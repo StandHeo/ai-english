@@ -42,6 +42,17 @@ for (const id of pack.levels) {
     }
   })
   if (!level.reward?.sticker) fail(`${id}: 缺少 reward.sticker`)
+  const assetRefs = [
+    level.scene?.image,
+    level.reward?.stickerImage,
+    ...(level.beats || []).flatMap((beat) => [
+      beat.show,
+      ...(beat.fallback?.options || []).map((o) => o.image),
+    ]),
+  ].filter(Boolean)
+  for (const ref of assetRefs) {
+    if (!fs.existsSync(path.join(root, ref))) fail(`${id}: 缺少资源 ${ref}`)
+  }
   ok(`${id} 校验通过`)
 }
 

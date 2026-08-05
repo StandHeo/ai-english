@@ -4,6 +4,8 @@
   background-position: center;
   position: relative;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .map-top {
@@ -38,11 +40,13 @@
 }
 
 .map-nodes {
-  margin-top: 8vh;
+  margin-top: 4vh;
+  margin-bottom: 8vh;
   display: flex;
   flex-direction: column;
   gap: 18px;
   align-items: center;
+  padding-bottom: 24px;
 }
 
 .level-node {

@@ -1,0 +1,58 @@
+{
+  "id": "fruit-07-pear",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Pear Orchard",
+  "target_words": ["pear"],
+  "scene": {
+    "setting": "A gentle pear orchard with green pears",
+    "image": "assets/scenes/pear-orchard.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/pear.png",
+      "npc_say": "Look! A pear!",
+      "hint_say": "Pear."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/pear.png",
+      "npc_say": "What's this?",
+      "expect": ["pear", "a pear"],
+      "hint_say": "Pear. Can you say pear?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "pear", "image": "assets/items/pear.png", "correct": true },
+          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/pear.png",
+      "npc_say": "Say pear!",
+      "expect": ["pear", "a pear"],
+      "hint_say": "Pear!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "pear", "image": "assets/items/pear.png", "correct": true },
+          { "id": "strawberry", "image": "assets/items/strawberry.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/pear.png",
+      "npc_say": "Yay! A pear!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-pear",
+    "stickerImage": "assets/items/pear.png",
+    "stars": 1
+  }
+}

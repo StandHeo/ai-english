@@ -1,16 +1,18 @@
-# MVP 五关剧情：水果森林大冒险（Fruit Forest）
+# 水果森林大冒险（Fruit Forest）剧情包
 
 **主题：** 水果（fruits）  
 **向导角色：** Bunny（小兔向导）  
-**地图：** 一条通往野餐草地的林间小路，五处果园节点线性解锁  
+**地图：** 一条通往野餐草地的林间小路，八处果园节点线性解锁  
 
 ## 总故事线
 
-小兔 Bunny 要准备一场森林野餐，但篮子是空的。孩子跟着 Bunny 走过五处果园，用英语说出水果名字，帮 Bunny 把水果装进篮子。最后大家在草地上开野餐派对。
+小兔 Bunny 要准备一场森林野餐，但篮子是空的。孩子跟着 Bunny 走过七处果园，用英语说出水果名字，帮 Bunny 把水果装进篮子。最后大家在草地上开野餐派对，复习新学的词。
 
 ```
-起点小屋 ──▶ 苹果园 ──▶ 香蕉林 ──▶ 橘子坡 ──▶ 葡萄架 ──▶ 野餐草地
-              Lv1        Lv2        Lv3        Lv4        Lv5
+起点小屋 ──▶ 苹果园 ──▶ 香蕉林 ──▶ 橘子坡 ──▶ 葡萄架
+              Lv1        Lv2        Lv3        Lv4
+         ──▶ 草莓田 ──▶ 西瓜田 ──▶ 梨树园 ──▶ 野餐草地
+              Lv5        Lv6        Lv7        Lv8
 ```
 
 ## 第一关：苹果园（Apple Orchard）
@@ -65,17 +67,57 @@
 - **贴纸：** `sticker-grape`
 - **资源：** `assets/scenes/grape-vine.png`、`assets/items/grape.png`、`assets/items/orange.png`
 
-## 第五关：野餐草地（Picnic Party）
+## 第五关：草莓田（Strawberry Field）
 
-- **id:** `fruit-05-picnic`
-- **目标词：** 复习 apple / banana / orange（短句 hello 可选）
+- **id:** `fruit-05-strawberry`
+- **目标词：** strawberry
+- **场景：** 阳光草莓田，成排红草莓；Bunny 蹲下摘一颗
+- **剧情拍：**
+  1. introduce：“Look! A strawberry!”
+  2. ask：“What's this?” → strawberry / a strawberry
+  3. ask：“Say strawberry!”
+  4. introduce：草莓进篮
+- **贴纸：** `sticker-strawberry`
+- **资源：** `assets/scenes/strawberry-field.png`、`assets/items/strawberry.png`、`assets/items/grape.png`
+
+## 第六关：西瓜田（Watermelon Patch）
+
+- **id:** `fruit-06-watermelon`
+- **目标词：** watermelon
+- **场景：** 绿叶西瓜田，大圆西瓜躺在地上；Bunny 轻轻拍拍西瓜
+- **剧情拍：**
+  1. introduce：“Look! A watermelon!”
+  2. ask：“What's this?” → watermelon / a watermelon
+  3. ask：“Say watermelon!”
+  4. introduce：西瓜进篮（想象中的大篮子）
+- **贴纸：** `sticker-watermelon`
+- **资源：** `assets/scenes/watermelon-patch.png`、`assets/items/watermelon.png`、`assets/items/orange.png`
+
+## 第七关：梨树园（Pear Orchard）
+
+- **id:** `fruit-07-pear`
+- **目标词：** pear
+- **场景：** 柔和梨树园，树上挂着绿梨；Bunny 捧着一颗梨
+- **剧情拍：**
+  1. introduce：“Look! A pear!”
+  2. ask：“What's this?” → pear / a pear
+  3. ask：“Say pear!”
+  4. introduce：梨进篮
+- **贴纸：** `sticker-pear`
+- **资源：** `assets/scenes/pear-orchard.png`、`assets/items/pear.png`、`assets/items/apple.png`
+
+## 第八关：野餐草地（Picnic Party）
+
+- **id:** `fruit-08-picnic`
+- **目标词：** 复习 apple / strawberry / watermelon / pear（短句 hello 可选）
 - **场景：** 格子野餐布，篮子满了；Bunny 邀请孩子一起吃
 - **剧情拍：**
   1. introduce：“Hello! Let's picnic!”
   2. ask：指苹果 “What's this?” → apple
-  3. ask：指香蕉 “What's this?” → banana
-  4. ask：指橘子 “What's this?” → orange
-  5. introduce：“Yay! Great job!” 撒花庆祝
+  3. ask：指草莓 “What's this?” → strawberry
+  4. ask：指西瓜 “What's this?” → watermelon
+  5. ask：指梨 “What's this?” → pear
+  6. introduce：“Yay! Great job!” 撒花庆祝
 - **贴纸：** `sticker-picnic`
 - **资源：** `assets/scenes/picnic.png`、各水果图
 
@@ -85,7 +127,7 @@
 |---------|------|------|
 | bunny | `assets/characters/bunny.png` | 向导角色 |
 | map | `assets/scenes/map.png` | 冒险地图背景 |
-| apple / banana / orange / grape | `assets/items/*.png` | 水果道具与贴纸原图 |
+| apple / banana / orange / grape / strawberry / watermelon / pear | `assets/items/*.png` | 水果道具与贴纸原图 |
 
 ## 实现落点
 
