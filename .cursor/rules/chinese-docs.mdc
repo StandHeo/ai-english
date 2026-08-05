@@ -1,0 +1,35 @@
+---
+description: 项目文档与 OpenSpec 产物优先使用中文撰写
+alwaysApply: true
+---
+
+# 文档语言：中文优先
+
+撰写或修改面向人的文档时，**正文尽量使用中文**。
+
+## 适用范围
+
+- OpenSpec 产物：`proposal.md`、`design.md`、`tasks.md`、`specs/**/spec.md`
+- 项目说明类 Markdown（如 `README.md`、设计说明、任务清单）
+- 与用户讨论需求、方案、总结时的说明文字
+
+## 要求
+
+- 标题、段落、列表、任务描述用中文
+- 能力标识、文件路径、代码标识符、API 字段名、命令保持英文原样（如 `story-adventure`、`expect`、`apps/web`）
+- OpenSpec 规格中的结构关键字保持英文，以便工具解析：`## Purpose`、`## ADDED Requirements`、`### Requirement:`、`#### Scenario:`、`**WHEN**` / `**THEN**`，以及规范性用词 `SHALL` / `MUST` / `MAY`
+- 专有名词可中英并存，首次出现时可用「中文（English）」
+
+## 示例
+
+```markdown
+<!-- ❌ 避免：整份 proposal/design/tasks 用英文写 -->
+## Why
+Chinese-speaking families lack...
+
+<!-- ✅ 推荐 -->
+## 为什么
+华语家庭缺少一种简单、好玩的方式……
+```
+
+若用户明确要求某份文档用英文，再按用户要求切换。

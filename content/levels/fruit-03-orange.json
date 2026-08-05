@@ -1,0 +1,58 @@
+{
+  "id": "fruit-03-orange",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Orange Hill",
+  "target_words": ["orange"],
+  "scene": {
+    "setting": "A gentle orange hill",
+    "image": "assets/scenes/orange-hill.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/orange.png",
+      "npc_say": "Look! An orange!",
+      "hint_say": "Orange."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/orange.png",
+      "npc_say": "What's this?",
+      "expect": ["orange", "an orange"],
+      "hint_say": "Orange. Can you say orange?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "orange", "image": "assets/items/orange.png", "correct": true },
+          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/orange.png",
+      "npc_say": "Say orange, please!",
+      "expect": ["orange", "an orange"],
+      "hint_say": "Orange!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "orange", "image": "assets/items/orange.png", "correct": true },
+          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/orange.png",
+      "npc_say": "Yay! An orange!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-orange",
+    "stickerImage": "assets/items/orange.png",
+    "stars": 1
+  }
+}

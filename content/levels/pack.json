@@ -1,0 +1,14 @@
+{
+  "id": "fruit-forest",
+  "title": "Fruit Forest",
+  "theme": "fruits",
+  "character": "bunny",
+  "mapImage": "assets/scenes/map.png",
+  "levels": [
+    "fruit-01-apple",
+    "fruit-02-banana",
+    "fruit-03-orange",
+    "fruit-04-grape",
+    "fruit-05-picnic"
+  ]
+}

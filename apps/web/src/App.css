@@ -1,0 +1,8 @@
+.app-shell {
+  min-height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  background: #fff8ee;
+  box-shadow: 0 0 40px rgba(80, 50, 20, 0.12);
+}

@@ -1,0 +1,19 @@
+schema: spec-driven
+
+context: |
+  项目：面向 4–6 岁儿童的英语口语故事冒险 App（Android 优先，后续 iOS）。
+  文档语言：OpenSpec 产物与项目说明文档正文尽量使用中文；能力 id、代码标识、路径、API 字段保持英文。
+  技术倾向：Web（React/Vue）+ Capacitor；后端代理 ASR/TTS；关卡为结构化脚本。
+
+rules:
+  proposal:
+    - 使用中文撰写（章节标题与正文）
+    - 能力 id 保持 kebab-case 英文
+  specs:
+    - 需求与场景的说明文字使用中文
+    - 保留 OpenSpec 结构关键字（Purpose、ADDED Requirements、Requirement、Scenario、WHEN/THEN、SHALL/MUST）
+  design:
+    - 使用中文撰写背景、目标、决策、风险与待决问题
+  tasks:
+    - 任务分组标题与任务描述使用中文
+    - 代码路径、配置键、命令可保留英文

@@ -1,0 +1,70 @@
+:root {
+  color: #2b2118;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  background: #f3e7d3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.screen,
+.loading-dot {
+  min-height: 100%;
+}
+
+.loading-dot::after {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 40vh auto;
+  border-radius: 50%;
+  background: #e38b3d;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
+}
+
+.exit-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M15 5l-7 7 7 7'/%3E%3C/svg%3E")
+    center/28px no-repeat;
+  z-index: 5;
+}
+
+.exit-btn.dark {
+  background-color: #fff7ea;
+}

@@ -1,0 +1,58 @@
+{
+  "id": "fruit-04-grape",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Grape Vine",
+  "target_words": ["grape", "grapes"],
+  "scene": {
+    "setting": "A purple grape vine",
+    "image": "assets/scenes/grape-vine.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/grape.png",
+      "npc_say": "Look! Grapes!",
+      "hint_say": "Grapes."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/grape.png",
+      "npc_say": "What are these?",
+      "expect": ["grape", "grapes", "a grape"],
+      "hint_say": "Grapes. Can you say grapes?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "grape", "image": "assets/items/grape.png", "correct": true },
+          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/grape.png",
+      "npc_say": "Say grapes!",
+      "expect": ["grape", "grapes"],
+      "hint_say": "Grapes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "grape", "image": "assets/items/grape.png", "correct": true },
+          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/grape.png",
+      "npc_say": "Yay! Grapes!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-grape",
+    "stickerImage": "assets/items/grape.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,50 @@
+.parent-screen {
+  min-height: 100vh;
+  padding: 28px 20px 40px;
+  background: #f7f4ef;
+  color: #2c241c;
+}
+
+.parent-screen h1 {
+  font-size: 1.6rem;
+  margin: 0 0 12px;
+}
+
+.parent-screen h2 {
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+
+.parent-screen section {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.parent-screen label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.parent-screen input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d7cfc3;
+}
+
+.parent-screen button {
+  margin-top: 10px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #3d7ea6;
+  color: #fff;
+}
+
+.parent-screen .linkish {
+  background: transparent;
+  color: #3d7ea6;
+  text-decoration: underline;
+}

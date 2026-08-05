@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+apps/web/android/
+apps/web/ios/
+apps/web/.capacitor/
+apps/web/public/content/
+*.local
+.idea/
+.vscode/

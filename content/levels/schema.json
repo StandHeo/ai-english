@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-english.local/schemas/level-script.json",
+  "title": "LevelScript",
+  "type": "object",
+  "required": ["id", "approved", "theme", "title", "target_words", "scene", "beats", "reward"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "approved": { "type": "boolean" },
+    "theme": { "type": "string" },
+    "title": { "type": "string" },
+    "target_words": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "scene": {
+      "type": "object",
+      "required": ["setting", "image", "character"],
+      "properties": {
+        "setting": { "type": "string" },
+        "image": { "type": "string" },
+        "character": { "type": "string" }
+      }
+    },
+    "beats": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["type", "npc_say"],
+        "properties": {
+          "type": { "enum": ["introduce", "ask"] },
+          "show": { "type": "string" },
+          "npc_say": { "type": "string" },
+          "hint_say": { "type": "string" },
+          "expect": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "fallback": {
+            "type": "object",
+            "required": ["type", "options"],
+            "properties": {
+              "type": { "const": "picture_choice" },
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": ["id", "image", "correct"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "image": { "type": "string" },
+                    "correct": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reward": {
+      "type": "object",
+      "required": ["sticker", "stickerImage", "stars"],
+      "properties": {
+        "sticker": { "type": "string" },
+        "stickerImage": { "type": "string" },
+        "stars": { "type": "number" }
+      }
+    }
+  }
+}

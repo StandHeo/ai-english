@@ -1,0 +1,58 @@
+{
+  "id": "fruit-01-apple",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Apple Orchard",
+  "target_words": ["apple"],
+  "scene": {
+    "setting": "A sunny apple orchard",
+    "image": "assets/scenes/orchard.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/apple.png",
+      "npc_say": "Look! An apple!",
+      "hint_say": "Apple."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/apple.png",
+      "npc_say": "What's this?",
+      "expect": ["apple", "an apple"],
+      "hint_say": "Apple. Can you say apple?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "apple", "image": "assets/items/apple.png", "correct": true },
+          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/apple.png",
+      "npc_say": "Say apple!",
+      "expect": ["apple", "an apple"],
+      "hint_say": "Apple!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "apple", "image": "assets/items/apple.png", "correct": true },
+          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/apple.png",
+      "npc_say": "Yay! An apple!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-apple",
+    "stickerImage": "assets/items/apple.png",
+    "stars": 1
+  }
+}
