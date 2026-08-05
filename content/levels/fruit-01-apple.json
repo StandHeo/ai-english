@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fruits",
   "title": "Apple Orchard",
-  "target_words": ["apple"],
+  "target_words": [
+    "apple"
+  ],
   "scene": {
     "setting": "A sunny apple orchard",
     "image": "assets/scenes/orchard.png",
@@ -13,41 +15,57 @@
     {
       "type": "introduce",
       "show": "assets/items/apple.png",
-      "npc_say": "Look! An apple!",
-      "hint_say": "Apple."
+      "npc_say": "Mmm! Yummy fruit!",
+      "hint_say": "Yummy!"
     },
     {
-      "type": "ask",
-      "show": "assets/items/apple.png",
-      "npc_say": "What's this?",
-      "expect": ["apple", "an apple"],
-      "hint_say": "Apple. Can you say apple?",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          { "id": "apple", "image": "assets/items/apple.png", "correct": true },
-          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
-        ]
-      }
-    },
-    {
-      "type": "ask",
-      "show": "assets/items/apple.png",
-      "npc_say": "Say apple!",
-      "expect": ["apple", "an apple"],
+      "type": "find",
+      "npc_say": "Find the apple!",
       "hint_say": "Apple!",
+      "success_say": "Yes! Apple!",
+      "options": [
+        {
+          "id": "apple",
+          "image": "assets/items/apple.png",
+          "correct": true
+        },
+        {
+          "id": "banana",
+          "image": "assets/items/banana.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/apple.png",
+      "npc_say": "I want a red one! What is it?",
+      "expect": [
+        "apple",
+        "an apple"
+      ],
+      "hint_say": "Apple. Can you say apple?",
+      "success_say": "Yum! Apple!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "apple", "image": "assets/items/apple.png", "correct": true },
-          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": true
+          },
+          {
+            "id": "orange",
+            "image": "assets/items/orange.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "introduce",
       "show": "assets/items/apple.png",
-      "npc_say": "Yay! An apple!"
+      "npc_say": "Into the basket!"
     }
   ],
   "reward": {

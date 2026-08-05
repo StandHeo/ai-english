@@ -15,29 +15,30 @@
     {
       "type": "introduce",
       "show": "assets/items/road-bike.png",
-      "npc_say": "Look! A road bike!",
-      "hint_say": "road bike."
+      "npc_say": "Fast on the road!",
+      "hint_say": "Fast!"
     },
     {
       "type": "ask",
       "show": "assets/items/road-bike.png",
-      "npc_say": "What's this?",
+      "npc_say": "Thin wheels! What bike?",
       "expect": [
         "road bike",
         "a road bike",
         "road"
       ],
-      "hint_say": "Say road bike!",
+      "hint_say": "Road bike!",
+      "success_say": "Cool!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "road",
             "image": "assets/items/road-bike.png",
             "correct": true
           },
           {
-            "id": "no",
+            "id": "mountain",
             "image": "assets/items/mountain-bike.png",
             "correct": false
           }
@@ -47,24 +48,25 @@
     {
       "type": "ask",
       "show": "assets/items/road-bike.png",
-      "npc_say": "Say road bike!",
+      "npc_say": "Can you say road bike?",
       "expect": [
         "road bike",
         "a road bike",
         "road"
       ],
-      "hint_say": "road bike!",
+      "hint_say": "Road bike!",
+      "success_say": "Yes!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "road",
             "image": "assets/items/road-bike.png",
             "correct": true
           },
           {
-            "id": "no2",
-            "image": "assets/items/helmet.png",
+            "id": "tricycle",
+            "image": "assets/items/tricycle.png",
             "correct": false
           }
         ]
@@ -73,7 +75,7 @@
     {
       "type": "introduce",
       "show": "assets/items/road-bike.png",
-      "npc_say": "Yay! road bike!"
+      "npc_say": "Zoom!"
     }
   ],
   "reward": {

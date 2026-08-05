@@ -18,8 +18,8 @@
     {
       "type": "introduce",
       "show": "assets/items/bike.png",
-      "npc_say": "Let's go!",
-      "hint_say": "go."
+      "npc_say": "Ready… set…",
+      "hint_say": "Ready!"
     },
     {
       "type": "ask",
@@ -27,21 +27,20 @@
       "npc_say": "Say go!",
       "expect": [
         "go",
-        "ride",
-        "let's go",
-        "go ride"
+        "let's go"
       ],
-      "hint_say": "Say go!",
+      "hint_say": "Go!",
+      "success_say": "Go go go!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "bike",
             "image": "assets/items/bike.png",
             "correct": true
           },
           {
-            "id": "no",
+            "id": "helmet",
             "image": "assets/items/helmet.png",
             "correct": false
           }
@@ -50,25 +49,24 @@
     },
     {
       "type": "ask",
-      "show": "assets/items/bike.png",
-      "npc_say": "Say ride!",
+      "show": "assets/items/rider-kid.png",
+      "npc_say": "Can you ride? Say ride!",
       "expect": [
-        "go",
         "ride",
-        "let's go",
-        "go ride"
+        "go"
       ],
-      "hint_say": "go!",
+      "hint_say": "Ride!",
+      "success_say": "Zoom!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
-            "image": "assets/items/bike.png",
+            "id": "rider",
+            "image": "assets/items/rider-kid.png",
             "correct": true
           },
           {
-            "id": "no2",
+            "id": "bell",
             "image": "assets/items/bell.png",
             "correct": false
           }

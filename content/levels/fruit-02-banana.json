@@ -3,9 +3,11 @@
   "approved": true,
   "theme": "fruits",
   "title": "Banana Grove",
-  "target_words": ["banana"],
+  "target_words": [
+    "banana"
+  ],
   "scene": {
-    "setting": "A sunny banana grove",
+    "setting": "A tropical banana grove",
     "image": "assets/scenes/banana-grove.png",
     "character": "bunny"
   },
@@ -13,20 +15,32 @@
     {
       "type": "introduce",
       "show": "assets/items/banana.png",
-      "npc_say": "Look! A banana!",
-      "hint_say": "Banana."
+      "npc_say": "Yellow and long!",
+      "hint_say": "Yellow!"
     },
     {
       "type": "ask",
       "show": "assets/items/banana.png",
-      "npc_say": "What's this?",
-      "expect": ["banana", "a banana"],
-      "hint_say": "Banana. Can you say banana?",
+      "npc_say": "Help Bunny! What is it?",
+      "expect": [
+        "banana",
+        "a banana"
+      ],
+      "hint_say": "Banana!",
+      "success_say": "Wow! Banana!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "banana", "image": "assets/items/banana.png", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "banana",
+            "image": "assets/items/banana.png",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -34,13 +48,25 @@
       "type": "ask",
       "show": "assets/items/banana.png",
       "npc_say": "Can you say banana?",
-      "expect": ["banana", "a banana"],
-      "hint_say": "Banana!",
+      "expect": [
+        "banana",
+        "a banana"
+      ],
+      "hint_say": "Ba-na-na!",
+      "success_say": "Super!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "banana", "image": "assets/items/banana.png", "correct": true },
-          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+          {
+            "id": "banana",
+            "image": "assets/items/banana.png",
+            "correct": true
+          },
+          {
+            "id": "grape",
+            "image": "assets/items/grape.png",
+            "correct": false
+          }
         ]
       }
     },

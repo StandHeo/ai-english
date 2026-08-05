@@ -33,13 +33,27 @@
         "type": "object",
         "required": ["type", "npc_say"],
         "properties": {
-          "type": { "enum": ["introduce", "ask"] },
+          "type": { "enum": ["introduce", "ask", "find"] },
           "show": { "type": "string" },
           "npc_say": { "type": "string" },
           "hint_say": { "type": "string" },
+          "success_say": { "type": "string" },
           "expect": {
             "type": "array",
             "items": { "type": "string" }
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["id", "image", "correct"],
+              "properties": {
+                "id": { "type": "string" },
+                "image": { "type": "string" },
+                "correct": { "type": "boolean" }
+              }
+            }
           },
           "fallback": {
             "type": "object",

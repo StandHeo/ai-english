@@ -40,6 +40,14 @@ function validateLevel(id) {
         fail(`${id} beat[${i}]: ask 拍需要 fallback.options`)
       }
     }
+    if (beat.type === 'find') {
+      const opts = beat.options || beat.fallback?.options
+      if (!opts?.length || opts.length < 2) {
+        fail(`${id} beat[${i}]: find 拍需要 options（至少 2 项）`)
+      } else if (!opts.some((o) => o.correct)) {
+        fail(`${id} beat[${i}]: find 拍需要正确选项`)
+      }
+    }
   })
   if (!level.reward?.sticker) fail(`${id}: 缺少 reward.sticker`)
   if (level.scene?.video_max_seconds != null) {
@@ -55,6 +63,7 @@ function validateLevel(id) {
     ...(level.beats || []).flatMap((beat) => [
       beat.show,
       ...(beat.fallback?.options || []).map((o) => o.image),
+      ...(beat.options || []).map((o) => o.image),
     ]),
   ].filter(Boolean)
   for (const ref of assetRefs) {

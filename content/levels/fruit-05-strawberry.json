@@ -3,9 +3,11 @@
   "approved": true,
   "theme": "fruits",
   "title": "Strawberry Field",
-  "target_words": ["strawberry"],
+  "target_words": [
+    "strawberry"
+  ],
   "scene": {
-    "setting": "A sunny strawberry field with red berries",
+    "setting": "A strawberry field",
     "image": "assets/scenes/strawberry-field.png",
     "character": "bunny"
   },
@@ -13,41 +15,65 @@
     {
       "type": "introduce",
       "show": "assets/items/strawberry.png",
-      "npc_say": "Look! A strawberry!",
-      "hint_say": "Strawberry."
+      "npc_say": "Tiny and sweet!",
+      "hint_say": "Sweet!"
     },
     {
       "type": "ask",
       "show": "assets/items/strawberry.png",
-      "npc_say": "What's this?",
-      "expect": ["strawberry", "a strawberry"],
-      "hint_say": "Strawberry. Can you say strawberry?",
+      "npc_say": "It's red! What is it?",
+      "expect": [
+        "strawberry",
+        "a strawberry"
+      ],
+      "hint_say": "Strawberry!",
+      "success_say": "Yum!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "strawberry", "image": "assets/items/strawberry.png", "correct": true },
-          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+          {
+            "id": "strawberry",
+            "image": "assets/items/strawberry.png",
+            "correct": true
+          },
+          {
+            "id": "grape",
+            "image": "assets/items/grape.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "ask",
       "show": "assets/items/strawberry.png",
-      "npc_say": "Say strawberry!",
-      "expect": ["strawberry", "a strawberry"],
-      "hint_say": "Strawberry!",
+      "npc_say": "Can you say strawberry?",
+      "expect": [
+        "strawberry",
+        "a strawberry"
+      ],
+      "hint_say": "Straw-ber-ry!",
+      "success_say": "Wow!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "strawberry", "image": "assets/items/strawberry.png", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "strawberry",
+            "image": "assets/items/strawberry.png",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "introduce",
       "show": "assets/items/strawberry.png",
-      "npc_say": "Yay! A strawberry!"
+      "npc_say": "Into the basket!"
     }
   ],
   "reward": {

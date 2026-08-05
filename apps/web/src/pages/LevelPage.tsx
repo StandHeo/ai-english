@@ -14,6 +14,7 @@ import './level.css'
 
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
+const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
 
 type Props = {
   progress: ProgressState
@@ -27,7 +28,9 @@ export function LevelPage({ onProgress }: Props) {
   const [level, setLevel] = useState<LevelScript | null>(null)
   const [packId, setPackId] = useState(search.get('pack') || '')
   const [beatIndex, setBeatIndex] = useState(0)
-  const [phase, setPhase] = useState<'speak' | 'listen' | 'fallback' | 'celebrate'>('speak')
+  const [phase, setPhase] = useState<
+    'speak' | 'listen' | 'find' | 'fallback' | 'celebrate'
+  >('speak')
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
   const [showDevType, setShowDevType] = useState(false)
@@ -160,6 +163,8 @@ export function LevelPage({ onProgress }: Props) {
           if (cancelled) return
           void advance()
         }, 700)
+      } else if (beat.type === 'find') {
+        setPhase('find')
       } else {
         setPhase('listen')
       }
@@ -172,10 +177,16 @@ export function LevelPage({ onProgress }: Props) {
     }
   }, [advance, beat, level, sceneReady])
 
+  async function playSuccess() {
+    const line =
+      beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    setPhase('celebrate')
+    await requestTts(line)
+  }
+
   async function onOralResult(matched: boolean) {
     if (matched) {
-      setPhase('celebrate')
-      await requestTts('Yay!')
+      await playSuccess()
       await advance()
       return
     }
@@ -218,10 +229,24 @@ export function LevelPage({ onProgress }: Props) {
 
   async function onPick(correct: boolean) {
     if (!correct) {
-      await requestTts(beat?.hint_say || beat?.expect?.[0] || '')
+      const nextRetry = retries + 1
+      setBusy(true)
+      await requestTts(beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || '')
+      setBusy(false)
+      if (phase === 'find' && nextRetry < MAX_RETRIES) {
+        setRetries(nextRetry)
+        return
+      }
+      // find 重试用尽或兜底点错：示范后继续
+      await requestTts(beat?.expect?.[0] || beat?.hint_say || '')
+      await advance()
+      return
     }
+    await playSuccess()
     await advance()
   }
+
+  const findOptions = beat?.options || beat?.fallback?.options
 
   if (!level) return <div className="screen loading-dot" />
   if (sceneReady && !beat) return <div className="screen loading-dot" />
@@ -271,7 +296,13 @@ export function LevelPage({ onProgress }: Props) {
       {sceneReady && (
         <>
           <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
-          {beat?.show && <img className="focus-item" src={assetUrl(beat.show)} alt="" />}
+          {beat?.show && phase !== 'find' && (
+            <img
+              className={`focus-item ${phase === 'listen' ? 'bounce' : ''}`}
+              src={assetUrl(beat.show)}
+              alt=""
+            />
+          )}
 
           {phase === 'listen' && (
             <button
@@ -291,10 +322,15 @@ export function LevelPage({ onProgress }: Props) {
             />
           )}
 
-          {phase === 'fallback' && beat?.fallback?.type === 'picture_choice' && (
+          {(phase === 'find' || phase === 'fallback') && findOptions && (
             <div className="choice-row">
-              {beat.fallback.options.map((opt) => (
-                <button key={opt.id} className="choice-tile" onClick={() => onPick(opt.correct)}>
+              {findOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  className="choice-tile"
+                  disabled={busy}
+                  onClick={() => onPick(opt.correct)}
+                >
                   <img src={assetUrl(opt.image)} alt="" />
                 </button>
               ))}

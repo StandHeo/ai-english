@@ -15,29 +15,30 @@
     {
       "type": "introduce",
       "show": "assets/items/mountain-bike.png",
-      "npc_say": "Look! A mountain bike!",
-      "hint_say": "mountain bike."
+      "npc_say": "Up the hill!",
+      "hint_say": "Hill!"
     },
     {
       "type": "ask",
       "show": "assets/items/mountain-bike.png",
-      "npc_say": "What's this?",
+      "npc_say": "Big tires! What bike is it?",
       "expect": [
         "mountain bike",
         "a mountain bike",
         "mountain"
       ],
-      "hint_say": "Say mountain bike!",
+      "hint_say": "Mountain bike!",
+      "success_say": "Wow!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "mountain",
             "image": "assets/items/mountain-bike.png",
             "correct": true
           },
           {
-            "id": "no",
+            "id": "road",
             "image": "assets/items/road-bike.png",
             "correct": false
           }
@@ -47,24 +48,25 @@
     {
       "type": "ask",
       "show": "assets/items/mountain-bike.png",
-      "npc_say": "Say mountain bike!",
+      "npc_say": "Say mountain!",
       "expect": [
+        "mountain",
         "mountain bike",
-        "a mountain bike",
-        "mountain"
+        "a mountain bike"
       ],
-      "hint_say": "mountain bike!",
+      "hint_say": "Mountain!",
+      "success_say": "Great!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "mountain",
             "image": "assets/items/mountain-bike.png",
             "correct": true
           },
           {
-            "id": "no2",
-            "image": "assets/items/helmet.png",
+            "id": "bike",
+            "image": "assets/items/bike.png",
             "correct": false
           }
         ]
@@ -73,7 +75,7 @@
     {
       "type": "introduce",
       "show": "assets/items/mountain-bike.png",
-      "npc_say": "Yay! mountain bike!"
+      "npc_say": "Cool mountain bike!"
     }
   ],
   "reward": {

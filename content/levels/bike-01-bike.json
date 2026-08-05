@@ -15,28 +15,29 @@
     {
       "type": "introduce",
       "show": "assets/items/bike.png",
-      "npc_say": "Look! A bike!",
-      "hint_say": "bike."
+      "npc_say": "Vroom? No… two wheels!",
+      "hint_say": "Wheels!"
     },
     {
       "type": "ask",
       "show": "assets/items/bike.png",
-      "npc_say": "What's this?",
+      "npc_say": "What can we ride?",
       "expect": [
         "bike",
         "a bike"
       ],
-      "hint_say": "Say bike!",
+      "hint_say": "Bike!",
+      "success_say": "Yes! Bike!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "bike",
             "image": "assets/items/bike.png",
             "correct": true
           },
           {
-            "id": "no",
+            "id": "tricycle",
             "image": "assets/items/tricycle.png",
             "correct": false
           }
@@ -46,22 +47,23 @@
     {
       "type": "ask",
       "show": "assets/items/bike.png",
-      "npc_say": "Say bike!",
+      "npc_say": "Can you say bike?",
       "expect": [
         "bike",
         "a bike"
       ],
-      "hint_say": "bike!",
+      "hint_say": "Bike!",
+      "success_say": "Cool!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "bike",
             "image": "assets/items/bike.png",
             "correct": true
           },
           {
-            "id": "no2",
+            "id": "helmet",
             "image": "assets/items/helmet.png",
             "correct": false
           }
@@ -71,7 +73,7 @@
     {
       "type": "introduce",
       "show": "assets/items/bike.png",
-      "npc_say": "Yay! bike!"
+      "npc_say": "Nice bike!"
     }
   ],
   "reward": {

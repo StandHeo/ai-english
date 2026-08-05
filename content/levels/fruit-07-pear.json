@@ -3,9 +3,11 @@
   "approved": true,
   "theme": "fruits",
   "title": "Pear Orchard",
-  "target_words": ["pear"],
+  "target_words": [
+    "pear"
+  ],
   "scene": {
-    "setting": "A gentle pear orchard with green pears",
+    "setting": "A pear orchard",
     "image": "assets/scenes/pear-orchard.png",
     "character": "bunny"
   },
@@ -13,41 +15,65 @@
     {
       "type": "introduce",
       "show": "assets/items/pear.png",
-      "npc_say": "Look! A pear!",
-      "hint_say": "Pear."
+      "npc_say": "Green and soft!",
+      "hint_say": "Green!"
     },
     {
       "type": "ask",
       "show": "assets/items/pear.png",
-      "npc_say": "What's this?",
-      "expect": ["pear", "a pear"],
-      "hint_say": "Pear. Can you say pear?",
+      "npc_say": "I want a pear! What is it?",
+      "expect": [
+        "pear",
+        "a pear"
+      ],
+      "hint_say": "Pear!",
+      "success_say": "Nice!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "pear", "image": "assets/items/pear.png", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "pear",
+            "image": "assets/items/pear.png",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "ask",
       "show": "assets/items/pear.png",
-      "npc_say": "Say pear!",
-      "expect": ["pear", "a pear"],
+      "npc_say": "Can you say pear?",
+      "expect": [
+        "pear",
+        "a pear"
+      ],
       "hint_say": "Pear!",
+      "success_say": "Great!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "pear", "image": "assets/items/pear.png", "correct": true },
-          { "id": "strawberry", "image": "assets/items/strawberry.png", "correct": false }
+          {
+            "id": "pear",
+            "image": "assets/items/pear.png",
+            "correct": true
+          },
+          {
+            "id": "strawberry",
+            "image": "assets/items/strawberry.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "introduce",
       "show": "assets/items/pear.png",
-      "npc_say": "Yay! A pear!"
+      "npc_say": "Basket full!"
     }
   ],
   "reward": {

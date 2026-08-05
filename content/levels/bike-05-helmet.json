@@ -15,54 +15,48 @@
     {
       "type": "introduce",
       "show": "assets/items/helmet.png",
-      "npc_say": "Look! A helmet!",
-      "hint_say": "helmet."
+      "npc_say": "Safe head!",
+      "hint_say": "Safe!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the helmet!",
+      "hint_say": "Helmet!",
+      "success_say": "Yes! Helmet!",
+      "options": [
+        {
+          "id": "helmet",
+          "image": "assets/items/helmet.png",
+          "correct": true
+        },
+        {
+          "id": "bell",
+          "image": "assets/items/bell.png",
+          "correct": false
+        }
+      ]
     },
     {
       "type": "ask",
       "show": "assets/items/helmet.png",
-      "npc_say": "What's this?",
+      "npc_say": "Put it on! What is it?",
       "expect": [
         "helmet",
         "a helmet"
       ],
-      "hint_say": "Say helmet!",
+      "hint_say": "Helmet!",
+      "success_say": "Safe!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "helmet",
             "image": "assets/items/helmet.png",
             "correct": true
           },
           {
-            "id": "no",
-            "image": "assets/items/bell.png",
-            "correct": false
-          }
-        ]
-      }
-    },
-    {
-      "type": "ask",
-      "show": "assets/items/helmet.png",
-      "npc_say": "Say helmet!",
-      "expect": [
-        "helmet",
-        "a helmet"
-      ],
-      "hint_say": "helmet!",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          {
-            "id": "ok",
-            "image": "assets/items/helmet.png",
-            "correct": true
-          },
-          {
-            "id": "no2",
-            "image": "assets/items/helmet.png",
+            "id": "bike",
+            "image": "assets/items/bike.png",
             "correct": false
           }
         ]
@@ -71,7 +65,7 @@
     {
       "type": "introduce",
       "show": "assets/items/helmet.png",
-      "npc_say": "Yay! helmet!"
+      "npc_say": "Good job!"
     }
   ],
   "reward": {

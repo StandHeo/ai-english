@@ -15,58 +15,50 @@
     {
       "type": "introduce",
       "show": "assets/items/tricycle.png",
-      "npc_say": "Look! A tricycle!",
-      "hint_say": "tricycle."
+      "npc_say": "One, two, three wheels!",
+      "hint_say": "Three!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the tricycle!",
+      "hint_say": "Trike!",
+      "success_say": "Yes! Trike!",
+      "options": [
+        {
+          "id": "tricycle",
+          "image": "assets/items/tricycle.png",
+          "correct": true
+        },
+        {
+          "id": "bike",
+          "image": "assets/items/bike.png",
+          "correct": false
+        }
+      ]
     },
     {
       "type": "ask",
       "show": "assets/items/tricycle.png",
-      "npc_say": "What's this?",
+      "npc_say": "What is it?",
       "expect": [
         "tricycle",
         "a tricycle",
         "trike",
         "a trike"
       ],
-      "hint_say": "Say tricycle!",
+      "hint_say": "Tricycle!",
+      "success_say": "Super!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "tricycle",
             "image": "assets/items/tricycle.png",
             "correct": true
           },
           {
-            "id": "no",
-            "image": "assets/items/bike.png",
-            "correct": false
-          }
-        ]
-      }
-    },
-    {
-      "type": "ask",
-      "show": "assets/items/tricycle.png",
-      "npc_say": "Say tricycle!",
-      "expect": [
-        "tricycle",
-        "a tricycle",
-        "trike",
-        "a trike"
-      ],
-      "hint_say": "tricycle!",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          {
-            "id": "ok",
-            "image": "assets/items/tricycle.png",
-            "correct": true
-          },
-          {
-            "id": "no2",
-            "image": "assets/items/helmet.png",
+            "id": "road-bike",
+            "image": "assets/items/road-bike.png",
             "correct": false
           }
         ]
@@ -75,7 +67,7 @@
     {
       "type": "introduce",
       "show": "assets/items/tricycle.png",
-      "npc_say": "Yay! tricycle!"
+      "npc_say": "Yay! A tricycle!"
     }
   ],
   "reward": {

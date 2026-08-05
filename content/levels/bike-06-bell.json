@@ -15,54 +15,48 @@
     {
       "type": "introduce",
       "show": "assets/items/bell.png",
-      "npc_say": "Look! A bell!",
-      "hint_say": "bell."
+      "npc_say": "Ding ding!",
+      "hint_say": "Ding!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the bell!",
+      "hint_say": "Bell!",
+      "success_say": "Ding!",
+      "options": [
+        {
+          "id": "bell",
+          "image": "assets/items/bell.png",
+          "correct": true
+        },
+        {
+          "id": "helmet",
+          "image": "assets/items/helmet.png",
+          "correct": false
+        }
+      ]
     },
     {
       "type": "ask",
       "show": "assets/items/bell.png",
-      "npc_say": "What's this?",
+      "npc_say": "Ring ring! What is it?",
       "expect": [
         "bell",
         "a bell"
       ],
-      "hint_say": "Say bell!",
+      "hint_say": "Bell!",
+      "success_say": "Cute!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "ok",
+            "id": "bell",
             "image": "assets/items/bell.png",
             "correct": true
           },
           {
-            "id": "no",
-            "image": "assets/items/helmet.png",
-            "correct": false
-          }
-        ]
-      }
-    },
-    {
-      "type": "ask",
-      "show": "assets/items/bell.png",
-      "npc_say": "Say bell!",
-      "expect": [
-        "bell",
-        "a bell"
-      ],
-      "hint_say": "bell!",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          {
-            "id": "ok",
-            "image": "assets/items/bell.png",
-            "correct": true
-          },
-          {
-            "id": "no2",
-            "image": "assets/items/bell.png",
+            "id": "tricycle",
+            "image": "assets/items/tricycle.png",
             "correct": false
           }
         ]
@@ -71,7 +65,7 @@
     {
       "type": "introduce",
       "show": "assets/items/bell.png",
-      "npc_say": "Yay! bell!"
+      "npc_say": "Ding ding ding!"
     }
   ],
   "reward": {

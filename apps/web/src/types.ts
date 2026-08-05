@@ -5,15 +5,18 @@ export type PictureOption = {
 }
 
 export type Beat = {
-  type: 'introduce' | 'ask'
+  type: 'introduce' | 'ask' | 'find'
   show?: string
   npc_say: string
   hint_say?: string
+  success_say?: string
   expect?: string[]
   fallback?: {
     type: 'picture_choice'
     options: PictureOption[]
   }
+  /** find 拍选项；也可复用 fallback.options */
+  options?: PictureOption[]
 }
 
 export type LevelScript = {

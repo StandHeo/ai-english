@@ -3,9 +3,11 @@
   "approved": true,
   "theme": "fruits",
   "title": "Orange Hill",
-  "target_words": ["orange"],
+  "target_words": [
+    "orange"
+  ],
   "scene": {
-    "setting": "A gentle orange hill",
+    "setting": "An orange hill",
     "image": "assets/scenes/orange-hill.png",
     "character": "bunny"
   },
@@ -13,41 +15,65 @@
     {
       "type": "introduce",
       "show": "assets/items/orange.png",
-      "npc_say": "Look! An orange!",
-      "hint_say": "Orange."
+      "npc_say": "Round and orange!",
+      "hint_say": "Round!"
     },
     {
       "type": "ask",
       "show": "assets/items/orange.png",
       "npc_say": "What's this?",
-      "expect": ["orange", "an orange"],
-      "hint_say": "Orange. Can you say orange?",
+      "expect": [
+        "orange",
+        "an orange"
+      ],
+      "hint_say": "Orange!",
+      "success_say": "Nice!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "orange", "image": "assets/items/orange.png", "correct": true },
-          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+          {
+            "id": "orange",
+            "image": "assets/items/orange.png",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "ask",
       "show": "assets/items/orange.png",
-      "npc_say": "Say orange, please!",
-      "expect": ["orange", "an orange"],
-      "hint_say": "Orange!",
+      "npc_say": "Bunny is thirsty! What is it?",
+      "expect": [
+        "orange",
+        "an orange"
+      ],
+      "hint_say": "Say orange!",
+      "success_say": "Yum!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "orange", "image": "assets/items/orange.png", "correct": true },
-          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
+          {
+            "id": "orange",
+            "image": "assets/items/orange.png",
+            "correct": true
+          },
+          {
+            "id": "grape",
+            "image": "assets/items/grape.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "introduce",
       "show": "assets/items/orange.png",
-      "npc_say": "Yay! An orange!"
+      "npc_say": "Into the basket!"
     }
   ],
   "reward": {

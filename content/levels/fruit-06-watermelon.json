@@ -3,9 +3,11 @@
   "approved": true,
   "theme": "fruits",
   "title": "Watermelon Patch",
-  "target_words": ["watermelon"],
+  "target_words": [
+    "watermelon"
+  ],
   "scene": {
-    "setting": "A green watermelon patch in the sun",
+    "setting": "A watermelon patch",
     "image": "assets/scenes/watermelon-patch.png",
     "character": "bunny"
   },
@@ -13,20 +15,32 @@
     {
       "type": "introduce",
       "show": "assets/items/watermelon.png",
-      "npc_say": "Look! A watermelon!",
-      "hint_say": "Watermelon."
+      "npc_say": "So big!",
+      "hint_say": "Big!"
     },
     {
       "type": "ask",
       "show": "assets/items/watermelon.png",
-      "npc_say": "What's this?",
-      "expect": ["watermelon", "a watermelon"],
-      "hint_say": "Watermelon. Can you say watermelon?",
+      "npc_say": "Help Bunny lift it! What is it?",
+      "expect": [
+        "watermelon",
+        "a watermelon"
+      ],
+      "hint_say": "Watermelon!",
+      "success_say": "Super!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "watermelon", "image": "assets/items/watermelon.png", "correct": true },
-          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
+          {
+            "id": "watermelon",
+            "image": "assets/items/watermelon.png",
+            "correct": true
+          },
+          {
+            "id": "orange",
+            "image": "assets/items/orange.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -34,20 +48,32 @@
       "type": "ask",
       "show": "assets/items/watermelon.png",
       "npc_say": "Say watermelon!",
-      "expect": ["watermelon", "a watermelon"],
-      "hint_say": "Watermelon!",
+      "expect": [
+        "watermelon",
+        "a watermelon"
+      ],
+      "hint_say": "Water-melon!",
+      "success_say": "Yay!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "watermelon", "image": "assets/items/watermelon.png", "correct": true },
-          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
+          {
+            "id": "watermelon",
+            "image": "assets/items/watermelon.png",
+            "correct": true
+          },
+          {
+            "id": "banana",
+            "image": "assets/items/banana.png",
+            "correct": false
+          }
         ]
       }
     },
     {
       "type": "introduce",
       "show": "assets/items/watermelon.png",
-      "npc_say": "Yay! A watermelon!"
+      "npc_say": "Into the basket!"
     }
   ],
   "reward": {

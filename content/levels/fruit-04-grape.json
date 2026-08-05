@@ -3,9 +3,12 @@
   "approved": true,
   "theme": "fruits",
   "title": "Grape Vine",
-  "target_words": ["grape", "grapes"],
+  "target_words": [
+    "grape",
+    "grapes"
+  ],
   "scene": {
-    "setting": "A purple grape vine",
+    "setting": "A grape vine",
     "image": "assets/scenes/grape-vine.png",
     "character": "bunny"
   },
@@ -13,34 +16,51 @@
     {
       "type": "introduce",
       "show": "assets/items/grape.png",
-      "npc_say": "Look! Grapes!",
-      "hint_say": "Grapes."
+      "npc_say": "Purple little friends!",
+      "hint_say": "Purple!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the grapes!",
+      "hint_say": "Grapes!",
+      "success_say": "Yes! Grapes!",
+      "options": [
+        {
+          "id": "grape",
+          "image": "assets/items/grape.png",
+          "correct": true
+        },
+        {
+          "id": "orange",
+          "image": "assets/items/orange.png",
+          "correct": false
+        }
+      ]
     },
     {
       "type": "ask",
       "show": "assets/items/grape.png",
       "npc_say": "What are these?",
-      "expect": ["grape", "grapes", "a grape"],
-      "hint_say": "Grapes. Can you say grapes?",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          { "id": "grape", "image": "assets/items/grape.png", "correct": true },
-          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
-        ]
-      }
-    },
-    {
-      "type": "ask",
-      "show": "assets/items/grape.png",
-      "npc_say": "Say grapes!",
-      "expect": ["grape", "grapes"],
+      "expect": [
+        "grape",
+        "grapes",
+        "a grape"
+      ],
       "hint_say": "Grapes!",
+      "success_say": "Great!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "grape", "image": "assets/items/grape.png", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "grape",
+            "image": "assets/items/grape.png",
+            "correct": true
+          },
+          {
+            "id": "banana",
+            "image": "assets/items/banana.png",
+            "correct": false
+          }
         ]
       }
     },

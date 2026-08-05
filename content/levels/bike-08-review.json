@@ -17,43 +17,37 @@
     {
       "type": "introduce",
       "show": "assets/characters/bunny.png",
-      "npc_say": "Hello! Bike party!",
-      "hint_say": "Hello!"
+      "npc_say": "Bike party!",
+      "hint_say": "Party!"
     },
     {
-      "type": "ask",
-      "show": "assets/items/bike.png",
-      "npc_say": "What's this?",
-      "expect": [
-        "bike",
-        "a bike"
-      ],
+      "type": "find",
+      "npc_say": "Find the bike!",
       "hint_say": "Bike!",
-      "fallback": {
-        "type": "picture_choice",
-        "options": [
-          {
-            "id": "bike",
-            "image": "assets/items/bike.png",
-            "correct": true
-          },
-          {
-            "id": "tricycle",
-            "image": "assets/items/tricycle.png",
-            "correct": false
-          }
-        ]
-      }
+      "success_say": "Yes!",
+      "options": [
+        {
+          "id": "bike",
+          "image": "assets/items/bike.png",
+          "correct": true
+        },
+        {
+          "id": "tricycle",
+          "image": "assets/items/tricycle.png",
+          "correct": false
+        }
+      ]
     },
     {
       "type": "ask",
       "show": "assets/items/helmet.png",
-      "npc_say": "What's this?",
+      "npc_say": "Safe head! What is it?",
       "expect": [
         "helmet",
         "a helmet"
       ],
       "hint_say": "Helmet!",
+      "success_say": "Safe!",
       "fallback": {
         "type": "picture_choice",
         "options": [
@@ -73,12 +67,13 @@
     {
       "type": "ask",
       "show": "assets/items/bell.png",
-      "npc_say": "What's this?",
+      "npc_say": "Ding? What is it?",
       "expect": [
         "bell",
         "a bell"
       ],
       "hint_say": "Bell!",
+      "success_say": "Ding!",
       "fallback": {
         "type": "picture_choice",
         "options": [
@@ -98,7 +93,7 @@
     {
       "type": "introduce",
       "show": "assets/items/rider-kid.png",
-      "npc_say": "Yay! Great job!"
+      "npc_say": "Great job!"
     }
   ],
   "reward": {
