@@ -1,18 +1,18 @@
 # 水果森林大冒险（Fruit Forest）剧情包
 
-**主题：** 水果（fruits）  
+**主题：** 水果（fruits）+ 家庭骑车场景  
 **向导角色：** Bunny（小兔向导）  
-**地图：** 一条通往野餐草地的林间小路，八处果园节点线性解锁  
+**地图：** 一条通往野餐草地的林间小路，九处节点线性解锁  
 
 ## 总故事线
 
-小兔 Bunny 要准备一场森林野餐，但篮子是空的。孩子跟着 Bunny 走过七处果园，用英语说出水果名字，帮 Bunny 把水果装进篮子。最后大家在草地上开野餐派对，复习新学的词。
+小兔 Bunny 要准备一场森林野餐，但篮子是空的。孩子跟着 Bunny 走过果园采水果，途中在骑车小路上遇见自行车，用英语说出 bike。最后大家在草地上开野餐派对。
 
 ```
 起点小屋 ──▶ 苹果园 ──▶ 香蕉林 ──▶ 橘子坡 ──▶ 葡萄架
               Lv1        Lv2        Lv3        Lv4
-         ──▶ 草莓田 ──▶ 西瓜田 ──▶ 梨树园 ──▶ 野餐草地
-              Lv5        Lv6        Lv7        Lv8
+         ──▶ 草莓田 ──▶ 西瓜田 ──▶ 梨树园 ──▶ 骑车小路 ──▶ 野餐草地
+              Lv5        Lv6        Lv7        Lv8(bike)     Lv9
 ```
 
 ## 第一关：苹果园（Apple Orchard）
@@ -106,7 +106,20 @@
 - **贴纸：** `sticker-pear`
 - **资源：** `assets/scenes/pear-orchard.png`、`assets/items/pear.png`、`assets/items/apple.png`
 
-## 第八关：野餐草地（Picnic Party）
+## 第八关：骑车小路（Bike Path）
+
+- **id:** `fruit-09-bike`
+- **目标词：** bike
+- **场景：** 家庭骑车短视频短播后定格；Bunny 指着卡通自行车
+- **剧情拍：**
+  1. introduce：“Look! A bike!”
+  2. ask：“What's this?” → bike / a bike
+  3. ask：“Say bike!”
+  4. introduce：展示卡通小骑手贴纸 “Yay! A bike!”
+- **贴纸：** `sticker-rider-kid`
+- **资源：** `assets/videos/tudouqiche.mp4`、`assets/scenes/bike-path.png`、`assets/items/bike.png`、`assets/items/rider-kid.png`
+
+## 第九关：野餐草地（Picnic Party）
 
 - **id:** `fruit-08-picnic`
 - **目标词：** 复习 apple / strawberry / watermelon / pear（短句 hello 可选）
@@ -127,10 +140,11 @@
 |---------|------|------|
 | bunny | `assets/characters/bunny.png` | 向导角色 |
 | map | `assets/scenes/map.png` | 冒险地图背景 |
-| apple / banana / orange / grape / strawberry / watermelon / pear | `assets/items/*.png` | 水果道具与贴纸原图 |
+| apple / banana / orange / grape / strawberry / watermelon / pear / bike / rider-kid | `assets/items/*.png` | 道具与贴纸原图 |
+| tudouqiche | `assets/videos/tudouqiche.mp4` | 家庭骑车关场景视频 |
 
 ## 实现落点
 
 - 关卡脚本 JSON：`content/levels/*.json`
 - 内容包索引：`content/levels/pack.json`
-- 图片：`content/assets/**`（同步到 `apps/web/public/content/`）
+- 图片/视频：`content/assets/**`（同步到 `apps/web/public/content/`）

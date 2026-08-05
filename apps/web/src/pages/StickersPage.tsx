@@ -28,7 +28,7 @@ export function StickersPage({ progress }: Props) {
         })}
       </div>
       <div className="star-count" aria-hidden>
-        {'★'.repeat(Math.min(progress.stars, 12))}
+        {'★'.repeat(Math.min(progress.stars, 16))}
       </div>
     </div>
   )

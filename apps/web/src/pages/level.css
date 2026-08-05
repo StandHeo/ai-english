@@ -8,6 +8,33 @@
   align-items: center;
   justify-content: flex-end;
   padding: 24px 16px 40px;
+  overflow: hidden;
+}
+
+.scene-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  background: #1a1a1a;
+}
+
+.video-skip {
+  position: absolute;
+  right: 16px;
+  top: 72px;
+  width: 72px;
+  height: 72px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M6 6h2v12H6zm3.5 6 8.5 6V6z'/%3E%3C/svg%3E")
+    center/36px no-repeat;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  z-index: 3;
 }
 
 .npc {
@@ -21,6 +48,7 @@
   border: 4px solid #fff;
   background: #fff;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+  z-index: 2;
 }
 
 .focus-item {
@@ -32,6 +60,7 @@
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
   margin-bottom: 28px;
   background: #fff8ee;
+  z-index: 2;
 }
 
 .mic-btn {
@@ -44,6 +73,7 @@
     center/42px no-repeat;
   box-shadow: 0 10px 24px rgba(180, 40, 30, 0.35);
   touch-action: none;
+  z-index: 2;
 }
 
 .mic-btn.hot {

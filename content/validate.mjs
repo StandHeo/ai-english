@@ -42,8 +42,15 @@ for (const id of pack.levels) {
     }
   })
   if (!level.reward?.sticker) fail(`${id}: 缺少 reward.sticker`)
+  if (level.scene?.video_max_seconds != null) {
+    const sec = level.scene.video_max_seconds
+    if (typeof sec !== 'number' || sec < 1 || sec > 30) {
+      fail(`${id}: scene.video_max_seconds 应在 1–30`)
+    }
+  }
   const assetRefs = [
     level.scene?.image,
+    level.scene?.video,
     level.reward?.stickerImage,
     ...(level.beats || []).flatMap((beat) => [
       beat.show,

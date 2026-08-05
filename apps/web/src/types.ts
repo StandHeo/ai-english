@@ -26,6 +26,8 @@ export type LevelScript = {
     setting: string
     image: string
     character: string
+    video?: string
+    video_max_seconds?: number
   }
   beats: Beat[]
   reward: {

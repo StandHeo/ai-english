@@ -7,8 +7,8 @@
 ```
 apps/web          # React + Vite 儿童/家长端
 apps/api          # Express：ASR/TTS 代理与期望词匹配
-content/levels    # 关卡 JSON 脚本 + pack（水果森林 8 关）
-content/assets    # 角色/水果/场景图片
+content/levels    # 关卡 JSON 脚本 + pack（水果森林含家庭骑车关）
+content/assets    # 角色/水果/场景图片与家庭视频
 openspec/         # 产品规格与变更
 ```
 
@@ -16,7 +16,9 @@ openspec/         # 产品规格与变更
 
 见 OpenSpec 文档：`openspec/changes/kids-story-oral-english-mvp/content/fruit-forest-story.md`
 
-1. 苹果园 apple → 2. 香蕉林 banana → 3. 橘子坡 orange → 4. 葡萄架 grapes → 5. 草莓田 strawberry → 6. 西瓜田 watermelon → 7. 梨树园 pear → 8. 野餐复习
+1. 苹果园 apple → 2. 香蕉林 banana → 3. 橘子坡 orange → 4. 葡萄架 grapes → 5. 草莓田 strawberry → 6. 西瓜田 watermelon → 7. 梨树园 pear → 8. 骑车小路 bike → 9. 野餐复习
+
+> 若本地进度是在加入骑车关之前通关的，地图解锁顺序可能错位；可在浏览器清除本站 `localStorage` 后重玩。
 
 ## 本地运行
 

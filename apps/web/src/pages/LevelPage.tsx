@@ -8,6 +8,7 @@ import type { LevelScript, ProgressState } from '../types'
 import './level.css'
 
 const MAX_RETRIES = 2
+const DEFAULT_VIDEO_SECONDS = 5
 
 type Props = {
   progress: ProgressState
@@ -24,6 +25,9 @@ export function LevelPage({ onProgress }: Props) {
   const [busy, setBusy] = useState(false)
   const [showDevType, setShowDevType] = useState(false)
   const [devText, setDevText] = useState('')
+  const [sceneReady, setSceneReady] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
   const { recording, start, stop } = usePressToTalk()
@@ -35,8 +39,55 @@ export function LevelPage({ onProgress }: Props) {
   useEffect(() => {
     setBeatIndex(0)
     setRetries(0)
-    loadLevel(levelId).then(setLevel).catch(() => navigate('/'))
+    setSceneReady(false)
+    setVideoPlaying(false)
+    startedAt.current = Date.now()
+    loadLevel(levelId)
+      .then((script) => {
+        setLevel(script)
+        if (!script.scene.video) setSceneReady(true)
+      })
+      .catch(() => navigate('/'))
   }, [levelId, navigate])
+
+  const freezeVideo = useCallback(() => {
+    const el = videoRef.current
+    if (el) {
+      el.pause()
+    }
+    setVideoPlaying(false)
+    setSceneReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!level?.scene.video || sceneReady) return
+    const el = videoRef.current
+    if (!el) return
+
+    let cancelled = false
+    let timer: number | undefined
+    const maxSec = level.scene.video_max_seconds ?? DEFAULT_VIDEO_SECONDS
+
+    const startPlayback = async () => {
+      setVideoPlaying(true)
+      try {
+        el.currentTime = 0
+        await el.play()
+      } catch {
+        if (!cancelled) freezeVideo()
+        return
+      }
+      timer = window.setTimeout(() => {
+        if (!cancelled) freezeVideo()
+      }, maxSec * 1000)
+    }
+
+    void startPlayback()
+    return () => {
+      cancelled = true
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [freezeVideo, level, sceneReady])
 
   const persistPlayTime = useCallback(() => {
     const seconds = (Date.now() - startedAt.current) / 1000
@@ -78,7 +129,7 @@ export function LevelPage({ onProgress }: Props) {
   const beat = level?.beats[beatIndex]
 
   useEffect(() => {
-    if (!beat || !level) return
+    if (!beat || !level || !sceneReady) return
     let cancelled = false
     let timer: number | undefined
     ;(async () => {
@@ -101,7 +152,7 @@ export function LevelPage({ onProgress }: Props) {
       if (timer) window.clearTimeout(timer)
       window.speechSynthesis?.cancel()
     }
-  }, [advance, beat, level])
+  }, [advance, beat, level, sceneReady])
 
   async function onOralResult(matched: boolean) {
     if (matched) {
@@ -154,13 +205,33 @@ export function LevelPage({ onProgress }: Props) {
     await advance()
   }
 
-  if (!level || !beat) return <div className="screen loading-dot" />
+  if (!level) return <div className="screen loading-dot" />
+  if (sceneReady && !beat) return <div className="screen loading-dot" />
+
+  const hasVideo = Boolean(level.scene.video)
 
   return (
     <div
       className="level-screen"
-      style={{ backgroundImage: `url(${assetUrl(level.scene.image)})` }}
+      style={
+        hasVideo
+          ? undefined
+          : { backgroundImage: `url(${assetUrl(level.scene.image)})` }
+      }
     >
+      {hasVideo && (
+        <video
+          ref={videoRef}
+          className="scene-video"
+          src={assetUrl(level.scene.video!)}
+          playsInline
+          muted
+          preload="auto"
+          poster={assetUrl(level.scene.image)}
+          onEnded={freezeVideo}
+        />
+      )}
+
       <button
         className="exit-btn"
         onClick={() => {
@@ -170,49 +241,62 @@ export function LevelPage({ onProgress }: Props) {
         aria-label="exit"
       />
 
-      <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
-      {beat.show && <img className="focus-item" src={assetUrl(beat.show)} alt="" />}
-
-      {phase === 'listen' && (
+      {videoPlaying && (
         <button
-          className={`mic-btn ${recording ? 'hot' : ''}`}
-          disabled={busy}
-          onPointerDown={async (e) => {
-            e.preventDefault()
-            if (busy) return
-            try {
-              await start()
-            } catch {
-              setShowDevType(true)
-            }
-          }}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+          className="video-skip"
+          type="button"
+          aria-label="skip"
+          onClick={freezeVideo}
         />
       )}
 
-      {phase === 'fallback' && beat.fallback?.type === 'picture_choice' && (
-        <div className="choice-row">
-          {beat.fallback.options.map((opt) => (
-            <button key={opt.id} className="choice-tile" onClick={() => onPick(opt.correct)}>
-              <img src={assetUrl(opt.image)} alt="" />
-            </button>
-          ))}
-        </div>
-      )}
+      {sceneReady && (
+        <>
+          <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
+          {beat?.show && <img className="focus-item" src={assetUrl(beat.show)} alt="" />}
 
-      {phase === 'celebrate' && <div className="burst" />}
+          {phase === 'listen' && (
+            <button
+              className={`mic-btn ${recording ? 'hot' : ''}`}
+              disabled={busy}
+              onPointerDown={async (e) => {
+                e.preventDefault()
+                if (busy) return
+                try {
+                  await start()
+                } catch {
+                  setShowDevType(true)
+                }
+              }}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+            />
+          )}
 
-      <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
-        ·
-      </button>
-      {showDevType && phase === 'listen' && (
-        <div className="dev-type">
-          <input value={devText} onChange={(e) => setDevText(e.target.value)} placeholder="apple" />
-          <button type="button" onClick={handleDevSubmit}>
-            OK
+          {phase === 'fallback' && beat?.fallback?.type === 'picture_choice' && (
+            <div className="choice-row">
+              {beat.fallback.options.map((opt) => (
+                <button key={opt.id} className="choice-tile" onClick={() => onPick(opt.correct)}>
+                  <img src={assetUrl(opt.image)} alt="" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {phase === 'celebrate' && <div className="burst" />}
+
+          <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
+            ·
           </button>
-        </div>
+          {showDevType && phase === 'listen' && (
+            <div className="dev-type">
+              <input value={devText} onChange={(e) => setDevText(e.target.value)} placeholder="bike" />
+              <button type="button" onClick={handleDevSubmit}>
+                OK
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -1,0 +1,60 @@
+{
+  "id": "fruit-09-bike",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Bike Path",
+  "target_words": ["bike"],
+  "scene": {
+    "setting": "A sunny bike path beside the fruit forest",
+    "image": "assets/scenes/bike-path.png",
+    "character": "bunny",
+    "video": "assets/videos/tudouqiche.mp4",
+    "video_max_seconds": 5
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/bike.png",
+      "npc_say": "Look! A bike!",
+      "hint_say": "Bike."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "What's this?",
+      "expect": ["bike", "a bike"],
+      "hint_say": "Bike. Can you say bike?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "bike", "image": "assets/items/bike.png", "correct": true },
+          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "Say bike!",
+      "expect": ["bike", "a bike"],
+      "hint_say": "Bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "bike", "image": "assets/items/bike.png", "correct": true },
+          { "id": "pear", "image": "assets/items/pear.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/rider-kid.png",
+      "npc_say": "Yay! A bike!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-rider-kid",
+    "stickerImage": "assets/items/rider-kid.png",
+    "stars": 1
+  }
+}
