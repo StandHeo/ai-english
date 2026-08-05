@@ -1,0 +1,58 @@
+{
+  "id": "fruit-06-strawberry",
+  "approved": true,
+  "theme": "fruits",
+  "title": "Strawberry Field",
+  "target_words": ["strawberry"],
+  "scene": {
+    "setting": "A sunny strawberry field",
+    "image": "assets/scenes/strawberry-field.svg",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/strawberry.svg",
+      "npc_say": "Look! A strawberry!",
+      "hint_say": "Strawberry."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/strawberry.svg",
+      "npc_say": "What's this?",
+      "expect": ["strawberry", "a strawberry"],
+      "hint_say": "Strawberry. Can you say strawberry?",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "strawberry", "image": "assets/items/strawberry.svg", "correct": true },
+          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/strawberry.svg",
+      "npc_say": "Say strawberry!",
+      "expect": ["strawberry", "a strawberry"],
+      "hint_say": "Strawberry!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "strawberry", "image": "assets/items/strawberry.svg", "correct": true },
+          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/strawberry.svg",
+      "npc_say": "Yay! A strawberry!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-strawberry",
+    "stickerImage": "assets/items/strawberry.svg",
+    "stars": 1
+  }
+}
