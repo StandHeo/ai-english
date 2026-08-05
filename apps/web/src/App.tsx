@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { loadProgress } from './progress/store'
 import type { ProgressState } from './types'
+import { HomePage } from './pages/HomePage'
 import { MapPage } from './pages/MapPage'
 import { LevelPage } from './pages/LevelPage'
 import { StickersPage } from './pages/StickersPage'
@@ -14,7 +15,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <Routes>
-        <Route path="/" element={<MapPage progress={progress} onProgress={setProgress} />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/map/:packId" element={<MapPage progress={progress} />} />
         <Route
           path="/level/:levelId"
           element={<LevelPage progress={progress} onProgress={setProgress} />}

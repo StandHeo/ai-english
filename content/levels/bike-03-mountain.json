@@ -1,0 +1,84 @@
+{
+  "id": "bike-03-mountain",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Mountain Trail",
+  "target_words": [
+    "mountain bike"
+  ],
+  "scene": {
+    "setting": "A green mountain bike trail",
+    "image": "assets/scenes/mountain-trail.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/mountain-bike.png",
+      "npc_say": "Look! A mountain bike!",
+      "hint_say": "mountain bike."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/mountain-bike.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "mountain bike",
+        "a mountain bike",
+        "mountain"
+      ],
+      "hint_say": "Say mountain bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/mountain-bike.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/road-bike.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/mountain-bike.png",
+      "npc_say": "Say mountain bike!",
+      "expect": [
+        "mountain bike",
+        "a mountain bike",
+        "mountain"
+      ],
+      "hint_say": "mountain bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/mountain-bike.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/mountain-bike.png",
+      "npc_say": "Yay! mountain bike!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-mountain-bike",
+    "stickerImage": "assets/items/mountain-bike.png",
+    "stars": 1
+  }
+}

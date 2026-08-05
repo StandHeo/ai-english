@@ -1,0 +1,84 @@
+{
+  "id": "bike-04-road",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Road Lane",
+  "target_words": [
+    "road bike"
+  ],
+  "scene": {
+    "setting": "A smooth road bike lane",
+    "image": "assets/scenes/road-lane.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/road-bike.png",
+      "npc_say": "Look! A road bike!",
+      "hint_say": "road bike."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/road-bike.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "road bike",
+        "a road bike",
+        "road"
+      ],
+      "hint_say": "Say road bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/road-bike.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/mountain-bike.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/road-bike.png",
+      "npc_say": "Say road bike!",
+      "expect": [
+        "road bike",
+        "a road bike",
+        "road"
+      ],
+      "hint_say": "road bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/road-bike.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/road-bike.png",
+      "npc_say": "Yay! road bike!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-road-bike",
+    "stickerImage": "assets/items/road-bike.png",
+    "stars": 1
+  }
+}

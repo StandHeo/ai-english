@@ -1,0 +1,82 @@
+{
+  "id": "bike-01-bike",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Bike Garage",
+  "target_words": [
+    "bike"
+  ],
+  "scene": {
+    "setting": "A sunny bike garage",
+    "image": "assets/scenes/bike-garage.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/bike.png",
+      "npc_say": "Look! A bike!",
+      "hint_say": "bike."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "bike",
+        "a bike"
+      ],
+      "hint_say": "Say bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/tricycle.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "Say bike!",
+      "expect": [
+        "bike",
+        "a bike"
+      ],
+      "hint_say": "bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/bike.png",
+      "npc_say": "Yay! bike!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-bike",
+    "stickerImage": "assets/items/bike.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "id": "bike-05-helmet",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Helmet House",
+  "target_words": [
+    "helmet"
+  ],
+  "scene": {
+    "setting": "A helmet house shop",
+    "image": "assets/scenes/helmet-house.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/helmet.png",
+      "npc_say": "Look! A helmet!",
+      "hint_say": "helmet."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/helmet.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "helmet",
+        "a helmet"
+      ],
+      "hint_say": "Say helmet!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/helmet.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/bell.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/helmet.png",
+      "npc_say": "Say helmet!",
+      "expect": [
+        "helmet",
+        "a helmet"
+      ],
+      "hint_say": "helmet!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/helmet.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/helmet.png",
+      "npc_say": "Yay! helmet!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-helmet",
+    "stickerImage": "assets/items/helmet.png",
+    "stars": 1
+  }
+}

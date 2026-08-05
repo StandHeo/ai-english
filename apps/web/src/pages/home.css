@@ -1,0 +1,77 @@
+.home-screen {
+  min-height: 100vh;
+  padding: 20px 16px 40px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 210, 120, 0.45), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(120, 200, 255, 0.35), transparent 40%),
+    linear-gradient(160deg, #fff6e8 0%, #e8f6ff 55%, #f3ffe8 100%);
+  position: relative;
+}
+
+.home-bunny {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.home-actions {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.home-actions .icon-btn {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 28px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.theme-grid {
+  margin-top: 10vh;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: center;
+}
+
+.theme-card {
+  width: min(78vw, 320px);
+  aspect-ratio: 1.15;
+  border: 0;
+  border-radius: 32px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 28px rgba(40, 30, 20, 0.16);
+  animation: float-in 0.6s ease both;
+}
+
+.theme-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.theme-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 22px;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

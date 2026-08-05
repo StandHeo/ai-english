@@ -4,6 +4,7 @@
   "theme": "fruits",
   "character": "bunny",
   "mapImage": "assets/scenes/map.png",
+  "homeImage": "assets/items/home-fruit.png",
   "levels": [
     "fruit-01-apple",
     "fruit-02-banana",
@@ -12,7 +13,6 @@
     "fruit-05-strawberry",
     "fruit-06-watermelon",
     "fruit-07-pear",
-    "fruit-09-bike",
     "fruit-08-picnic"
   ]
 }

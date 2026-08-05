@@ -43,13 +43,19 @@ export type ContentPack = {
   theme: string
   character: string
   mapImage: string
+  homeImage?: string
   levels: string[]
 }
 
-export type ProgressState = {
+export type PackProgress = {
   completed: string[]
   unlocked: string[]
   stickers: string[]
+}
+
+export type ProgressState = {
+  version: 2
+  packs: Record<string, PackProgress>
   stars: number
   dailyLimitMinutes: number | null
   playSecondsByDate: Record<string, number>

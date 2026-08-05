@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { assetUrl, loadApprovedLevels, loadLevel } from '../content/loader'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  assetUrl,
+  findPackIdForLevel,
+  loadApprovedLevels,
+  loadLevel,
+} from '../content/loader'
 import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
 import { requestTts, submitSpeech } from '../voice/client'
 import { usePressToTalk } from '../voice/usePressToTalk'
@@ -17,8 +22,10 @@ type Props = {
 
 export function LevelPage({ onProgress }: Props) {
   const { levelId = '' } = useParams()
+  const [search] = useSearchParams()
   const navigate = useNavigate()
   const [level, setLevel] = useState<LevelScript | null>(null)
+  const [packId, setPackId] = useState(search.get('pack') || '')
   const [beatIndex, setBeatIndex] = useState(0)
   const [phase, setPhase] = useState<'speak' | 'listen' | 'fallback' | 'celebrate'>('speak')
   const [retries, setRetries] = useState(0)
@@ -32,6 +39,10 @@ export function LevelPage({ onProgress }: Props) {
   const beatIndexRef = useRef(0)
   const { recording, start, stop } = usePressToTalk()
 
+  const goMap = useCallback(() => {
+    navigate(packId ? `/map/${packId}` : '/')
+  }, [navigate, packId])
+
   useEffect(() => {
     beatIndexRef.current = beatIndex
   }, [beatIndex])
@@ -42,13 +53,18 @@ export function LevelPage({ onProgress }: Props) {
     setSceneReady(false)
     setVideoPlaying(false)
     startedAt.current = Date.now()
-    loadLevel(levelId)
-      .then((script) => {
+    const hinted = search.get('pack')
+    Promise.all([
+      loadLevel(levelId),
+      hinted ? Promise.resolve(hinted) : findPackIdForLevel(levelId),
+    ])
+      .then(([script, pid]) => {
         setLevel(script)
+        setPackId(pid)
         if (!script.scene.video) setSceneReady(true)
       })
       .catch(() => navigate('/'))
-  }, [levelId, navigate])
+  }, [levelId, navigate, search])
 
   const freezeVideo = useCallback(() => {
     const el = videoRef.current
@@ -97,12 +113,14 @@ export function LevelPage({ onProgress }: Props) {
 
   const finishLevel = useCallback(
     async (current: LevelScript) => {
+      if (!packId) return
       setPhase('celebrate')
-      const all = await loadApprovedLevels()
+      const all = await loadApprovedLevels(packId)
       const idx = all.findIndex((l) => l.id === current.id)
       const nextId = all[idx + 1]?.id
       const next = completeLevel(
         loadProgress(),
+        packId,
         current.id,
         nextId,
         current.reward.sticker,
@@ -111,9 +129,9 @@ export function LevelPage({ onProgress }: Props) {
       onProgress(next)
       persistPlayTime()
       await requestTts('Yay!')
-      window.setTimeout(() => navigate('/'), 1200)
+      window.setTimeout(() => navigate(`/map/${packId}`), 1200)
     },
-    [navigate, onProgress, persistPlayTime],
+    [navigate, onProgress, packId, persistPlayTime],
   )
 
   const advance = useCallback(async () => {
@@ -236,7 +254,7 @@ export function LevelPage({ onProgress }: Props) {
         className="exit-btn"
         onClick={() => {
           persistPlayTime()
-          navigate('/')
+          goMap()
         }}
         aria-label="exit"
       />

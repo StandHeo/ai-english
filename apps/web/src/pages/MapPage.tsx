@@ -1,37 +1,39 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { assetUrl, loadApprovedLevels, loadPack } from '../content/loader'
-import {
-  isDailyLimitReached,
-} from '../progress/store'
+import { getPackProgress, isDailyLimitReached } from '../progress/store'
 import type { ContentPack, LevelScript, ProgressState } from '../types'
 import './map.css'
 
 type Props = {
   progress: ProgressState
-  onProgress: (p: ProgressState) => void
 }
 
 export function MapPage({ progress }: Props) {
+  const { packId = 'fruit-forest' } = useParams()
   const [pack, setPack] = useState<ContentPack | null>(null)
   const [levels, setLevels] = useState<LevelScript[]>([])
   const navigate = useNavigate()
   const limited = isDailyLimitReached(progress)
+  const packProgress = getPackProgress(progress, packId)
 
   useEffect(() => {
-    Promise.all([loadPack(), loadApprovedLevels()]).then(([p, ls]) => {
-      setPack(p)
-      setLevels(ls)
-    })
-  }, [])
+    setPack(null)
+    Promise.all([loadPack(packId), loadApprovedLevels(packId)])
+      .then(([p, ls]) => {
+        setPack(p)
+        setLevels(ls)
+      })
+      .catch(() => navigate('/'))
+  }, [navigate, packId])
 
   const nodes = useMemo(() => {
     return levels.map((level, index) => {
-      const unlocked = progress.unlocked.includes(level.id)
-      const completed = progress.completed.includes(level.id)
+      const unlocked = packProgress.unlocked.includes(level.id)
+      const completed = packProgress.completed.includes(level.id)
       return { level, index, unlocked, completed }
     })
-  }, [levels, progress])
+  }, [levels, packProgress])
 
   if (!pack) return <div className="screen loading-dot" />
 
@@ -41,6 +43,7 @@ export function MapPage({ progress }: Props) {
       style={{ backgroundImage: `url(${assetUrl(pack.mapImage)})` }}
     >
       <header className="map-top">
+        <button className="exit-btn" onClick={() => navigate('/')} aria-label="home" />
         <img className="bunny-badge" src={assetUrl('assets/characters/bunny.png')} alt="" />
         <div className="map-actions">
           <button className="icon-btn" onClick={() => navigate('/stickers')} aria-label="stickers">
@@ -60,17 +63,15 @@ export function MapPage({ progress }: Props) {
             key={level.id}
             className={`level-node ${unlocked ? 'open' : 'locked'} ${completed ? 'done' : ''}`}
             disabled={!unlocked || limited}
-            onClick={() => unlocked && !limited && navigate(`/level/${level.id}`)}
+            onClick={() =>
+              unlocked && !limited && navigate(`/level/${level.id}?pack=${packId}`)
+            }
           >
             <img src={assetUrl(level.reward.stickerImage)} alt="" />
             {!unlocked && <span className="lock" />}
           </button>
         ))}
       </div>
-
-      <Link className="sr-only" to="/parent">
-        parent
-      </Link>
     </div>
   )
 }

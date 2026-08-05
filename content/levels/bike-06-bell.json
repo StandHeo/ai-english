@@ -1,0 +1,82 @@
+{
+  "id": "bike-06-bell",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Bell Bridge",
+  "target_words": [
+    "bell"
+  ],
+  "scene": {
+    "setting": "A bridge with bike bells",
+    "image": "assets/scenes/bell-bridge.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/bell.png",
+      "npc_say": "Look! A bell!",
+      "hint_say": "bell."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bell.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "bell",
+        "a bell"
+      ],
+      "hint_say": "Say bell!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/bell.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bell.png",
+      "npc_say": "Say bell!",
+      "expect": [
+        "bell",
+        "a bell"
+      ],
+      "hint_say": "bell!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/bell.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/bell.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/bell.png",
+      "npc_say": "Yay! bell!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-bell",
+    "stickerImage": "assets/items/bell.png",
+    "stars": 1
+  }
+}

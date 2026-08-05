@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)))
 const levelsDir = path.join(root, 'levels')
-const pack = JSON.parse(fs.readFileSync(path.join(levelsDir, 'pack.json'), 'utf8'))
+const packsIndex = JSON.parse(fs.readFileSync(path.join(levelsDir, 'packs.json'), 'utf8'))
 
 let errors = 0
 
@@ -18,11 +18,11 @@ function ok(msg) {
   console.log(`✓ ${msg}`)
 }
 
-for (const id of pack.levels) {
+function validateLevel(id) {
   const file = path.join(levelsDir, `${id}.json`)
   if (!fs.existsSync(file)) {
     fail(`缺少关卡文件 ${id}.json`)
-    continue
+    return
   }
   const level = JSON.parse(fs.readFileSync(file, 'utf8'))
   if (level.id !== id) fail(`${id}: id 字段不匹配`)
@@ -63,8 +63,30 @@ for (const id of pack.levels) {
   ok(`${id} 校验通过`)
 }
 
+if (!Array.isArray(packsIndex.packs) || packsIndex.packs.length === 0) {
+  fail('packs.json 缺少 packs 列表')
+}
+
+for (const packId of packsIndex.packs) {
+  const packFile = path.join(levelsDir, 'packs', `${packId}.json`)
+  if (!fs.existsSync(packFile)) {
+    fail(`缺少 pack 文件 packs/${packId}.json`)
+    continue
+  }
+  const pack = JSON.parse(fs.readFileSync(packFile, 'utf8'))
+  if (pack.id !== packId) fail(`${packId}: pack.id 不匹配`)
+  if (pack.mapImage && !fs.existsSync(path.join(root, pack.mapImage))) {
+    fail(`${packId}: 缺少地图 ${pack.mapImage}`)
+  }
+  if (pack.homeImage && !fs.existsSync(path.join(root, pack.homeImage))) {
+    fail(`${packId}: 缺少首页图 ${pack.homeImage}`)
+  }
+  ok(`pack ${packId} 索引通过`)
+  for (const id of pack.levels) validateLevel(id)
+}
+
 if (errors > 0) {
   console.error(`\n校验失败：${errors} 个问题`)
   process.exit(1)
 }
-console.log('\n全部关卡校验通过')
+console.log('\n全部内容包校验通过')

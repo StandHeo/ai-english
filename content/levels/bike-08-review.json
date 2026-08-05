@@ -1,0 +1,109 @@
+{
+  "id": "bike-08-review",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Bike Party",
+  "target_words": [
+    "bike",
+    "helmet",
+    "bell"
+  ],
+  "scene": {
+    "setting": "A bike yard celebration",
+    "image": "assets/scenes/bike-review.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Hello! Bike party!",
+      "hint_say": "Hello!"
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "bike",
+        "a bike"
+      ],
+      "hint_say": "Bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "bike",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "tricycle",
+            "image": "assets/items/tricycle.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/helmet.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "helmet",
+        "a helmet"
+      ],
+      "hint_say": "Helmet!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "helmet",
+            "image": "assets/items/helmet.png",
+            "correct": true
+          },
+          {
+            "id": "bell",
+            "image": "assets/items/bell.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bell.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "bell",
+        "a bell"
+      ],
+      "hint_say": "Bell!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "bell",
+            "image": "assets/items/bell.png",
+            "correct": true
+          },
+          {
+            "id": "bike",
+            "image": "assets/items/bike.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/rider-kid.png",
+      "npc_say": "Yay! Great job!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-bike-party",
+    "stickerImage": "assets/scenes/bike-review.png",
+    "stars": 2
+  }
+}

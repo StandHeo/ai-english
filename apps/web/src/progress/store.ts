@@ -1,21 +1,79 @@
-import type { ProgressState } from '../types'
+import type { PackProgress, ProgressState } from '../types'
 
-const KEY = 'ai-english-progress-v1'
+const KEY = 'ai-english-progress-v2'
+const LEGACY_KEY = 'ai-english-progress-v1'
+
+const FRUIT = 'fruit-forest'
+const BIKE = 'bike-world'
+
+function emptyPack(firstLevelId: string): PackProgress {
+  return { completed: [], unlocked: [firstLevelId], stickers: [] }
+}
 
 const defaultState = (): ProgressState => ({
-  completed: [],
-  unlocked: ['fruit-01-apple'],
-  stickers: [],
+  version: 2,
+  packs: {
+    [FRUIT]: emptyPack('fruit-01-apple'),
+    [BIKE]: emptyPack('bike-01-bike'),
+  },
   stars: 0,
   dailyLimitMinutes: 30,
   playSecondsByDate: {},
 })
 
+function migrateLegacy(raw: Record<string, unknown>): ProgressState {
+  const base = defaultState()
+  const completed = Array.isArray(raw.completed) ? (raw.completed as string[]) : []
+  const unlocked = Array.isArray(raw.unlocked) ? (raw.unlocked as string[]) : ['fruit-01-apple']
+  const stickers = Array.isArray(raw.stickers) ? (raw.stickers as string[]) : []
+  base.packs[FRUIT] = {
+    completed: completed.filter((id) => id.startsWith('fruit-')),
+    unlocked: unlocked.filter((id) => id.startsWith('fruit-')).length
+      ? unlocked.filter((id) => id.startsWith('fruit-'))
+      : ['fruit-01-apple'],
+    stickers,
+  }
+  // Drop fruit-09-bike from migrated unlock if present; picnic may already be unlocked
+  base.packs[FRUIT].unlocked = base.packs[FRUIT].unlocked.filter((id) => id !== 'fruit-09-bike')
+  base.packs[FRUIT].completed = base.packs[FRUIT].completed.filter((id) => id !== 'fruit-09-bike')
+  if (
+    base.packs[FRUIT].completed.includes('fruit-07-pear') &&
+    !base.packs[FRUIT].unlocked.includes('fruit-08-picnic')
+  ) {
+    base.packs[FRUIT].unlocked.push('fruit-08-picnic')
+  }
+  base.stars = typeof raw.stars === 'number' ? raw.stars : 0
+  base.dailyLimitMinutes =
+    raw.dailyLimitMinutes === null || typeof raw.dailyLimitMinutes === 'number'
+      ? (raw.dailyLimitMinutes as number | null)
+      : 30
+  base.playSecondsByDate =
+    raw.playSecondsByDate && typeof raw.playSecondsByDate === 'object'
+      ? (raw.playSecondsByDate as Record<string, number>)
+      : {}
+  return base
+}
+
 export function loadProgress(): ProgressState {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return defaultState()
-    return { ...defaultState(), ...JSON.parse(raw) }
+    const v2 = localStorage.getItem(KEY)
+    if (v2) {
+      const parsed = JSON.parse(v2) as ProgressState
+      const base = defaultState()
+      return {
+        ...base,
+        ...parsed,
+        version: 2,
+        packs: { ...base.packs, ...(parsed.packs || {}) },
+      }
+    }
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (legacy) {
+      const migrated = migrateLegacy(JSON.parse(legacy) as Record<string, unknown>)
+      saveProgress(migrated)
+      return migrated
+    }
+    return defaultState()
   } catch {
     return defaultState()
   }
@@ -23,6 +81,14 @@ export function loadProgress(): ProgressState {
 
 export function saveProgress(state: ProgressState): void {
   localStorage.setItem(KEY, JSON.stringify(state))
+}
+
+export function getPackProgress(state: ProgressState, packId: string): PackProgress {
+  return state.packs[packId] || emptyPack(packId === BIKE ? 'bike-01-bike' : 'fruit-01-apple')
+}
+
+export function allStickers(state: ProgressState): string[] {
+  return Object.values(state.packs).flatMap((p) => p.stickers)
 }
 
 function todayKey(): string {
@@ -53,26 +119,32 @@ export function addPlaySeconds(state: ProgressState, seconds: number): ProgressS
 
 export function completeLevel(
   state: ProgressState,
+  packId: string,
   levelId: string,
   nextLevelId: string | undefined,
   stickerId: string,
   stars: number,
 ): ProgressState {
-  const completed = state.completed.includes(levelId)
-    ? state.completed
-    : [...state.completed, levelId]
-  const unlocked = new Set(state.unlocked)
+  const pack = { ...getPackProgress(state, packId) }
+  const already = pack.completed.includes(levelId)
+  const completed = already ? pack.completed : [...pack.completed, levelId]
+  const unlocked = new Set(pack.unlocked)
   unlocked.add(levelId)
   if (nextLevelId) unlocked.add(nextLevelId)
-  const stickers = state.stickers.includes(stickerId)
-    ? state.stickers
-    : [...state.stickers, stickerId]
+  const stickers = pack.stickers.includes(stickerId)
+    ? pack.stickers
+    : [...pack.stickers, stickerId]
   const next: ProgressState = {
     ...state,
-    completed,
-    unlocked: [...unlocked],
-    stickers,
-    stars: state.stars + (completed ? 0 : stars),
+    packs: {
+      ...state.packs,
+      [packId]: {
+        completed,
+        unlocked: [...unlocked],
+        stickers,
+      },
+    },
+    stars: state.stars + (already ? 0 : stars),
   }
   saveProgress(next)
   return next
@@ -86,3 +158,5 @@ export function updateSettings(
   saveProgress(next)
   return next
 }
+
+export const PACK_IDS = { FRUIT, BIKE } as const

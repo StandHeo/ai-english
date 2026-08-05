@@ -12,6 +12,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.map-top .exit-btn {
+  position: relative;
+  top: 0;
+  left: 0;
+  flex-shrink: 0;
+}
+
+.map-top .bunny-badge {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .bunny-badge {

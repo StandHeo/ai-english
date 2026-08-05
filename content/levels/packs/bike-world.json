@@ -1,0 +1,18 @@
+{
+  "id": "bike-world",
+  "title": "Bike World",
+  "theme": "bikes",
+  "character": "bunny",
+  "mapImage": "assets/scenes/bike-map.png",
+  "homeImage": "assets/items/home-bike.png",
+  "levels": [
+    "bike-01-bike",
+    "bike-02-tricycle",
+    "bike-03-mountain",
+    "bike-04-road",
+    "bike-05-helmet",
+    "bike-06-bell",
+    "bike-07-go",
+    "bike-08-review"
+  ]
+}

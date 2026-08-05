@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { listPackIds, loadPack } from '../content/loader'
 import {
+  getPackProgress,
   getTodayPlaySeconds,
   loadProgress,
   updateSettings,
 } from '../progress/store'
-import type { ProgressState } from '../types'
+import type { ContentPack, ProgressState } from '../types'
 import './parent.css'
 
 type Props = {
@@ -17,12 +19,20 @@ type Props = {
 export function ParentPage({ progress, onProgress }: Props) {
   const navigate = useNavigate()
   const [gated, setGated] = useState(false)
+  const [packs, setPacks] = useState<ContentPack[]>([])
   const [a] = useState(() => 2 + Math.floor(Math.random() * 5))
   const [b] = useState(() => 2 + Math.floor(Math.random() * 5))
   const [answer, setAnswer] = useState('')
   const [limit, setLimit] = useState(
     progress.dailyLimitMinutes == null ? '' : String(progress.dailyLimitMinutes),
   )
+
+  useEffect(() => {
+    listPackIds()
+      .then((ids) => Promise.all(ids.map(loadPack)))
+      .then(setPacks)
+      .catch(() => setPacks([]))
+  }, [])
 
   const todayMin = useMemo(
     () => Math.round(getTodayPlaySeconds(progress) / 60),
@@ -68,19 +78,19 @@ export function ParentPage({ progress, onProgress }: Props) {
         <h2>今日游玩</h2>
         <p>约 {todayMin} 分钟</p>
       </section>
+      {packs.map((pack) => {
+        const pp = getPackProgress(progress, pack.id)
+        return (
+          <section key={pack.id}>
+            <h2>{pack.id === 'bike-world' ? '自行车世界' : '水果森林'}</h2>
+            <p>已通关：{pp.completed.length ? pp.completed.join('、') : '暂无'}</p>
+            <p>贴纸：{pp.stickers.length ? pp.stickers.join('、') : '暂无'}</p>
+          </section>
+        )
+      })}
       <section>
-        <h2>已完成关卡</h2>
-        <ul>
-          {progress.completed.length === 0 && <li>暂无</li>}
-          {progress.completed.map((id) => (
-            <li key={id}>{id}</li>
-          ))}
-        </ul>
-      </section>
-      <section>
-        <h2>贴纸</h2>
-        <p>{progress.stickers.join('、') || '暂无'}</p>
-        <p>星星：{progress.stars}</p>
+        <h2>星星合计</h2>
+        <p>{progress.stars}</p>
       </section>
       <section>
         <h2>每日时长上限（分钟）</h2>
@@ -91,7 +101,7 @@ export function ParentPage({ progress, onProgress }: Props) {
         </button>
       </section>
       <button type="button" onClick={() => navigate('/')}>
-        返回地图
+        返回首页
       </button>
     </div>
   )

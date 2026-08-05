@@ -1,0 +1,86 @@
+{
+  "id": "bike-02-tricycle",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Tricycle Shed",
+  "target_words": [
+    "tricycle"
+  ],
+  "scene": {
+    "setting": "A friendly tricycle shed",
+    "image": "assets/scenes/tricycle-shed.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/tricycle.png",
+      "npc_say": "Look! A tricycle!",
+      "hint_say": "tricycle."
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/tricycle.png",
+      "npc_say": "What's this?",
+      "expect": [
+        "tricycle",
+        "a tricycle",
+        "trike",
+        "a trike"
+      ],
+      "hint_say": "Say tricycle!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/tricycle.png",
+            "correct": true
+          },
+          {
+            "id": "no",
+            "image": "assets/items/bike.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/tricycle.png",
+      "npc_say": "Say tricycle!",
+      "expect": [
+        "tricycle",
+        "a tricycle",
+        "trike",
+        "a trike"
+      ],
+      "hint_say": "tricycle!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "ok",
+            "image": "assets/items/tricycle.png",
+            "correct": true
+          },
+          {
+            "id": "no2",
+            "image": "assets/items/helmet.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/tricycle.png",
+      "npc_say": "Yay! tricycle!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-tricycle",
+    "stickerImage": "assets/items/tricycle.png",
+    "stars": 1
+  }
+}
