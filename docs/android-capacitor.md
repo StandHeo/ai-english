@@ -1,4 +1,8 @@
-# Android（Capacitor）构建说明
+# Android（Capacitor）工程笔记
+
+> **不会安卓开发、只想在手机上玩：** 请先看  
+> **[`android-phone-guide.md`](./android-phone-guide.md)**（浏览器直连电脑，最简单）。  
+> 下文给「要打 APK / 用 Android Studio」时用。
 
 ## 前提
 
@@ -36,5 +40,5 @@ MVP 继续使用 **Capacitor + Web**，以匹配后端/HTML 技术栈、缩短�
 
 ## 未在本环境完成的项
 
-- 本机若未安装 Android SDK，无法在此直接产出 APK；请按上文在本地 Android Studio 构建。
+- 云端构建环境若未装 Android SDK，无法在此直接产出 APK；请在本地 Android Studio 构建。
 - 真机儿童试玩与 ASR 词表微调需在有孩子的环境完成。

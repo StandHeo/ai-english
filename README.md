@@ -57,9 +57,17 @@ npm run dev
 node content/validate.mjs
 ```
 
+## 在安卓手机上玩
+
+**不会安卓开发也没关系**，推荐用手机浏览器打开电脑上的页面：
+
+→ 详见 **[`docs/android-phone-guide.md`](docs/android-phone-guide.md)**
+
+（可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
+
 ## Capacitor / Android APK
 
-详见 [`docs/android-capacitor.md`](docs/android-capacitor.md)。
+偏工程向的简要步骤见 [`docs/android-capacitor.md`](docs/android-capacitor.md)。零基础请先看手机运行指南。
 
 ## OpenSpec
 
