@@ -12,7 +12,6 @@ import {
   todayKey,
   upsertStory,
 } from '../family/store'
-import { isMicAllowedByBrowser } from '../voice/secureContext'
 import { usePressToTalk } from '../voice/usePressToTalk'
 import './family-studio.css'
 
