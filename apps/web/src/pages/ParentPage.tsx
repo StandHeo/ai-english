@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listPackIds, loadPack } from '../content/loader'
+import { listDaysWithLevels } from '../family/store'
 import {
   getPackProgress,
   getTodayPlaySeconds,
@@ -75,6 +76,27 @@ export function ParentPage({ progress, onProgress }: Props) {
   return (
     <div className="parent-screen">
       <h1>家长中心</h1>
+      <section>
+        <h2>家庭日记关卡</h2>
+        <p>和孩子聊今天，生成当晚可玩的英语小关</p>
+        <button type="button" onClick={() => navigate('/family/studio')}>
+          做今日关卡
+        </button>
+        <button type="button" className="linkish" onClick={() => navigate('/family')}>
+          查看家庭日历
+        </button>
+        <ul className="family-day-list">
+          {listDaysWithLevels()
+            .slice(0, 7)
+            .map((d) => (
+              <li key={d.date}>
+                {d.date}
+                {d.completed ? ' · 已通关' : ' · 未通关'}
+                {d.level ? ` · ${d.level.title}` : ''}
+              </li>
+            ))}
+        </ul>
+      </section>
       <section>
         <h2>今日游玩</h2>
         <p>约 {todayMin} 分钟</p>

@@ -43,8 +43,26 @@
   color: #fff;
 }
 
+.family-day-list {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  color: #5a4a3a;
+}
+  border-radius: 12px;
+  background: #3d7ea6;
+  color: #fff;
+}
+
 .parent-screen .linkish {
   background: transparent;
   color: #3d7ea6;
   text-decoration: underline;
+}
+
+.family-day-list {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.92rem;
+  color: #5a4a3a;
 }

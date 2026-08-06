@@ -1,0 +1,92 @@
+.family-studio {
+  min-height: 100vh;
+  padding: 16px 16px 40px;
+  background: linear-gradient(165deg, #fff8ef, #eef6ff);
+  color: #2c2418;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.family-studio h1 {
+  font-size: 1.4rem;
+  margin: 8px 0 4px;
+}
+
+.family-studio h2 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+
+.family-studio section {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  padding: 14px;
+  margin: 12px 0;
+  box-shadow: 0 8px 18px rgba(40, 30, 20, 0.06);
+}
+
+.family-studio textarea,
+.family-studio input[type='password'],
+.family-studio input:not([type='file']) {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.family-studio .row,
+.family-studio .append-row,
+.family-studio .footer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.family-studio button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #3d7ea6;
+  color: #fff;
+  font-size: 15px;
+}
+
+.family-studio button.primary {
+  width: 100%;
+  background: #d4553a;
+  font-size: 17px;
+  padding: 14px;
+}
+
+.family-studio button.ghost,
+.family-studio button.linkish {
+  background: transparent;
+  color: #3d7ea6;
+}
+
+.family-studio .mic-mini.hot {
+  background: #c43b2a;
+}
+
+.family-studio .muted {
+  color: #7a6a58;
+  font-size: 0.9rem;
+}
+
+.family-studio .status {
+  background: #fff3d6;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.family-studio .ok {
+  color: #2f6b3a;
+}
+
+.family-studio ul {
+  margin: 0 0 10px;
+  padding-left: 1.2rem;
+}

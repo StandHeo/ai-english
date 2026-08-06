@@ -7,6 +7,9 @@ import { MapPage } from './pages/MapPage'
 import { LevelPage } from './pages/LevelPage'
 import { StickersPage } from './pages/StickersPage'
 import { ParentPage } from './pages/ParentPage'
+import { FamilyStudioPage } from './pages/FamilyStudioPage'
+import { FamilyCalendarPage } from './pages/FamilyCalendarPage'
+import { FamilyLevelPage } from './pages/FamilyLevelPage'
 import './App.css'
 
 export default function App() {
@@ -25,6 +28,12 @@ export default function App() {
         <Route
           path="/parent"
           element={<ParentPage progress={progress} onProgress={setProgress} />}
+        />
+        <Route path="/family" element={<FamilyCalendarPage />} />
+        <Route path="/family/studio" element={<FamilyStudioPage />} />
+        <Route
+          path="/family/:date/play"
+          element={<FamilyLevelPage onProgress={setProgress} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
