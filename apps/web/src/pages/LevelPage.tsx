@@ -8,8 +8,8 @@ import {
 } from '../content/loader'
 import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
 import { requestTts, submitSpeech } from '../voice/client'
-import { isMicAllowedByBrowser } from '../voice/secureContext'
-import { usePressToTalk } from '../voice/usePressToTalk'
+import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
+import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { LevelScript, ProgressState } from '../types'
 import './level.css'
 
@@ -17,7 +17,7 @@ const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
 const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
 
-type MicTip = 'insecure' | 'denied' | 'empty' | null
+type MicTip = 'insecure' | 'denied' | 'empty' | 'listening' | null
 
 type Props = {
   progress: ProgressState
@@ -44,7 +44,7 @@ export function LevelPage({ onProgress }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
-  const { recording, start, stop } = usePressToTalk()
+  const { recording, toggleListen, cancelAutoStop } = usePressToTalk()
 
   const goMap = useCallback(() => {
     navigate(packId ? `/map/${packId}` : '/')
@@ -55,7 +55,10 @@ export function LevelPage({ onProgress }: Props) {
   }, [beatIndex])
 
   useEffect(() => {
-    if (!isMicAllowedByBrowser()) setMicTip('insecure')
+    if (!isMicAllowedByBrowser() || pageProtocolHint() === 'http') {
+      setMicTip('insecure')
+      setShowDevType(true)
+    }
   }, [])
 
   useEffect(() => {
@@ -215,11 +218,14 @@ export function LevelPage({ onProgress }: Props) {
     setShowDevType(true)
   }
 
-  async function handlePointerUp() {
-    if (busy || phase !== 'listen' || !beat?.expect) return
+  const finishingRef = useRef(false)
+
+  async function handleCapture(capture: TalkCapture) {
+    if (!beat?.expect || finishingRef.current) return
+    finishingRef.current = true
     setBusy(true)
+    setMicTip(null)
     try {
-      const capture = await stop()
       if (capture.error === 'insecure') {
         openTypeFallback('insecure')
         return
@@ -243,11 +249,31 @@ export function LevelPage({ onProgress }: Props) {
       setPhase('fallback')
     } finally {
       setBusy(false)
+      finishingRef.current = false
+    }
+  }
+
+  async function handleMicTap() {
+    if (busy || phase !== 'listen' || !beat?.expect) return
+    const result = await toggleListen((capture) => {
+      void handleCapture(capture)
+    })
+    if (result === 'started') {
+      setMicTip('listening')
+      setShowDevType(false)
+      return
+    }
+    if (result === 'stopped') return
+    // 提前结束或启动失败
+    cancelAutoStop()
+    if (typeof result === 'object') {
+      await handleCapture(result)
     }
   }
 
   async function handleDevSubmit() {
     if (!beat?.expect) return
+    cancelAutoStop()
     setBusy(true)
     try {
       const result = await submitSpeech({ text: devText, expect: beat.expect })
@@ -283,12 +309,16 @@ export function LevelPage({ onProgress }: Props) {
   const hasVideo = Boolean(level.scene.video)
   const tipText =
     micTip === 'insecure'
-      ? '当前网页不是安全连接，手机浏览器不能用麦克风。请用电脑命令 npm run dev:phone，再用 https://电脑IP:5173 打开；或先在下方输入单词。'
+      ? `当前是 ${pageProtocolHint() === 'http' ? 'http' : '非安全'} 页面，手机不能开麦克风。请在电脑运行 npm run dev:phone，手机用 https://电脑IP:5173 打开（证书点继续访问）；或先在下方输入单词。`
       : micTip === 'denied'
-        ? '未获得麦克风权限。请在浏览器设置里允许麦克风，或在下方输入单词。'
-        : micTip === 'empty'
-          ? '没有听到声音。请靠近手机再说一次，或在下方输入单词（如 apple / bike）。'
-          : null
+        ? '未获得麦克风权限。请在浏览器弹窗点「允许」，或到网站设置里打开麦克风；也可在下方输入单词。'
+        : micTip === 'listening'
+          ? '正在听… 请大声说英语单词，约 3 秒后自动结束；再点一次麦克风可提前结束。'
+          : micTip === 'empty'
+            ? '没有听到声音。请再点麦克风说一次，或在下方输入单词（如 apple / bike）。'
+            : phase === 'listen' && !recording
+              ? '点一下红色麦克风，然后大声说英语～'
+              : null
 
   return (
     <div
@@ -341,7 +371,7 @@ export function LevelPage({ onProgress }: Props) {
             />
           )}
 
-          {tipText && phase === 'listen' && (
+          {tipText && (phase === 'listen' || micTip === 'insecure') && (
             <div className="mic-tip" role="status">
               {tipText}
             </div>
@@ -350,23 +380,13 @@ export function LevelPage({ onProgress }: Props) {
           {phase === 'listen' && (
             <button
               className={`mic-btn ${recording ? 'hot' : ''}`}
-              disabled={busy}
-              onPointerDown={async (e) => {
+              disabled={busy && !recording}
+              type="button"
+              aria-label={recording ? 'stop listening' : 'start listening'}
+              onClick={(e) => {
                 e.preventDefault()
-                if (busy) return
-                const early = await start()
-                if (early?.error) {
-                  openTypeFallback(
-                    early.error === 'denied'
-                      ? 'denied'
-                      : early.error === 'insecure'
-                        ? 'insecure'
-                        : 'empty',
-                  )
-                }
+                void handleMicTap()
               }}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
             />
           )}
 

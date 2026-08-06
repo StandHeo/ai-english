@@ -5,6 +5,13 @@ export function isMicAllowedByBrowser(): boolean {
   return Boolean(navigator.mediaDevices?.getUserMedia)
 }
 
+export function pageProtocolHint(): 'https' | 'http' | 'other' {
+  if (typeof window === 'undefined') return 'other'
+  if (window.location.protocol === 'https:') return 'https'
+  if (window.location.protocol === 'http:') return 'http'
+  return 'other'
+}
+
 export type BrowserSpeechRecognition = {
   lang: string
   continuous: boolean
@@ -13,9 +20,14 @@ export type BrowserSpeechRecognition = {
   start: () => void
   stop: () => void
   abort: () => void
-  onresult: ((ev: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null
+  onresult: ((ev: {
+    resultIndex: number
+    results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean; length: number }>
+  }) => void) | null
   onerror: ((ev: { error: string }) => void) | null
   onend: (() => void) | null
+  onaudiostart: (() => void) | null
+  onspeechstart: (() => void) | null
 }
 
 export function getSpeechRecognitionCtor():

@@ -93,6 +93,17 @@
 .mic-btn.hot {
   transform: scale(1.08);
   background-color: #c43b2a;
+  animation: mic-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 24px rgba(180, 40, 30, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(228, 93, 74, 0.28), 0 10px 24px rgba(180, 40, 30, 0.35);
+  }
 }
 
 .mic-tip {

@@ -11,119 +11,226 @@ export type TalkCapture = {
   error?: 'insecure' | 'denied' | 'unsupported' | 'empty' | 'unknown'
 }
 
+const LISTEN_MS = 3500
+
+/**
+ * 手机优先：点一下开始听（约 3.5 秒），再点可提前结束。
+ * 先申请 getUserMedia 权限，再并行尝试浏览器语音识别 + 录音。
+ */
 export function usePressToTalk() {
   const [recording, setRecording] = useState(false)
   const mediaRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
   const transcriptRef = useRef('')
-  const modeRef = useRef<'speech' | 'media' | null>(null)
+  const startPromiseRef = useRef<Promise<TalkCapture | null> | null>(null)
+  const activeRef = useRef(false)
+  const autoTimerRef = useRef<number | null>(null)
+
+  const cleanupTimer = () => {
+    if (autoTimerRef.current != null) {
+      window.clearTimeout(autoTimerRef.current)
+      autoTimerRef.current = null
+    }
+  }
+
+  const releaseStream = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+  }
 
   const start = useCallback(async (): Promise<TalkCapture | null> => {
-    transcriptRef.current = ''
-    modeRef.current = null
-
-    if (!isMicAllowedByBrowser()) {
-      return { error: 'insecure' }
-    }
-
-    const SpeechRecognition = getSpeechRecognitionCtor()
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition()
-      recognition.lang = 'en-US'
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.maxAlternatives = 1
-      recognition.onresult = (ev) => {
-        let text = ''
-        for (let i = 0; i < ev.results.length; i += 1) {
-          text += ev.results[i][0]?.transcript || ''
-        }
-        transcriptRef.current = text.trim()
-      }
-      recognition.onerror = () => {
-        /* stop() 会读最终结果；此处忽略临时错误 */
-      }
-      recognitionRef.current = recognition
-      modeRef.current = 'speech'
-      recognition.start()
-      setRecording(true)
+    if (activeRef.current || startPromiseRef.current) {
       return null
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : undefined
-      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
+    const run = (async (): Promise<TalkCapture | null> => {
+      transcriptRef.current = ''
       chunksRef.current = []
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
+      recognitionRef.current = null
+      mediaRef.current = null
+
+      if (!isMicAllowedByBrowser()) {
+        return { error: 'insecure' }
       }
-      mediaRef.current = recorder
-      modeRef.current = 'media'
-      recorder.start(200)
+
+      // 立刻给 UI 反馈，再异步要权限
+      activeRef.current = true
       setRecording(true)
-      return null
-    } catch (err) {
-      const name = err instanceof DOMException ? err.name : ''
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-        return { error: 'denied' }
+
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        })
+        streamRef.current = stream
+      } catch (err) {
+        activeRef.current = false
+        setRecording(false)
+        const name = err instanceof DOMException ? err.name : ''
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          return { error: 'denied' }
+        }
+        if (name === 'NotFoundError') return { error: 'unsupported' }
+        return { error: 'unknown' }
       }
-      if (name === 'NotFoundError') return { error: 'unsupported' }
-      return { error: 'unknown' }
+
+      // 录音兜底（mock / whisper 可用）
+      try {
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : MediaRecorder.isTypeSupported('audio/mp4')
+              ? 'audio/mp4'
+              : undefined
+        const recorder = mime
+          ? new MediaRecorder(stream, { mimeType: mime })
+          : new MediaRecorder(stream)
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data)
+        }
+        mediaRef.current = recorder
+        recorder.start(100)
+      } catch {
+        // 部分机型 MediaRecorder 失败时仍可走语音识别
+      }
+
+      // 浏览器英语识别（安卓 Chrome 在 HTTPS + 已授权后通常可用）
+      const SpeechRecognition = getSpeechRecognitionCtor()
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition()
+          recognition.lang = 'en-US'
+          recognition.continuous = true
+          recognition.interimResults = true
+          recognition.maxAlternatives = 3
+          recognition.onresult = (ev) => {
+            let text = ''
+            for (let i = 0; i < ev.results.length; i += 1) {
+              text += ev.results[i][0]?.transcript || ''
+            }
+            transcriptRef.current = text.trim()
+          }
+          recognition.onerror = () => {
+            /* stop 时读取已有结果 */
+          }
+          recognitionRef.current = recognition
+          recognition.start()
+        } catch {
+          recognitionRef.current = null
+        }
+      }
+
+      return null
+    })()
+
+    startPromiseRef.current = run
+    try {
+      return await run
+    } finally {
+      startPromiseRef.current = null
     }
   }, [])
 
   const stop = useCallback(async (): Promise<TalkCapture> => {
-    const mode = modeRef.current
-    modeRef.current = null
+    cleanupTimer()
 
-    if (mode === 'speech') {
-      const recognition = recognitionRef.current
-      recognitionRef.current = null
-      if (!recognition) {
+    // 短按：等 start 完成再停
+    if (startPromiseRef.current) {
+      const early = await startPromiseRef.current
+      if (early?.error) {
+        activeRef.current = false
         setRecording(false)
-        return { error: 'empty' }
+        releaseStream()
+        return early
       }
-      const transcript = await new Promise<string>((resolve) => {
-        const finish = () => resolve(transcriptRef.current.trim())
+      // 给识别一点时间（点一下就松的情况）
+      await new Promise((r) => window.setTimeout(r, 600))
+    }
+
+    if (!activeRef.current && !mediaRef.current && !recognitionRef.current) {
+      setRecording(false)
+      return { error: 'empty' }
+    }
+
+    activeRef.current = false
+
+    const recognition = recognitionRef.current
+    recognitionRef.current = null
+    if (recognition) {
+      await new Promise<void>((resolve) => {
+        let done = false
+        const finish = () => {
+          if (done) return
+          done = true
+          resolve()
+        }
         recognition.onend = finish
         try {
           recognition.stop()
         } catch {
           finish()
         }
-        window.setTimeout(finish, 800)
+        window.setTimeout(finish, 900)
       })
-      setRecording(false)
-      if (!transcript) return { error: 'empty' }
-      return { transcript }
     }
 
     const recorder = mediaRef.current
-    if (!recorder) {
-      setRecording(false)
-      return { error: 'empty' }
+    mediaRef.current = null
+    let blob: Blob | undefined
+    if (recorder && recorder.state !== 'inactive') {
+      blob =
+        (await new Promise<Blob | null>((resolve) => {
+          recorder.onstop = () => {
+            const data = new Blob(chunksRef.current, {
+              type: recorder.mimeType || 'audio/webm',
+            })
+            resolve(data.size > 0 ? data : null)
+          }
+          try {
+            recorder.stop()
+          } catch {
+            resolve(null)
+          }
+        })) || undefined
     }
-    const blob = await new Promise<Blob | null>((resolve) => {
-      recorder.onstop = () => {
-        recorder.stream.getTracks().forEach((t) => t.stop())
-        const data = new Blob(chunksRef.current, {
-          type: recorder.mimeType || 'audio/webm',
-        })
-        mediaRef.current = null
-        resolve(data.size > 0 ? data : null)
-      }
-      recorder.stop()
-    })
+
+    releaseStream()
     setRecording(false)
-    if (!blob) return { error: 'empty' }
-    return { blob }
+
+    const transcript = transcriptRef.current.trim()
+    if (transcript) return { transcript, blob }
+    if (blob) return { blob }
+    return { error: 'empty' }
   }, [])
 
-  return { recording, start, stop }
+  /** 点一下：开始听，超时自动结束；再点一次提前结束 */
+  const toggleListen = useCallback(
+    async (onAutoStop: (capture: TalkCapture) => void): Promise<'started' | 'stopped' | TalkCapture> => {
+      if (recording || activeRef.current) {
+        const capture = await stop()
+        return capture
+      }
+      const early = await start()
+      if (early?.error) return early
+
+      cleanupTimer()
+      autoTimerRef.current = window.setTimeout(() => {
+        void stop().then(onAutoStop)
+      }, LISTEN_MS)
+      return 'started'
+    },
+    [recording, start, stop],
+  )
+
+  const cancelAutoStop = useCallback(() => {
+    cleanupTimer()
+  }, [])
+
+  return { recording, start, stop, toggleListen, cancelAutoStop, listenMs: LISTEN_MS }
 }
