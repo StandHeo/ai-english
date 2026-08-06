@@ -1,13 +1,13 @@
 # AI English · 故事冒险口语练习
 
-面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林** 或 **自行车世界**。
+面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**。
 
 ## 仓库结构
 
 ```
 apps/web          # React + Vite 儿童/家长端
 apps/api          # Express：ASR/TTS 代理与期望词匹配
-content/levels    # 关卡 JSON + packs/（fruit-forest、bike-world）
+content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
 ```
@@ -26,7 +26,19 @@ openspec/         # 产品规格与变更
 
 bike → tricycle → mountain bike → road bike → helmet → bell → go/ride（家庭视频）→ 复习
 
-> 进度按主题包分桶。若从旧版升级后解锁异常，可清除本站 `localStorage` 后重玩。
+### 机器人实验室
+
+见 `openspec/changes/robot-ultraman-packs/content/robot-lab-story.md`
+
+robot → arm → wheel → button → beep → gear → friend → 复习
+
+### 英雄世界（奥特曼风格 · 原创形象）
+
+见 `openspec/changes/robot-ultraman-packs/content/hero-world-story.md`
+
+hero → monster → light → fly → kick → shield → go → 复习
+
+> 视觉为原创卡通光之英雄，不使用官方奥特曼商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 
 ## 本地运行
 
@@ -71,4 +83,4 @@ node content/validate.mjs
 
 ## OpenSpec
 
-活跃变更包括 `bike-world-pack`、`family-bike-level`、`kids-story-oral-english-mvp`。
+活跃变更包括 `robot-ultraman-packs`、`bike-world-pack`、`family-bike-level`、`kids-story-oral-english-mvp`、`richer-oral-beats`。

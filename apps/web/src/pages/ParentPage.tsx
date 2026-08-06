@@ -6,6 +6,7 @@ import {
   getPackProgress,
   getTodayPlaySeconds,
   loadProgress,
+  PACK_LABELS_ZH,
   updateSettings,
 } from '../progress/store'
 import type { ContentPack, ProgressState } from '../types'
@@ -82,7 +83,7 @@ export function ParentPage({ progress, onProgress }: Props) {
         const pp = getPackProgress(progress, pack.id)
         return (
           <section key={pack.id}>
-            <h2>{pack.id === 'bike-world' ? '自行车世界' : '水果森林'}</h2>
+            <h2>{PACK_LABELS_ZH[pack.id] || pack.title}</h2>
             <p>已通关：{pp.completed.length ? pp.completed.join('、') : '暂无'}</p>
             <p>贴纸：{pp.stickers.length ? pp.stickers.join('、') : '暂无'}</p>
           </section>

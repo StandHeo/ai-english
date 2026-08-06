@@ -1,0 +1,76 @@
+{
+  "id": "robot-02-arm",
+  "approved": true,
+  "theme": "robots",
+  "title": "Arm Shop",
+  "target_words": [
+    "arm"
+  ],
+  "scene": {
+    "setting": "A mechanical arm shop",
+    "image": "assets/scenes/arm-shop.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/arm.png",
+      "npc_say": "Look! Move, move!",
+      "hint_say": "Move!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the arm!",
+      "hint_say": "Arm!",
+      "success_say": "Yes! Arm!",
+      "options": [
+        {
+          "id": "arm",
+          "image": "assets/items/arm.png",
+          "correct": true
+        },
+        {
+          "id": "wheel",
+          "image": "assets/items/wheel.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/arm.png",
+      "npc_say": "What can grab?",
+      "expect": [
+        "arm",
+        "an arm"
+      ],
+      "hint_say": "Arm!",
+      "success_say": "Nice arm!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "arm",
+            "image": "assets/items/arm.png",
+            "correct": true
+          },
+          {
+            "id": "robot",
+            "image": "assets/items/robot.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/arm.png",
+      "npc_say": "Strong arm!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-arm",
+    "stickerImage": "assets/items/arm.png",
+    "stars": 1
+  }
+}

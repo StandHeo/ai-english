@@ -1,0 +1,18 @@
+{
+  "id": "hero-world",
+  "title": "Hero World",
+  "theme": "heroes",
+  "character": "bunny",
+  "mapImage": "assets/scenes/hero-map.png",
+  "homeImage": "assets/items/home-hero.png",
+  "levels": [
+    "hero-01-hero",
+    "hero-02-monster",
+    "hero-03-light",
+    "hero-04-fly",
+    "hero-05-kick",
+    "hero-06-shield",
+    "hero-07-go",
+    "hero-08-review"
+  ]
+}

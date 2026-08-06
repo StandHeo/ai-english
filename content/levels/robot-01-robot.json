@@ -1,0 +1,76 @@
+{
+  "id": "robot-01-robot",
+  "approved": true,
+  "theme": "robots",
+  "title": "Robot Lab",
+  "target_words": [
+    "robot"
+  ],
+  "scene": {
+    "setting": "A bright robot lab",
+    "image": "assets/scenes/robot-lab.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/robot.png",
+      "npc_say": "Beep boop! Big friend!",
+      "hint_say": "Beep!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the robot!",
+      "hint_say": "Robot!",
+      "success_say": "Yes! Robot!",
+      "options": [
+        {
+          "id": "robot",
+          "image": "assets/items/robot.png",
+          "correct": true
+        },
+        {
+          "id": "gear",
+          "image": "assets/items/gear.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/robot.png",
+      "npc_say": "Who is this metal friend?",
+      "expect": [
+        "robot",
+        "a robot"
+      ],
+      "hint_say": "Robot!",
+      "success_say": "Yes! Robot!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "robot",
+            "image": "assets/items/robot.png",
+            "correct": true
+          },
+          {
+            "id": "button",
+            "image": "assets/items/button.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/robot.png",
+      "npc_say": "Hello, robot!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-robot",
+    "stickerImage": "assets/items/robot.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "id": "hero-04-fly",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Fly Clouds",
+  "target_words": [
+    "fly"
+  ],
+  "scene": {
+    "setting": "Soft clouds for flying",
+    "image": "assets/scenes/fly-cloud.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/fly.png",
+      "npc_say": "Up we go!",
+      "hint_say": "Up!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find fly!",
+      "hint_say": "Fly!",
+      "success_say": "Yes! Fly!",
+      "options": [
+        {
+          "id": "fly",
+          "image": "assets/items/fly.png",
+          "correct": true
+        },
+        {
+          "id": "kick",
+          "image": "assets/items/kick.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/fly.png",
+      "npc_say": "Can the hero…?",
+      "expect": [
+        "fly"
+      ],
+      "hint_say": "Fly!",
+      "success_say": "We fly!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "fly",
+            "image": "assets/items/fly.png",
+            "correct": true
+          },
+          {
+            "id": "monster",
+            "image": "assets/items/monster.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/fly.png",
+      "npc_say": "Fly high!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-fly",
+    "stickerImage": "assets/items/fly.png",
+    "stars": 1
+  }
+}

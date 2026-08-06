@@ -1,0 +1,76 @@
+{
+  "id": "hero-02-monster",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Monster Cave",
+  "target_words": [
+    "monster"
+  ],
+  "scene": {
+    "setting": "A friendly monster cave",
+    "image": "assets/scenes/monster-cave.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/monster.png",
+      "npc_say": "A soft little monster!",
+      "hint_say": "Soft!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the monster!",
+      "hint_say": "Monster!",
+      "success_say": "Yes! Monster!",
+      "options": [
+        {
+          "id": "monster",
+          "image": "assets/items/monster.png",
+          "correct": true
+        },
+        {
+          "id": "hero",
+          "image": "assets/items/hero.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/monster.png",
+      "npc_say": "Who is cute and purple?",
+      "expect": [
+        "monster",
+        "a monster"
+      ],
+      "hint_say": "Monster!",
+      "success_say": "Hi monster!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "monster",
+            "image": "assets/items/monster.png",
+            "correct": true
+          },
+          {
+            "id": "light",
+            "image": "assets/items/light.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/monster.png",
+      "npc_say": "Nice monster!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-monster",
+    "stickerImage": "assets/items/monster.png",
+    "stars": 1
+  }
+}

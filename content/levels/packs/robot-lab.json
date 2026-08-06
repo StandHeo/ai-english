@@ -1,0 +1,18 @@
+{
+  "id": "robot-lab",
+  "title": "Robot Lab",
+  "theme": "robots",
+  "character": "bunny",
+  "mapImage": "assets/scenes/robot-map.png",
+  "homeImage": "assets/items/home-robot.png",
+  "levels": [
+    "robot-01-robot",
+    "robot-02-arm",
+    "robot-03-wheel",
+    "robot-04-button",
+    "robot-05-beep",
+    "robot-06-gear",
+    "robot-07-friend",
+    "robot-08-review"
+  ]
+}

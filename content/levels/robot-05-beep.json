@@ -1,0 +1,75 @@
+{
+  "id": "robot-05-beep",
+  "approved": true,
+  "theme": "robots",
+  "title": "Beep Hall",
+  "target_words": [
+    "beep"
+  ],
+  "scene": {
+    "setting": "A beep sound hall",
+    "image": "assets/scenes/beep-hall.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/beep.png",
+      "npc_say": "Listen! Beep beep!",
+      "hint_say": "Beep!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the beep!",
+      "hint_say": "Beep!",
+      "success_say": "Yes! Beep!",
+      "options": [
+        {
+          "id": "beep",
+          "image": "assets/items/beep.png",
+          "correct": true
+        },
+        {
+          "id": "gear",
+          "image": "assets/items/gear.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/beep.png",
+      "npc_say": "What sound is that?",
+      "expect": [
+        "beep"
+      ],
+      "hint_say": "Beep!",
+      "success_say": "Beep beep!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "beep",
+            "image": "assets/items/beep.png",
+            "correct": true
+          },
+          {
+            "id": "wheel",
+            "image": "assets/items/wheel.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/beep.png",
+      "npc_say": "Funny beep!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-beep",
+    "stickerImage": "assets/items/beep.png",
+    "stars": 1
+  }
+}

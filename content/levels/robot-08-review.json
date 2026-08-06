@@ -1,0 +1,103 @@
+{
+  "id": "robot-08-review",
+  "approved": true,
+  "theme": "robots",
+  "title": "Robot Party",
+  "target_words": [
+    "robot",
+    "arm",
+    "beep"
+  ],
+  "scene": {
+    "setting": "A robot lab party",
+    "image": "assets/scenes/robot-review.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Robot party!",
+      "hint_say": "Party!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the robot!",
+      "hint_say": "Robot!",
+      "success_say": "Yes!",
+      "options": [
+        {
+          "id": "robot",
+          "image": "assets/items/robot.png",
+          "correct": true
+        },
+        {
+          "id": "gear",
+          "image": "assets/items/gear.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/arm.png",
+      "npc_say": "What grabs?",
+      "expect": [
+        "arm",
+        "an arm"
+      ],
+      "hint_say": "Arm!",
+      "success_say": "Nice!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "arm",
+            "image": "assets/items/arm.png",
+            "correct": true
+          },
+          {
+            "id": "wheel",
+            "image": "assets/items/wheel.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/beep.png",
+      "npc_say": "What sound?",
+      "expect": [
+        "beep"
+      ],
+      "hint_say": "Beep!",
+      "success_say": "Beep!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "beep",
+            "image": "assets/items/beep.png",
+            "correct": true
+          },
+          {
+            "id": "button",
+            "image": "assets/items/button.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/robot-friend.png",
+      "npc_say": "Great job!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-robot-party",
+    "stickerImage": "assets/scenes/robot-review.png",
+    "stars": 2
+  }
+}

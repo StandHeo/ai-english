@@ -1,0 +1,76 @@
+{
+  "id": "robot-06-gear",
+  "approved": true,
+  "theme": "robots",
+  "title": "Gear Factory",
+  "target_words": [
+    "gear"
+  ],
+  "scene": {
+    "setting": "A shiny gear factory",
+    "image": "assets/scenes/gear-factory.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/gear.png",
+      "npc_say": "Spinny gold!",
+      "hint_say": "Spin!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the gear!",
+      "hint_say": "Gear!",
+      "success_say": "Yes! Gear!",
+      "options": [
+        {
+          "id": "gear",
+          "image": "assets/items/gear.png",
+          "correct": true
+        },
+        {
+          "id": "robot",
+          "image": "assets/items/robot.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/gear.png",
+      "npc_say": "What spins inside?",
+      "expect": [
+        "gear",
+        "a gear"
+      ],
+      "hint_say": "Gear!",
+      "success_say": "Cool gear!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "gear",
+            "image": "assets/items/gear.png",
+            "correct": true
+          },
+          {
+            "id": "button",
+            "image": "assets/items/button.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/gear.png",
+      "npc_say": "Good gear!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-gear",
+    "stickerImage": "assets/items/gear.png",
+    "stars": 1
+  }
+}

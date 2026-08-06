@@ -1,0 +1,76 @@
+{
+  "id": "robot-03-wheel",
+  "approved": true,
+  "theme": "robots",
+  "title": "Wheel Yard",
+  "target_words": [
+    "wheel"
+  ],
+  "scene": {
+    "setting": "A sunny wheel yard",
+    "image": "assets/scenes/wheel-yard.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/wheel.png",
+      "npc_say": "Round and roll!",
+      "hint_say": "Roll!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the wheel!",
+      "hint_say": "Wheel!",
+      "success_say": "Yes! Wheel!",
+      "options": [
+        {
+          "id": "wheel",
+          "image": "assets/items/wheel.png",
+          "correct": true
+        },
+        {
+          "id": "gear",
+          "image": "assets/items/gear.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/wheel.png",
+      "npc_say": "What rolls?",
+      "expect": [
+        "wheel",
+        "a wheel"
+      ],
+      "hint_say": "Wheel!",
+      "success_say": "Spin!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "wheel",
+            "image": "assets/items/wheel.png",
+            "correct": true
+          },
+          {
+            "id": "button",
+            "image": "assets/items/button.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/wheel.png",
+      "npc_say": "Go, wheel!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-wheel",
+    "stickerImage": "assets/items/wheel.png",
+    "stars": 1
+  }
+}

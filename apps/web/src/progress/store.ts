@@ -5,16 +5,31 @@ const LEGACY_KEY = 'ai-english-progress-v1'
 
 const FRUIT = 'fruit-forest'
 const BIKE = 'bike-world'
+const ROBOT = 'robot-lab'
+const HERO = 'hero-world'
+
+const FIRST_LEVEL: Record<string, string> = {
+  [FRUIT]: 'fruit-01-apple',
+  [BIKE]: 'bike-01-bike',
+  [ROBOT]: 'robot-01-robot',
+  [HERO]: 'hero-01-hero',
+}
 
 function emptyPack(firstLevelId: string): PackProgress {
   return { completed: [], unlocked: [firstLevelId], stickers: [] }
 }
 
+function firstLevelFor(packId: string): string {
+  return FIRST_LEVEL[packId] || 'fruit-01-apple'
+}
+
 const defaultState = (): ProgressState => ({
   version: 2,
   packs: {
-    [FRUIT]: emptyPack('fruit-01-apple'),
-    [BIKE]: emptyPack('bike-01-bike'),
+    [FRUIT]: emptyPack(FIRST_LEVEL[FRUIT]),
+    [BIKE]: emptyPack(FIRST_LEVEL[BIKE]),
+    [ROBOT]: emptyPack(FIRST_LEVEL[ROBOT]),
+    [HERO]: emptyPack(FIRST_LEVEL[HERO]),
   },
   stars: 0,
   dailyLimitMinutes: 30,
@@ -84,7 +99,7 @@ export function saveProgress(state: ProgressState): void {
 }
 
 export function getPackProgress(state: ProgressState, packId: string): PackProgress {
-  return state.packs[packId] || emptyPack(packId === BIKE ? 'bike-01-bike' : 'fruit-01-apple')
+  return state.packs[packId] || emptyPack(firstLevelFor(packId))
 }
 
 export function allStickers(state: ProgressState): string[] {
@@ -159,4 +174,11 @@ export function updateSettings(
   return next
 }
 
-export const PACK_IDS = { FRUIT, BIKE } as const
+export const PACK_IDS = { FRUIT, BIKE, ROBOT, HERO } as const
+
+export const PACK_LABELS_ZH: Record<string, string> = {
+  [FRUIT]: '水果森林',
+  [BIKE]: '自行车世界',
+  [ROBOT]: '机器人实验室',
+  [HERO]: '英雄世界',
+}

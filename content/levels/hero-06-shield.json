@@ -1,0 +1,76 @@
+{
+  "id": "hero-06-shield",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Shield Fort",
+  "target_words": [
+    "shield"
+  ],
+  "scene": {
+    "setting": "A glowing shield fort",
+    "image": "assets/scenes/shield-fort.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/shield.png",
+      "npc_say": "Safe! Big shield!",
+      "hint_say": "Safe!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the shield!",
+      "hint_say": "Shield!",
+      "success_say": "Yes! Shield!",
+      "options": [
+        {
+          "id": "shield",
+          "image": "assets/items/shield.png",
+          "correct": true
+        },
+        {
+          "id": "light",
+          "image": "assets/items/light.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/shield.png",
+      "npc_say": "What keeps us safe?",
+      "expect": [
+        "shield",
+        "a shield"
+      ],
+      "hint_say": "Shield!",
+      "success_say": "Safe!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "shield",
+            "image": "assets/items/shield.png",
+            "correct": true
+          },
+          {
+            "id": "monster",
+            "image": "assets/items/monster.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/shield.png",
+      "npc_say": "Strong shield!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-shield",
+    "stickerImage": "assets/items/shield.png",
+    "stars": 1
+  }
+}

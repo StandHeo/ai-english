@@ -1,0 +1,76 @@
+{
+  "id": "hero-03-light",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Light Sky",
+  "target_words": [
+    "light"
+  ],
+  "scene": {
+    "setting": "A glowing light sky",
+    "image": "assets/scenes/light-sky.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/light.png",
+      "npc_say": "Shine! Bright light!",
+      "hint_say": "Shine!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the light!",
+      "hint_say": "Light!",
+      "success_say": "Yes! Light!",
+      "options": [
+        {
+          "id": "light",
+          "image": "assets/items/light.png",
+          "correct": true
+        },
+        {
+          "id": "shield",
+          "image": "assets/items/shield.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/light.png",
+      "npc_say": "What is bright?",
+      "expect": [
+        "light",
+        "a light"
+      ],
+      "hint_say": "Light!",
+      "success_say": "Bright!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "light",
+            "image": "assets/items/light.png",
+            "correct": true
+          },
+          {
+            "id": "kick",
+            "image": "assets/items/kick.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/light.png",
+      "npc_say": "Good light!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-light",
+    "stickerImage": "assets/items/light.png",
+    "stars": 1
+  }
+}

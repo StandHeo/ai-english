@@ -1,0 +1,76 @@
+{
+  "id": "hero-05-kick",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Kick Arena",
+  "target_words": [
+    "kick"
+  ],
+  "scene": {
+    "setting": "A sunny kick arena",
+    "image": "assets/scenes/kick-arena.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/kick.png",
+      "npc_say": "Ready? Kick!",
+      "hint_say": "Kick!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the kick!",
+      "hint_say": "Kick!",
+      "success_say": "Yes! Kick!",
+      "options": [
+        {
+          "id": "kick",
+          "image": "assets/items/kick.png",
+          "correct": true
+        },
+        {
+          "id": "fly",
+          "image": "assets/items/fly.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/kick.png",
+      "npc_say": "What move is this?",
+      "expect": [
+        "kick",
+        "a kick"
+      ],
+      "hint_say": "Kick!",
+      "success_say": "Strong kick!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "kick",
+            "image": "assets/items/kick.png",
+            "correct": true
+          },
+          {
+            "id": "shield",
+            "image": "assets/items/shield.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/kick.png",
+      "npc_say": "Super kick!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-kick",
+    "stickerImage": "assets/items/kick.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "robot-04-button",
+  "approved": true,
+  "theme": "robots",
+  "title": "Button Room",
+  "target_words": [
+    "button"
+  ],
+  "scene": {
+    "setting": "A colorful button room",
+    "image": "assets/scenes/button-room.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/button.png",
+      "npc_say": "Push? Click!",
+      "hint_say": "Click!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the button!",
+      "hint_say": "Button!",
+      "success_say": "Yes! Button!",
+      "options": [
+        {
+          "id": "button",
+          "image": "assets/items/button.png",
+          "correct": true
+        },
+        {
+          "id": "beep",
+          "image": "assets/items/beep.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/button.png",
+      "npc_say": "What do we push?",
+      "expect": [
+        "button",
+        "a button"
+      ],
+      "hint_say": "Button!",
+      "success_say": "Click!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "button",
+            "image": "assets/items/button.png",
+            "correct": true
+          },
+          {
+            "id": "arm",
+            "image": "assets/items/arm.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/button.png",
+      "npc_say": "Big button!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-button",
+    "stickerImage": "assets/items/button.png",
+    "stars": 1
+  }
+}

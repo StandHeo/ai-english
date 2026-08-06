@@ -1,0 +1,76 @@
+{
+  "id": "robot-07-friend",
+  "approved": true,
+  "theme": "robots",
+  "title": "Friend Park",
+  "target_words": [
+    "friend"
+  ],
+  "scene": {
+    "setting": "A friendly robot park",
+    "image": "assets/scenes/friend-park.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/robot-friend.png",
+      "npc_say": "Hi, little buddy!",
+      "hint_say": "Hi!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the friend!",
+      "hint_say": "Friend!",
+      "success_say": "Yes! Friend!",
+      "options": [
+        {
+          "id": "friend",
+          "image": "assets/items/robot-friend.png",
+          "correct": true
+        },
+        {
+          "id": "arm",
+          "image": "assets/items/arm.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/robot-friend.png",
+      "npc_say": "Who is my friend?",
+      "expect": [
+        "friend",
+        "a friend"
+      ],
+      "hint_say": "Friend!",
+      "success_say": "Best friend!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "friend",
+            "image": "assets/items/robot-friend.png",
+            "correct": true
+          },
+          {
+            "id": "wheel",
+            "image": "assets/items/wheel.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/robot-friend.png",
+      "npc_say": "Robot friend!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-robot-friend",
+    "stickerImage": "assets/items/robot-friend.png",
+    "stars": 1
+  }
+}

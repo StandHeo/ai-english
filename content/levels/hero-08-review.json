@@ -1,0 +1,104 @@
+{
+  "id": "hero-08-review",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Hero Party",
+  "target_words": [
+    "hero",
+    "light",
+    "kick"
+  ],
+  "scene": {
+    "setting": "A hero celebration",
+    "image": "assets/scenes/hero-review.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Hero party!",
+      "hint_say": "Party!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the hero!",
+      "hint_say": "Hero!",
+      "success_say": "Yes!",
+      "options": [
+        {
+          "id": "hero",
+          "image": "assets/items/hero.png",
+          "correct": true
+        },
+        {
+          "id": "monster",
+          "image": "assets/items/monster.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/light.png",
+      "npc_say": "What is bright?",
+      "expect": [
+        "light",
+        "a light"
+      ],
+      "hint_say": "Light!",
+      "success_say": "Bright!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "light",
+            "image": "assets/items/light.png",
+            "correct": true
+          },
+          {
+            "id": "shield",
+            "image": "assets/items/shield.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/kick.png",
+      "npc_say": "What move?",
+      "expect": [
+        "kick",
+        "a kick"
+      ],
+      "hint_say": "Kick!",
+      "success_say": "Yes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "kick",
+            "image": "assets/items/kick.png",
+            "correct": true
+          },
+          {
+            "id": "fly",
+            "image": "assets/items/fly.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/hero.png",
+      "npc_say": "Great job!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-hero-party",
+    "stickerImage": "assets/scenes/hero-review.png",
+    "stars": 2
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "hero-01-hero",
+  "approved": true,
+  "theme": "heroes",
+  "title": "Hero City",
+  "target_words": [
+    "hero"
+  ],
+  "scene": {
+    "setting": "A bright hero city",
+    "image": "assets/scenes/hero-city.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/hero.png",
+      "npc_say": "Wow! A big hero!",
+      "hint_say": "Wow!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the hero!",
+      "hint_say": "Hero!",
+      "success_say": "Yes! Hero!",
+      "options": [
+        {
+          "id": "hero",
+          "image": "assets/items/hero.png",
+          "correct": true
+        },
+        {
+          "id": "monster",
+          "image": "assets/items/monster.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/hero.png",
+      "npc_say": "Who helps us?",
+      "expect": [
+        "hero",
+        "a hero"
+      ],
+      "hint_say": "Hero!",
+      "success_say": "Yes! Hero!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "hero",
+            "image": "assets/items/hero.png",
+            "correct": true
+          },
+          {
+            "id": "shield",
+            "image": "assets/items/shield.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/hero.png",
+      "npc_say": "Hello, hero!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-hero",
+    "stickerImage": "assets/items/hero.png",
+    "stars": 1
+  }
+}
