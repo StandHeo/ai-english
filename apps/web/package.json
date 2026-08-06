@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run sync-content && vite",
+    "dev:phone": "npm run sync-content && VITE_PHONE=1 vite --host 0.0.0.0 --port 5173",
     "sync-content": "rm -rf public/content && mkdir -p public/content && cp -R ../../content/levels public/content/ && cp -R ../../content/assets public/content/",
     "build": "npm run sync-content && tsc -b && vite build",
     "lint": "oxlint",
@@ -19,6 +20,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",

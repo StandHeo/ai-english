@@ -8,6 +8,7 @@ import {
 } from '../content/loader'
 import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
 import { requestTts, submitSpeech } from '../voice/client'
+import { isMicAllowedByBrowser } from '../voice/secureContext'
 import { usePressToTalk } from '../voice/usePressToTalk'
 import type { LevelScript, ProgressState } from '../types'
 import './level.css'
@@ -15,6 +16,8 @@ import './level.css'
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
 const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
+
+type MicTip = 'insecure' | 'denied' | 'empty' | null
 
 type Props = {
   progress: ProgressState
@@ -35,6 +38,7 @@ export function LevelPage({ onProgress }: Props) {
   const [busy, setBusy] = useState(false)
   const [showDevType, setShowDevType] = useState(false)
   const [devText, setDevText] = useState('')
+  const [micTip, setMicTip] = useState<MicTip>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -49,6 +53,10 @@ export function LevelPage({ onProgress }: Props) {
   useEffect(() => {
     beatIndexRef.current = beatIndex
   }, [beatIndex])
+
+  useEffect(() => {
+    if (!isMicAllowedByBrowser()) setMicTip('insecure')
+  }, [])
 
   useEffect(() => {
     setBeatIndex(0)
@@ -202,12 +210,34 @@ export function LevelPage({ onProgress }: Props) {
     setPhase('fallback')
   }
 
+  function openTypeFallback(tip: MicTip = 'empty') {
+    setMicTip(tip)
+    setShowDevType(true)
+  }
+
   async function handlePointerUp() {
     if (busy || phase !== 'listen' || !beat?.expect) return
     setBusy(true)
     try {
-      const blob = await stop()
-      const result = await submitSpeech({ blob: blob || undefined, expect: beat.expect })
+      const capture = await stop()
+      if (capture.error === 'insecure') {
+        openTypeFallback('insecure')
+        return
+      }
+      if (capture.error === 'denied') {
+        openTypeFallback('denied')
+        return
+      }
+      if (!capture.transcript && !capture.blob) {
+        openTypeFallback('empty')
+        setPhase('fallback')
+        return
+      }
+      const result = await submitSpeech({
+        text: capture.transcript,
+        blob: capture.blob,
+        expect: beat.expect,
+      })
       await onOralResult(result.matched)
     } catch {
       setPhase('fallback')
@@ -237,7 +267,6 @@ export function LevelPage({ onProgress }: Props) {
         setRetries(nextRetry)
         return
       }
-      // find 重试用尽或兜底点错：示范后继续
       await requestTts(beat?.expect?.[0] || beat?.hint_say || '')
       await advance()
       return
@@ -252,6 +281,14 @@ export function LevelPage({ onProgress }: Props) {
   if (sceneReady && !beat) return <div className="screen loading-dot" />
 
   const hasVideo = Boolean(level.scene.video)
+  const tipText =
+    micTip === 'insecure'
+      ? '当前网页不是安全连接，手机浏览器不能用麦克风。请用电脑命令 npm run dev:phone，再用 https://电脑IP:5173 打开；或先在下方输入单词。'
+      : micTip === 'denied'
+        ? '未获得麦克风权限。请在浏览器设置里允许麦克风，或在下方输入单词。'
+        : micTip === 'empty'
+          ? '没有听到声音。请靠近手机再说一次，或在下方输入单词（如 apple / bike）。'
+          : null
 
   return (
     <div
@@ -304,6 +341,12 @@ export function LevelPage({ onProgress }: Props) {
             />
           )}
 
+          {tipText && phase === 'listen' && (
+            <div className="mic-tip" role="status">
+              {tipText}
+            </div>
+          )}
+
           {phase === 'listen' && (
             <button
               className={`mic-btn ${recording ? 'hot' : ''}`}
@@ -311,10 +354,15 @@ export function LevelPage({ onProgress }: Props) {
               onPointerDown={async (e) => {
                 e.preventDefault()
                 if (busy) return
-                try {
-                  await start()
-                } catch {
-                  setShowDevType(true)
+                const early = await start()
+                if (early?.error) {
+                  openTypeFallback(
+                    early.error === 'denied'
+                      ? 'denied'
+                      : early.error === 'insecure'
+                        ? 'insecure'
+                        : 'empty',
+                  )
                 }
               }}
               onPointerUp={handlePointerUp}
@@ -344,7 +392,12 @@ export function LevelPage({ onProgress }: Props) {
           </button>
           {showDevType && phase === 'listen' && (
             <div className="dev-type">
-              <input value={devText} onChange={(e) => setDevText(e.target.value)} placeholder="bike" />
+              <input
+                value={devText}
+                onChange={(e) => setDevText(e.target.value)}
+                placeholder="apple"
+                aria-label="type word"
+              />
               <button type="button" onClick={handleDevSubmit}>
                 OK
               </button>

@@ -55,14 +55,18 @@ cp -n .env.example .env
 npm install
 npm run dev
 
-# 终端 2：Web
+# 终端 2：Web（仅电脑）
 cd apps/web
 npm install
 npm run sync-content
 npm run dev
+
+# 手机要测麦克风时，改用：
+# npm run dev:phone
+# 然后手机 Chrome 打开 https://电脑局域网IP:5173 （证书警告点继续访问）
 ```
 
-浏览器打开 Vite 地址（默认 `http://localhost:5173`）。
+浏览器打开 Vite 地址（默认 `http://localhost:5173`；手机请用 `https://…`，见 [`docs/android-phone-guide.md`](docs/android-phone-guide.md)）。
 
 - 首页点主题大图进入对应地图；地图左上角返回首页。
 - 按住红色麦克风说话；`ASR_PROVIDER=mock` 时便于联调。
