@@ -1,0 +1,103 @@
+{
+  "id": "pup-08-review",
+  "approved": true,
+  "theme": "pups",
+  "title": "Pup Party",
+  "target_words": [
+    "pup",
+    "truck",
+    "help"
+  ],
+  "scene": {
+    "setting": "A pup patrol party",
+    "image": "assets/scenes/pup-review.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Pup party!",
+      "hint_say": "Party!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the pup!",
+      "hint_say": "Pup!",
+      "success_say": "Yes!",
+      "options": [
+        {
+          "id": "pup",
+          "image": "assets/items/pup.png",
+          "correct": true
+        },
+        {
+          "id": "bone",
+          "image": "assets/items/bone.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/truck.png",
+      "npc_say": "What do we drive?",
+      "expect": [
+        "truck",
+        "a truck"
+      ],
+      "hint_say": "Truck!",
+      "success_say": "Vroom!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "truck",
+            "image": "assets/items/truck.png",
+            "correct": true
+          },
+          {
+            "id": "hat",
+            "image": "assets/items/hat.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/help.png",
+      "npc_say": "Can you say help?",
+      "expect": [
+        "help"
+      ],
+      "hint_say": "Help!",
+      "success_say": "We help!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "help",
+            "image": "assets/items/help.png",
+            "correct": true
+          },
+          {
+            "id": "badge",
+            "image": "assets/items/badge.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/pup.png",
+      "npc_say": "Great job!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-pup-party",
+    "stickerImage": "assets/scenes/pup-review.png",
+    "stars": 2
+  }
+}

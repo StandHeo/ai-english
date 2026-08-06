@@ -68,6 +68,10 @@
   animation-delay: 0.18s;
 }
 
+.theme-card:nth-child(5) {
+  animation-delay: 0.24s;
+}
+
 .theme-card img {
   width: 100%;
   height: 100%;

@@ -1,0 +1,76 @@
+{
+  "id": "pup-04-badge",
+  "approved": true,
+  "theme": "pups",
+  "title": "Badge Room",
+  "target_words": [
+    "badge"
+  ],
+  "scene": {
+    "setting": "A shiny badge room",
+    "image": "assets/scenes/badge-room.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/badge.png",
+      "npc_say": "Sparkle! A badge!",
+      "hint_say": "Sparkle!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the badge!",
+      "hint_say": "Badge!",
+      "success_say": "Yes! Badge!",
+      "options": [
+        {
+          "id": "badge",
+          "image": "assets/items/badge.png",
+          "correct": true
+        },
+        {
+          "id": "hat",
+          "image": "assets/items/hat.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/badge.png",
+      "npc_say": "What is shiny?",
+      "expect": [
+        "badge",
+        "a badge"
+      ],
+      "hint_say": "Badge!",
+      "success_say": "Nice badge!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "badge",
+            "image": "assets/items/badge.png",
+            "correct": true
+          },
+          {
+            "id": "help",
+            "image": "assets/items/help.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/badge.png",
+      "npc_say": "My badge!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-badge",
+    "stickerImage": "assets/items/badge.png",
+    "stars": 1
+  }
+}

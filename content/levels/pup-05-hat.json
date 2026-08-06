@@ -1,0 +1,76 @@
+{
+  "id": "pup-05-hat",
+  "approved": true,
+  "theme": "pups",
+  "title": "Hat Shop",
+  "target_words": [
+    "hat"
+  ],
+  "scene": {
+    "setting": "A cozy hat shop",
+    "image": "assets/scenes/hat-shop.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/hat.png",
+      "npc_say": "On your head!",
+      "hint_say": "Hat!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the hat!",
+      "hint_say": "Hat!",
+      "success_say": "Yes! Hat!",
+      "options": [
+        {
+          "id": "hat",
+          "image": "assets/items/hat.png",
+          "correct": true
+        },
+        {
+          "id": "bone",
+          "image": "assets/items/bone.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/hat.png",
+      "npc_say": "What do we wear?",
+      "expect": [
+        "hat",
+        "a hat"
+      ],
+      "hint_say": "Hat!",
+      "success_say": "Cool hat!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "hat",
+            "image": "assets/items/hat.png",
+            "correct": true
+          },
+          {
+            "id": "truck",
+            "image": "assets/items/truck.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/hat.png",
+      "npc_say": "Red hat!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-hat",
+    "stickerImage": "assets/items/hat.png",
+    "stars": 1
+  }
+}

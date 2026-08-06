@@ -1,0 +1,76 @@
+{
+  "id": "pup-06-bone",
+  "approved": true,
+  "theme": "pups",
+  "title": "Bone Yard",
+  "target_words": [
+    "bone"
+  ],
+  "scene": {
+    "setting": "A sunny bone yard",
+    "image": "assets/scenes/bone-yard.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/bone.png",
+      "npc_say": "Yum? A bone!",
+      "hint_say": "Yum!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the bone!",
+      "hint_say": "Bone!",
+      "success_say": "Yes! Bone!",
+      "options": [
+        {
+          "id": "bone",
+          "image": "assets/items/bone.png",
+          "correct": true
+        },
+        {
+          "id": "badge",
+          "image": "assets/items/badge.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bone.png",
+      "npc_say": "What snack is this?",
+      "expect": [
+        "bone",
+        "a bone"
+      ],
+      "hint_say": "Bone!",
+      "success_say": "Yummy bone!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "bone",
+            "image": "assets/items/bone.png",
+            "correct": true
+          },
+          {
+            "id": "dog",
+            "image": "assets/items/dog.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/bone.png",
+      "npc_say": "Good bone!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-bone",
+    "stickerImage": "assets/items/bone.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "pup-02-dog",
+  "approved": true,
+  "theme": "pups",
+  "title": "Dog Park",
+  "target_words": [
+    "dog"
+  ],
+  "scene": {
+    "setting": "A friendly dog park",
+    "image": "assets/scenes/dog-park.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/dog.png",
+      "npc_say": "Big dog friend!",
+      "hint_say": "Dog!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the dog!",
+      "hint_say": "Dog!",
+      "success_say": "Yes! Dog!",
+      "options": [
+        {
+          "id": "dog",
+          "image": "assets/items/dog.png",
+          "correct": true
+        },
+        {
+          "id": "hat",
+          "image": "assets/items/hat.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/dog.png",
+      "npc_say": "What animal is this?",
+      "expect": [
+        "dog",
+        "a dog"
+      ],
+      "hint_say": "Dog!",
+      "success_say": "Good dog!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "dog",
+            "image": "assets/items/dog.png",
+            "correct": true
+          },
+          {
+            "id": "pup",
+            "image": "assets/items/pup.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/dog.png",
+      "npc_say": "Nice dog!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-dog",
+    "stickerImage": "assets/items/dog.png",
+    "stars": 1
+  }
+}

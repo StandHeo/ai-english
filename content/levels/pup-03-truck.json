@@ -1,0 +1,76 @@
+{
+  "id": "pup-03-truck",
+  "approved": true,
+  "theme": "pups",
+  "title": "Truck Garage",
+  "target_words": [
+    "truck"
+  ],
+  "scene": {
+    "setting": "A colorful truck garage",
+    "image": "assets/scenes/truck-garage.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/truck.png",
+      "npc_say": "Vroom! Big truck!",
+      "hint_say": "Vroom!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the truck!",
+      "hint_say": "Truck!",
+      "success_say": "Yes! Truck!",
+      "options": [
+        {
+          "id": "truck",
+          "image": "assets/items/truck.png",
+          "correct": true
+        },
+        {
+          "id": "badge",
+          "image": "assets/items/badge.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/truck.png",
+      "npc_say": "What can we drive?",
+      "expect": [
+        "truck",
+        "a truck"
+      ],
+      "hint_say": "Truck!",
+      "success_say": "Cool truck!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "truck",
+            "image": "assets/items/truck.png",
+            "correct": true
+          },
+          {
+            "id": "bone",
+            "image": "assets/items/bone.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/truck.png",
+      "npc_say": "Go, truck!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-truck",
+    "stickerImage": "assets/items/truck.png",
+    "stars": 1
+  }
+}

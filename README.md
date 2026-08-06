@@ -1,13 +1,13 @@
 # AI English · 故事冒险口语练习
 
-面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**。
+面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**、**小狗救援队**。
 
 ## 仓库结构
 
 ```
 apps/web          # React + Vite 儿童/家长端
 apps/api          # Express：ASR/TTS 代理与期望词匹配
-content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero）
+content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
 ```
@@ -38,7 +38,13 @@ robot → arm → wheel → button → beep → gear → friend → 复习
 
 hero → monster → light → fly → kick → shield → go → 复习
 
-> 视觉为原创卡通光之英雄，不使用官方奥特曼商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
+### 小狗救援队（汪汪队风格 · 原创形象）
+
+见 `openspec/changes/pup-patrol-pack/content/pup-patrol-story.md`
+
+pup → dog → truck → badge → hat → bone → help → 复习
+
+> 英雄与小狗均为原创卡通风格，不使用官方商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 
 ## 本地运行
 
@@ -83,4 +89,4 @@ node content/validate.mjs
 
 ## OpenSpec
 
-活跃变更包括 `robot-ultraman-packs`、`bike-world-pack`、`family-bike-level`、`kids-story-oral-english-mvp`、`richer-oral-beats`。
+活跃变更包括 `pup-patrol-pack`、`robot-ultraman-packs`、`bike-world-pack`、`family-bike-level`、`kids-story-oral-english-mvp`、`richer-oral-beats`。

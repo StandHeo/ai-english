@@ -1,0 +1,18 @@
+{
+  "id": "pup-patrol",
+  "title": "Pup Patrol",
+  "theme": "pups",
+  "character": "bunny",
+  "mapImage": "assets/scenes/pup-map.png",
+  "homeImage": "assets/items/home-pup.png",
+  "levels": [
+    "pup-01-pup",
+    "pup-02-dog",
+    "pup-03-truck",
+    "pup-04-badge",
+    "pup-05-hat",
+    "pup-06-bone",
+    "pup-07-help",
+    "pup-08-review"
+  ]
+}

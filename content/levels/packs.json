@@ -1,3 +1,9 @@
 {
-  "packs": ["fruit-forest", "bike-world", "robot-lab", "hero-world"]
+  "packs": [
+    "fruit-forest",
+    "bike-world",
+    "robot-lab",
+    "hero-world",
+    "pup-patrol"
+  ]
 }
