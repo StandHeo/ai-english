@@ -1,6 +1,22 @@
+import { Capacitor } from '@capacitor/core'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
+
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
-export async function speakBrowser(text: string): Promise<void> {
+async function speakNative(text: string): Promise<void> {
+  await TextToSpeech.stop()
+  await TextToSpeech.speak({
+    text,
+    lang: 'en-US',
+    rate: 0.9,
+    pitch: 1.0,
+    volume: 1.0,
+    category: 'playback',
+    queueStrategy: 0,
+  })
+}
+
+async function speakWeb(text: string): Promise<void> {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
       resolve()
@@ -14,6 +30,30 @@ export async function speakBrowser(text: string): Promise<void> {
     u.onerror = () => resolve()
     window.speechSynthesis.speak(u)
   })
+}
+
+/** App（Capacitor）走系统 TTS；手机/电脑浏览器仍用 speechSynthesis。 */
+export async function speakBrowser(text: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await speakNative(text)
+      return
+    } catch {
+      // 原生失败时再试 WebView speechSynthesis
+    }
+  }
+  await speakWeb(text)
+}
+
+export async function cancelSpeak(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await TextToSpeech.stop()
+    } catch {
+      // ignore
+    }
+  }
+  window.speechSynthesis?.cancel()
 }
 
 export async function requestTts(text: string): Promise<void> {

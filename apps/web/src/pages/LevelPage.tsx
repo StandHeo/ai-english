@@ -7,7 +7,7 @@ import {
   loadLevel,
 } from '../content/loader'
 import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
-import { requestTts, submitSpeech } from '../voice/client'
+import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { LevelScript, ProgressState } from '../types'
@@ -184,7 +184,7 @@ export function LevelPage({ onProgress }: Props) {
     return () => {
       cancelled = true
       if (timer) window.clearTimeout(timer)
-      window.speechSynthesis?.cancel()
+      void cancelSpeak()
     }
   }, [advance, beat, level, sceneReady])
 
