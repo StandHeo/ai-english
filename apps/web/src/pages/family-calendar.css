@@ -1,0 +1,100 @@
+.family-cal {
+  min-height: 100vh;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 200, 120, 0.35), transparent 40%),
+    linear-gradient(160deg, #fff6e8, #e8f4ff);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.family-cal header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.family-cal h1 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.family-cal .icon {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  font-size: 20px;
+}
+
+.month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.month-nav button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 22px;
+}
+
+.dow,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+
+.dow span {
+  font-size: 12px;
+  color: #7a6a58;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+}
+
+.cell.empty {
+  background: transparent;
+}
+
+.cell.has {
+  background: #ffd089;
+  font-weight: 700;
+}
+
+.cell.today {
+  outline: 2px solid #3d7ea6;
+}
+
+.cell.done {
+  background: #9fd6a8;
+}
+
+.legend {
+  margin-top: 16px;
+  color: #5a4a3a;
+  font-size: 0.9rem;
+}
+
+.play-today {
+  margin-top: 12px;
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px;
+  background: #d4553a;
+  color: #fff;
+  font-size: 17px;
+}

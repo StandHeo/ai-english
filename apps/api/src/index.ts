@@ -5,6 +5,7 @@ import multer from 'multer'
 import { matchExpect } from './match.js'
 import { recognizeSpeech } from './asr.js'
 import { synthesizeSpeech } from './tts.js'
+import { generateFamilyLevel } from './familyGenerate.js'
 
 const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5_000_000 } })
@@ -18,6 +19,7 @@ app.get('/health', (_req, res) => {
     ok: true,
     asr: process.env.ASR_PROVIDER || 'mock',
     tts: process.env.TTS_PROVIDER || 'browser-hint',
+    familyLlm: process.env.FAMILY_LLM_PROVIDER || 'deepseek',
   })
 })
 
@@ -60,6 +62,34 @@ app.post('/api/tts', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'tts_failed' })
+  }
+})
+
+app.post('/api/family/generate-level', async (req, res) => {
+  try {
+    const story = String(req.body.story || '').trim()
+    const date = String(req.body.date || '').trim() || new Date().toISOString().slice(0, 10)
+    const headerKey = String(req.header('x-deepseek-key') || '').trim()
+    const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
+    const apiKey = headerKey || bodyKey || undefined
+
+    if (!story) {
+      res.status(400).json({ error: 'story_required' })
+      return
+    }
+
+    const payload = await generateFamilyLevel({ story, date, apiKey })
+    res.json(payload)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'generate_failed'
+    const status =
+      message === 'api_key_required' || message === 'story_required'
+        ? 400
+        : message.startsWith('invalid_level')
+          ? 422
+          : 500
+    console.error('[family/generate-level]', message)
+    res.status(status).json({ error: message })
   }
 })
 

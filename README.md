@@ -85,6 +85,12 @@ node content/validate.mjs
 
 → 详见 **[`docs/android-phone-guide.md`](docs/android-phone-guide.md)**
 
+## 家庭日记关卡（当晚生成）
+
+家长聊「今天做了什么」→ DeepSeek 生成关卡 → 家庭日历游玩：
+
+→ 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**
+
 （可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
 
 ## Capacitor / Android APK
@@ -93,4 +99,4 @@ node content/validate.mjs
 
 ## OpenSpec
 
-活跃变更包括 `pup-patrol-pack`、`robot-ultraman-packs`、`bike-world-pack`、`family-bike-level`、`kids-story-oral-english-mvp`、`richer-oral-beats`。
+活跃变更包括 `family-day-studio`、`pup-patrol-pack`、`robot-ultraman-packs` 等。

@@ -29,6 +29,17 @@ export function HomePage() {
         </button>
       </div>
       <div className="theme-grid">
+        <button
+          className="theme-card family-card"
+          type="button"
+          aria-label="Family Calendar"
+          onClick={() => navigate('/family')}
+        >
+          <div className="family-card-inner">
+            <span className="family-card-title">Family</span>
+            <span className="family-card-sub">今日冒险</span>
+          </div>
+        </button>
         {packs.map((pack) => (
           <button
             key={pack.id}

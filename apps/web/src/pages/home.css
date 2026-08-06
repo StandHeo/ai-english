@@ -72,6 +72,41 @@
   animation-delay: 0.24s;
 }
 
+.theme-card:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.family-card {
+  background: linear-gradient(145deg, #fff0d4, #ffe0b8);
+}
+
+.family-card-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 180, 80, 0.45), transparent 50%),
+    linear-gradient(160deg, #ffb35a, #e86b4a);
+}
+
+.family-card-title {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: clamp(1.6rem, 6vw, 2rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.family-card-sub {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .theme-card img {
   width: 100%;
   height: 100%;
