@@ -3,6 +3,8 @@
  * 支持环境变量 Key；无 Key 或 FAMILY_IMAGE_PROVIDER=mock 时走占位。
  */
 
+import sharp from 'sharp'
+
 export type ImageSlot = {
   /** 用于 prompt 的主体描述（英文词或中文场景） */
   subject: string
@@ -41,6 +43,12 @@ const SAFETY_PREFIX =
 
 const NEGATIVE =
   '文字,水印,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
+
+/** 压缩后 data URL 上限（约 400KB raw ≈ 550KB base64） */
+const MAX_COMPRESSED_BYTES = 400_000
+const TONGYI_TIMEOUT_MS = 120_000
+const MAX_EDGE = 512
+const JPEG_QUALITY = 80
 
 function envKey(): string {
   return (
@@ -117,18 +125,67 @@ function extractImageUrls(payload: unknown): string[] {
   return [...new Set(urls)]
 }
 
+function isTimeoutError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return (
+    err.name === 'TimeoutError' ||
+    err.name === 'AbortError' ||
+    /timeout|aborted/i.test(err.message)
+  )
+}
+
+/**
+ * 将原始图片 buffer 缩到最长边 512，输出 JPEG（控制 localStorage 体积）。
+ */
+export async function compressImageBuffer(buf: Buffer): Promise<Buffer> {
+  let quality = JPEG_QUALITY
+  let out = await sharp(buf)
+    .rotate()
+    .resize({
+      width: MAX_EDGE,
+      height: MAX_EDGE,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality, mozjpeg: true })
+    .toBuffer()
+
+  // 仍过大则再降质量
+  while (out.length > MAX_COMPRESSED_BYTES && quality > 40) {
+    quality -= 15
+    out = await sharp(buf)
+      .rotate()
+      .resize({
+        width: MAX_EDGE,
+        height: MAX_EDGE,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer()
+  }
+  return out
+}
+
+export async function bufferToJpegDataUrl(buf: Buffer): Promise<string> {
+  const compressed = await compressImageBuffer(buf)
+  if (compressed.length > MAX_COMPRESSED_BYTES) {
+    throw new Error('image_too_large')
+  }
+  return `data:image/jpeg;base64,${compressed.toString('base64')}`
+}
+
 async function urlToDataUrl(url: string): Promise<string> {
-  if (url.startsWith('data:image')) return url
+  if (url.startsWith('data:image')) {
+    const m = /^data:image\/[^;]+;base64,(.+)$/i.exec(url)
+    if (!m) return url
+    const raw = Buffer.from(m[1], 'base64')
+    return bufferToJpegDataUrl(raw)
+  }
   const res = await fetch(url, { signal: AbortSignal.timeout(60_000) })
   if (!res.ok) throw new Error(`image_download_failed_${res.status}`)
   const buf = Buffer.from(await res.arrayBuffer())
-  // 限制体积，避免撑爆 localStorage（约 1.5MB raw）
-  if (buf.length > 1_500_000) {
-    throw new Error('image_too_large')
-  }
-  const ct = res.headers.get('content-type') || 'image/png'
-  const mime = ct.split(';')[0].trim() || 'image/png'
-  return `data:${mime};base64,${buf.toString('base64')}`
+  return bufferToJpegDataUrl(buf)
 }
 
 async function callTongyiOnce(
@@ -150,7 +207,7 @@ async function callTongyiOnce(
       ],
     },
     parameters: {
-      prompt_extend: true,
+      prompt_extend: false,
       watermark: false,
       n: 1,
       negative_prompt: NEGATIVE,
@@ -167,7 +224,7 @@ async function callTongyiOnce(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(TONGYI_TIMEOUT_MS),
   })
 
   const text = await res.text()
@@ -200,6 +257,20 @@ async function callTongyiOnce(
   return {
     dataUrl,
     rawPreview: `url=${urls[0].slice(0, 120)} dataUrlLen=${dataUrl.length}`,
+  }
+}
+
+/** 超时则同一 prompt 再试一次 */
+async function callTongyiWithRetry(
+  apiKey: string,
+  prompt: string,
+): Promise<{ dataUrl: string; rawPreview: string }> {
+  try {
+    return await callTongyiOnce(apiKey, prompt)
+  } catch (err) {
+    if (!isTimeoutError(err)) throw err
+    console.log('[tongyi] retry after timeout', prompt.slice(0, 80))
+    return await callTongyiOnce(apiKey, prompt)
   }
 }
 
@@ -288,7 +359,7 @@ export async function generateFamilyImages(
   for (const slot of slots) {
     const prompt = buildKidsPrompt(slot)
     try {
-      const { dataUrl, rawPreview } = await callTongyiOnce(key, prompt)
+      const { dataUrl, rawPreview } = await callTongyiWithRetry(key, prompt)
       images.push(dataUrl)
       debugCalls.push({ subject: slot.subject, prompt, ok: true, detail: rawPreview })
     } catch (err) {
