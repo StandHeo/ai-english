@@ -1,8 +1,18 @@
 import type { LevelScript } from '../types'
 
+export type FamilyDiaryMessage = {
+  id: string
+  createdAt: number
+  text: string
+  /** data URL for short diary clips; optional for text-only */
+  audioDataUrl?: string
+}
+
 export type FamilyDayRecord = {
   date: string
+  /** Merged cache of message texts for level generation */
   story: string
+  messages: FamilyDiaryMessage[]
   level: LevelScript | null
   photoHints: string[]
   /** data URL or blob URL strings attached by parent */
@@ -30,14 +40,66 @@ export function todayKey(d = new Date()): string {
   return `${y}-${m}-${day}`
 }
 
+export function newMessageId(): string {
+  return `m_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+export function mergeStoryFromMessages(messages: FamilyDiaryMessage[]): string {
+  return messages
+    .map((m) => m.text.trim())
+    .filter(Boolean)
+    .join('\n')
+}
+
+function normalizeMessages(raw: unknown): FamilyDiaryMessage[] {
+  if (!Array.isArray(raw)) return []
+  const out: FamilyDiaryMessage[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const m = item as Partial<FamilyDiaryMessage>
+    if (typeof m.id !== 'string' || typeof m.createdAt !== 'number') continue
+    out.push({
+      id: m.id,
+      createdAt: m.createdAt,
+      text: typeof m.text === 'string' ? m.text : '',
+      ...(typeof m.audioDataUrl === 'string' && m.audioDataUrl
+        ? { audioDataUrl: m.audioDataUrl }
+        : {}),
+    })
+  }
+  return out
+}
+
+function normalizeDay(date: string, raw: Partial<FamilyDayRecord> | undefined): FamilyDayRecord {
+  const messages = normalizeMessages(raw?.messages)
+  const story =
+    typeof raw?.story === 'string'
+      ? raw.story
+      : mergeStoryFromMessages(messages)
+  return {
+    date,
+    story,
+    messages,
+    level: raw?.level || null,
+    photoHints: Array.isArray(raw?.photoHints) ? raw.photoHints.map(String) : [],
+    images: Array.isArray(raw?.images) ? raw.images.map(String) : [],
+    completed: Boolean(raw?.completed),
+    updatedAt: typeof raw?.updatedAt === 'number' ? raw.updatedAt : Date.now(),
+  }
+}
+
 export function loadFamilyStore(): FamilyStore {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return emptyStore()
     const parsed = JSON.parse(raw) as FamilyStore
+    const days: Record<string, FamilyDayRecord> = {}
+    for (const [date, day] of Object.entries(parsed.days || {})) {
+      days[date] = normalizeDay(date, day)
+    }
     return {
       version: 1,
-      days: parsed.days || {},
+      days,
       deepseekApiKey: typeof parsed.deepseekApiKey === 'string' ? parsed.deepseekApiKey : '',
     }
   } catch {
@@ -59,16 +121,45 @@ export function listDaysWithLevels(): FamilyDayRecord[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-export function upsertStory(date: string, story: string): FamilyDayRecord {
+export function listDaysWithVoice(): string[] {
+  return Object.values(loadFamilyStore().days)
+    .filter((d) => d.messages.some((m) => Boolean(m.audioDataUrl)))
+    .map((d) => d.date)
+}
+
+/** Migrate legacy story-only days into a single text message. */
+export function ensureMessagesMigrated(date: string): FamilyDayRecord {
   const store = loadFamilyStore()
   const prev = store.days[date]
+  if (!prev) {
+    const empty: FamilyDayRecord = {
+      date,
+      story: '',
+      messages: [],
+      level: null,
+      photoHints: [],
+      images: [],
+      completed: false,
+      updatedAt: Date.now(),
+    }
+    store.days[date] = empty
+    saveFamilyStore(store)
+    return empty
+  }
+  if (prev.messages.length > 0) return prev
+  const story = (prev.story || '').trim()
+  if (!story) return prev
+  const messages: FamilyDiaryMessage[] = [
+    {
+      id: newMessageId(),
+      createdAt: prev.updatedAt || Date.now(),
+      text: story,
+    },
+  ]
   const next: FamilyDayRecord = {
-    date,
+    ...prev,
+    messages,
     story,
-    level: prev?.level || null,
-    photoHints: prev?.photoHints || [],
-    images: prev?.images || [],
-    completed: prev?.completed || false,
     updatedAt: Date.now(),
   }
   store.days[date] = next
@@ -76,12 +167,96 @@ export function upsertStory(date: string, story: string): FamilyDayRecord {
   return next
 }
 
+function persistDay(date: string, patch: Partial<FamilyDayRecord>): FamilyDayRecord {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  const base = prev || normalizeDay(date, undefined)
+  const messages = patch.messages ?? base.messages
+  const next: FamilyDayRecord = {
+    ...base,
+    ...patch,
+    date,
+    messages,
+    story:
+      patch.story !== undefined
+        ? patch.story
+        : mergeStoryFromMessages(messages),
+    updatedAt: Date.now(),
+  }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+export function upsertStory(date: string, story: string): FamilyDayRecord {
+  const day = ensureMessagesMigrated(date)
+  // Keep messages; treat whole-story edit as replacing merged cache only when no messages?
+  // Legacy callers: sync a single editable story into one message when editing whole text.
+  if (day.messages.length <= 1) {
+    const messages =
+      day.messages.length === 1
+        ? [{ ...day.messages[0], text: story }]
+        : story.trim()
+          ? [{ id: newMessageId(), createdAt: Date.now(), text: story }]
+          : []
+    return persistDay(date, { messages, story })
+  }
+  return persistDay(date, { story })
+}
+
 export function appendStory(date: string, chunk: string): FamilyDayRecord {
+  return appendTextMessage(date, chunk)
+}
+
+export function appendTextMessage(date: string, text: string): FamilyDayRecord {
+  ensureMessagesMigrated(date)
+  const add = text.trim()
+  if (!add) {
+    return getDay(date) || ensureMessagesMigrated(date)
+  }
+  const prev = getDay(date)!
+  const messages = [
+    ...prev.messages,
+    { id: newMessageId(), createdAt: Date.now(), text: add },
+  ]
+  return persistDay(date, { messages })
+}
+
+export function appendVoiceMessage(
+  date: string,
+  opts: { text: string; audioDataUrl: string },
+): FamilyDayRecord {
+  ensureMessagesMigrated(date)
+  const prev = getDay(date)!
+  const messages = [
+    ...prev.messages,
+    {
+      id: newMessageId(),
+      createdAt: Date.now(),
+      text: opts.text.trim(),
+      audioDataUrl: opts.audioDataUrl,
+    },
+  ]
+  return persistDay(date, { messages })
+}
+
+export function updateMessageText(
+  date: string,
+  messageId: string,
+  text: string,
+): FamilyDayRecord | null {
+  ensureMessagesMigrated(date)
   const prev = getDay(date)
-  const base = (prev?.story || '').trim()
-  const add = chunk.trim()
-  const story = base ? `${base}\n${add}` : add
-  return upsertStory(date, story)
+  if (!prev) return null
+  const messages = prev.messages.map((m) =>
+    m.id === messageId ? { ...m, text } : m,
+  )
+  if (!messages.some((m) => m.id === messageId)) return null
+  return persistDay(date, { messages })
+}
+
+export function getMessages(date: string): FamilyDiaryMessage[] {
+  return ensureMessagesMigrated(date).messages
 }
 
 /** @returns error message if blocked without force */
@@ -96,17 +271,18 @@ export function saveGeneratedLevel(
   if (prev?.completed && prev.level && !opts.force) {
     return { ok: false, reason: 'needs_confirm' }
   }
+  const base = prev || normalizeDay(date, undefined)
   const next: FamilyDayRecord = {
+    ...base,
     date,
-    story: prev?.story || '',
+    story: base.story || mergeStoryFromMessages(base.messages),
+    messages: base.messages,
     level,
     photoHints,
-    images: opts.force || !prev?.completed ? [] : prev?.images || [],
+    images: [],
     completed: false,
     updatedAt: Date.now(),
   }
-  // fresh generate clears images unless we want to keep — design: overwrite script; clear images on regen
-  next.images = []
   store.days[date] = next
   saveFamilyStore(store)
   return { ok: true, day: next }

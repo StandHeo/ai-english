@@ -10,6 +10,15 @@ import {
   PACK_LABELS_ZH,
   updateSettings,
 } from '../progress/store'
+import {
+  defaultVoicePrefs,
+  loadVoicePrefs,
+  saveVoicePrefs,
+  VOICE_PERSONA_OPTIONS,
+  type VoicePersona,
+  type VoicePrefs,
+} from '../voice/prefs'
+import { requestTts } from '../voice/client'
 import type { ContentPack, ProgressState } from '../types'
 import './parent.css'
 
@@ -28,6 +37,8 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [limit, setLimit] = useState(
     progress.dailyLimitMinutes == null ? '' : String(progress.dailyLimitMinutes),
   )
+  const [voicePrefs, setVoicePrefs] = useState<VoicePrefs>(() => loadVoicePrefs())
+  const [voiceSaved, setVoiceSaved] = useState('')
 
   useEffect(() => {
     listPackIds()
@@ -52,6 +63,20 @@ export function ParentPage({ progress, onProgress }: Props) {
       dailyLimitMinutes: minutes != null && !Number.isNaN(minutes) ? minutes : null,
     })
     onProgress(next)
+  }
+
+  function patchVoice(partial: Partial<VoicePrefs>) {
+    const next = { ...voicePrefs, ...partial }
+    setVoicePrefs(next)
+    saveVoicePrefs(next)
+    setVoiceSaved('已保存，关卡里马上生效')
+  }
+
+  async function previewVoice() {
+    saveVoicePrefs(voicePrefs)
+    setVoiceSaved('试听中…')
+    await requestTts("Hi! Let's play. Say apple!")
+    setVoiceSaved('已保存，关卡里马上生效')
   }
 
   if (!gated) {
@@ -80,7 +105,7 @@ export function ParentPage({ progress, onProgress }: Props) {
         <h2>家庭日记关卡</h2>
         <p>和孩子聊今天，生成当晚可玩的英语小关</p>
         <button type="button" onClick={() => navigate('/family/studio')}>
-          做今日关卡
+          家庭日记
         </button>
         <button type="button" className="linkish" onClick={() => navigate('/family')}>
           查看家庭日历
@@ -97,6 +122,69 @@ export function ParentPage({ progress, onProgress }: Props) {
             ))}
         </ul>
       </section>
+
+      <section>
+        <h2>英语朗读声音</h2>
+        <p className="muted">
+          仍使用手机/浏览器系统朗读。可选风格并微调；默认「小女孩」更活泼一点。实际音色因手机品牌而异。
+        </p>
+        <div className="voice-grid">
+          {VOICE_PERSONA_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`voice-chip ${voicePrefs.persona === opt.id ? 'active' : ''}`}
+              onClick={() => patchVoice({ persona: opt.id as VoicePersona })}
+            >
+              {opt.label}
+              <small>{opt.hint}</small>
+            </button>
+          ))}
+        </div>
+        <div className="voice-sliders">
+          <label>
+            语速微调（{voicePrefs.rateBoost >= 0 ? '+' : ''}
+            {voicePrefs.rateBoost.toFixed(2)}）
+            <input
+              type="range"
+              min={-0.25}
+              max={0.25}
+              step={0.05}
+              value={voicePrefs.rateBoost}
+              onChange={(e) => patchVoice({ rateBoost: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            音调微调（{voicePrefs.pitchBoost >= 0 ? '+' : ''}
+            {voicePrefs.pitchBoost.toFixed(2)}）
+            <input
+              type="range"
+              min={-0.35}
+              max={0.35}
+              step={0.05}
+              value={voicePrefs.pitchBoost}
+              onChange={(e) => patchVoice({ pitchBoost: Number(e.target.value) })}
+            />
+          </label>
+        </div>
+        <button type="button" onClick={() => void previewVoice()}>
+          试听
+        </button>
+        <button
+          type="button"
+          className="linkish"
+          onClick={() => {
+            const d = defaultVoicePrefs()
+            setVoicePrefs(d)
+            saveVoicePrefs(d)
+            setVoiceSaved('已恢复默认（小女孩）')
+          }}
+        >
+          恢复默认
+        </button>
+        {voiceSaved && <p className="muted">{voiceSaved}</p>}
+      </section>
+
       <section>
         <h2>今日游玩</h2>
         <p>约 {todayMin} 分钟</p>

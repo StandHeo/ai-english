@@ -1,49 +1,96 @@
 import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import { matchExpect } from './match'
+import {
+  loadVoicePrefs,
+  loadWebVoices,
+  pickWebVoice,
+  resolveVoice,
+  type VoiceResolved,
+} from './prefs'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
-async function speakNative(text: string): Promise<void> {
+async function speakNative(text: string, resolved: VoiceResolved): Promise<void> {
   await TextToSpeech.stop()
+  let voiceURI: string | undefined
+  try {
+    const { voices } = await TextToSpeech.getSupportedVoices()
+    const en = voices.filter((v) => /^en/i.test(v.lang || ''))
+    const pool = en.length ? en : voices
+    const picked = pickNativeVoice(pool, resolved)
+    voiceURI = picked?.voiceURI
+  } catch {
+    // some devices lack voice listing
+  }
   await TextToSpeech.speak({
     text,
-    lang: 'en-US',
-    rate: 0.9,
-    pitch: 1.0,
+    lang: resolved.lang,
+    rate: resolved.rate,
+    pitch: resolved.pitch,
     volume: 1.0,
     category: 'playback',
     queueStrategy: 0,
+    ...(voiceURI ? { voiceURI } : {}),
   })
 }
 
-async function speakWeb(text: string): Promise<void> {
+type NativeVoice = { voiceURI: string; name?: string; lang?: string }
+
+function pickNativeVoice(voices: NativeVoice[], resolved: VoiceResolved): NativeVoice | null {
+  if (!voices.length) return null
+  // Reuse web scoring via fake SpeechSynthesisVoice-like objects
+  const fake = voices.map(
+    (v) =>
+      ({
+        voiceURI: v.voiceURI,
+        name: v.name || v.voiceURI,
+        lang: v.lang || 'en-US',
+        localService: true,
+        default: false,
+      }) as SpeechSynthesisVoice,
+  )
+  const picked = pickWebVoice(fake, resolved)
+  if (!picked) return voices[0]
+  return voices.find((v) => v.voiceURI === picked.voiceURI) || voices[0]
+}
+
+async function speakWeb(text: string, resolved: VoiceResolved): Promise<void> {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
       resolve()
       return
     }
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'en-US'
-    u.rate = 0.9
-    u.onend = () => resolve()
-    u.onerror = () => resolve()
-    window.speechSynthesis.speak(u)
+    void loadWebVoices().then((voices) => {
+      window.speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = resolved.lang
+      u.rate = resolved.rate
+      u.pitch = resolved.pitch
+      const voice = pickWebVoice(voices, resolved)
+      if (voice) {
+        u.voice = voice
+        u.lang = voice.lang || resolved.lang
+      }
+      u.onend = () => resolve()
+      u.onerror = () => resolve()
+      window.speechSynthesis.speak(u)
+    })
   })
 }
 
 /** App（Capacitor）走系统 TTS；手机/电脑浏览器仍用 speechSynthesis。 */
 export async function speakBrowser(text: string): Promise<void> {
+  const resolved = resolveVoice(loadVoicePrefs())
   if (Capacitor.isNativePlatform()) {
     try {
-      await speakNative(text)
+      await speakNative(text, resolved)
       return
     } catch {
       // 原生失败时再试 WebView speechSynthesis
     }
   }
-  await speakWeb(text)
+  await speakWeb(text, resolved)
 }
 
 export async function cancelSpeak(): Promise<void> {

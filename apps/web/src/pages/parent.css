@@ -55,3 +55,45 @@
   font-size: 0.92rem;
   color: #5a4a3a;
 }
+
+.voice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.voice-chip {
+  margin-top: 0 !important;
+  padding: 12px 10px !important;
+  background: #f3eee6 !important;
+  color: #2c241c !important;
+  border: 2px solid transparent !important;
+  text-align: left;
+  font-size: 14px !important;
+}
+
+.voice-chip.active {
+  border-color: #3d7ea6 !important;
+  background: #e7f3fa !important;
+}
+
+.voice-chip small {
+  display: block;
+  margin-top: 4px;
+  color: #7a6a58;
+  font-weight: 400;
+}
+
+.voice-sliders label {
+  margin-top: 10px;
+}
+
+.voice-sliders input[type='range'] {
+  width: 100%;
+}
+
+.muted {
+  color: #7a6a58;
+  font-size: 0.9rem;
+}

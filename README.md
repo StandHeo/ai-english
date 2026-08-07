@@ -10,7 +10,11 @@ apps/api          # Express：ASR/TTS 代理与期望词匹配
 content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
+docs/             # 使用说明与技术方案
 ```
+
+**整体技术方案（架构 / 双轨语音 / 家庭日记 / 本地存储）：**  
+→ **[`docs/tech-architecture.md`](docs/tech-architecture.md)**
 
 ## 主题包
 
@@ -89,7 +93,12 @@ node content/validate.mjs
 
 家长聊「今天做了什么」→ DeepSeek 生成关卡 → 家庭日历游玩：
 
-→ 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**
+→ 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**  
+→ 聊天气泡 + 端侧 Whisper：**[`docs/family-diary-whisper.md`](docs/family-diary-whisper.md)**
+
+## 英语朗读声音
+
+默认更偏「小女孩」活泼音色（仍用系统 TTS）。家长中心可切换：小女孩 / 小男孩 / 女声 / 男声 / 老奶奶 / 老爷爷，并微调语速与音调。
 
 （可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
 
@@ -99,4 +108,4 @@ node content/validate.mjs
 
 ## OpenSpec
 
-活跃变更包括 `family-day-studio`、`pup-patrol-pack`、`robot-ultraman-packs` 等。
+活跃变更包括 `family-diary-chat-whisper`、`family-day-studio`、`pup-patrol-pack` 等。

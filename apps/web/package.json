@@ -18,6 +18,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "diary-whisper": "file:plugins/diary-whisper",
     "monosklet": "^1.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
