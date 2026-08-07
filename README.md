@@ -10,7 +10,11 @@ apps/api          # Express：ASR/TTS 代理与期望词匹配
 content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
+docs/             # 使用说明与技术方案
 ```
+
+**整体技术方案（架构 / 双轨语音 / 家庭日记 / 本地存储）：**  
+→ **[`docs/tech-architecture.md`](docs/tech-architecture.md)**
 
 ## 主题包
 
