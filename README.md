@@ -89,7 +89,8 @@ node content/validate.mjs
 
 家长聊「今天做了什么」→ DeepSeek 生成关卡 → 家庭日历游玩：
 
-→ 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**
+→ 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**  
+→ 聊天气泡 + 端侧 Whisper：**[`docs/family-diary-whisper.md`](docs/family-diary-whisper.md)**
 
 ## 英语朗读声音
 
@@ -103,4 +104,4 @@ node content/validate.mjs
 
 ## OpenSpec
 
-活跃变更包括 `family-day-studio`、`pup-patrol-pack`、`robot-ultraman-packs` 等。
+活跃变更包括 `family-diary-chat-whisper`、`family-day-studio`、`pup-patrol-pack` 等。

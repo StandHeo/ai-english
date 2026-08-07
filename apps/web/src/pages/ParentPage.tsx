@@ -105,7 +105,7 @@ export function ParentPage({ progress, onProgress }: Props) {
         <h2>家庭日记关卡</h2>
         <p>和孩子聊今天，生成当晚可玩的英语小关</p>
         <button type="button" onClick={() => navigate('/family/studio')}>
-          做今日关卡
+          家庭日记
         </button>
         <button type="button" className="linkish" onClick={() => navigate('/family')}>
           查看家庭日历
