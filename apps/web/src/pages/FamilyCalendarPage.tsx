@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDay, listDaysWithLevels, todayKey } from '../family/store'
+import { getDay, listDaysWithLevels, listDaysWithVoice, todayKey } from '../family/store'
 import './family-calendar.css'
 
 function monthMatrix(year: number, month: number) {
@@ -20,6 +20,7 @@ export function FamilyCalendarPage() {
   const now = new Date()
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() })
   const daysWith = useMemo(() => new Set(listDaysWithLevels().map((d) => d.date)), [])
+  const daysVoice = useMemo(() => new Set(listDaysWithVoice()), [])
 
   const cells = monthMatrix(cursor.y, cursor.m)
 
@@ -33,7 +34,10 @@ export function FamilyCalendarPage() {
     const key = dateOf(day)
     const rec = getDay(key)
     if (!rec?.level) {
-      window.alert('这一天还没有家庭关卡。请让家长在「做今日关卡」里生成。')
+      const voiceNote = rec?.messages?.some((m) => m.audioDataUrl)
+        ? '\n（这一天有日记语音，可让家长在制作台回听。）'
+        : ''
+      window.alert(`这一天还没有家庭关卡。请让家长在「家庭日记」里生成。${voiceNote}`)
       return
     }
     navigate(`/family/${key}/play`)
@@ -86,29 +90,32 @@ export function FamilyCalendarPage() {
           if (day == null) return <span key={`e-${i}`} className="cell empty" />
           const key = dateOf(day)
           const has = daysWith.has(key)
+          const hasVoice = daysVoice.has(key)
           const isToday = key === today
           const done = getDay(key)?.completed
           return (
             <button
               key={key}
               type="button"
-              className={`cell ${has ? 'has' : ''} ${isToday ? 'today' : ''} ${done ? 'done' : ''}`}
+              className={`cell ${has ? 'has' : ''} ${hasVoice ? 'voice' : ''} ${isToday ? 'today' : ''} ${done ? 'done' : ''}`}
               onClick={() => onPick(day)}
+              title={hasVoice ? '有日记语音' : undefined}
             >
-              {day}
+              <span className="day-num">{day}</span>
+              {hasVoice && <span className="voice-dot" aria-label="有语音" />}
             </button>
           )
         })}
       </div>
 
-      <p className="legend">有颜色的日子表示已生成关卡 · 点进去玩</p>
+      <p className="legend">有颜色的日子表示已生成关卡 · 小圆点表示有日记语音</p>
       <button
         type="button"
         className="play-today"
         onClick={() => {
           const day = getDay(today)
           if (!day?.level) {
-            window.alert('今天还没有家庭关卡。请让家长先「做今日关卡」。')
+            window.alert('今天还没有家庭关卡。请让家长先做「家庭日记」并生成关卡。')
             return
           }
           navigate(`/family/${today}/play`)

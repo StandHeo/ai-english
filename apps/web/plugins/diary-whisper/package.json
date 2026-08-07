@@ -1,0 +1,22 @@
+{
+  "name": "diary-whisper",
+  "version": "0.1.0",
+  "description": "On-device Whisper ASR for family diary (Capacitor)",
+  "main": "index.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "index.js",
+    "README.md"
+  ],
+  "author": "ai-english",
+  "license": "MIT",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}
