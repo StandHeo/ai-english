@@ -32,7 +32,8 @@ npm run dev:phone
 3. 点 **生成关卡**；若设置开启自动配图，会再请求通义万相（也可稍后「重新配图」或相册选图）
 4. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
 
-通义开通、费用与验收见 [`family-tongyi-images.md`](./family-tongyi-images.md)。
+通义开通、费用与验收见 [`family-tongyi-images.md`](./family-tongyi-images.md)。  
+本地图标配图见 [`family-iconify-images.md`](./family-iconify-images.md)。
 
 ## 孩子：玩
 
@@ -42,5 +43,6 @@ npm run dev:phone
 
 - 数据存在本机浏览器（`localStorage`），清站点数据会丢。
 - 同一天未通关可再次生成覆盖；已通关会先确认。
+- 生成关卡会检查英文关键词数量（目标词 + 选项 id 去重）；默认至少 9 个，可在日记设置里改（3–20）。不足时不保存关卡，提示追加日记后再生成。
 - 不会改写官方水果/机器人等 pack。
 - `FAMILY_LLM_PROVIDER=mock` 时不调用 DeepSeek，用固定演示关，方便冒烟。

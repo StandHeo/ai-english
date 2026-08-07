@@ -1,4 +1,4 @@
-# 在安卓手机上运行本项目（零安卓开发基础版）
+# 2在安卓手机上运行本项目（零安卓开发基础版）
 
 你**不需要会写安卓代码**。推荐先用最简单的方式：手机浏览器打开电脑上跑的网页。想装成 App 图标再看后半部分。
 
@@ -148,6 +148,7 @@ https://你的IP:5173
 ### 8. 语音识别说明
 
 - 
+
 - 手机在 HTTPS 下，会优先用 **浏览器自带英语语音识别**（按住说话，松开后匹配关卡单词）。
 - 后端默认 `ASR_PROVIDER=mock`：若只有录音、没有识别文本，会用期望词做联调；**真正听你说了什么**，靠浏览器识别文本或配置 `ASR_PROVIDER=openai` + `ASR_API_KEY`。
 - 前端默认请求同源 `/api`（Vite 代理到电脑 `8787`），一般不用改代码。
@@ -226,14 +227,14 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 
 打成 App 后，请求不再走电脑 Vite 代理。手机上的 `localhost` 是手机自己，**不是电脑**。
 
-1. 电脑保持 `apps/api` 在跑（默认 `8787`），手机与电脑同一 Wi‑Fi。  
-2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.2.104:8787`（把 IP 换成你电脑的）。  
-3. Capacitor 已开启 `allowMixedContent`，HTTPS 页面可请求局域网 HTTP。  
+1. 电脑保持 `apps/api` 在跑（默认 `8787`），手机与电脑同一 Wi‑Fi。
+2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.2.104:8787`（把 IP 换成你电脑的）。
+3. Capacitor 已开启 `allowMixedContent`，并用原生 `CapacitorHttp` 发 API 请求，避免 HTTPS 页访问局域网 HTTP 被 Mixed Content 拦截。
 4. 回到日记页点「生成关卡」。
 
 也可在打包前设 `apps/web/.env.local`：`VITE_API_BASE=http://电脑IP:8787`，再 `npm run build && npx cap sync android`。
 
-Android 已允许明文 HTTP（局域网调试）。若仍连不上，检查电脑防火墙是否放行 8787。
+Android 已允许明文 HTTP（局域网调试）。若仍看到 Mixed Content，确认已重新 `build` + `cap sync` 后再 Run。若仍连不上，检查电脑防火墙是否放行 8787。
 
 **不会改代码时，建议先用「方式一：浏览器」试玩。**
 

@@ -83,16 +83,56 @@ app.post('/api/family/generate-level', async (req, res) => {
     const headerKey = String(req.header('x-deepseek-key') || '').trim()
     const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
     const apiKey = headerKey || bodyKey || undefined
+    const minKeywords = req.body.minKeywords
 
     if (!story) {
       res.status(400).json({ error: 'story_required' })
       return
     }
 
-    const payload = await generateFamilyLevel({ story, date, apiKey })
+    console.log(
+      '[family/generate-level] incoming',
+      JSON.stringify({
+        date,
+        minKeywords,
+        storyChars: story.length,
+        storyPreview: story.slice(0, 400),
+        hasKey: Boolean(apiKey),
+      }),
+    )
+
+    const payload = await generateFamilyLevel({ story, date, apiKey, minKeywords })
+    console.log(
+      '[family/generate-level] result',
+      JSON.stringify({
+        keywordCount: payload.keywords?.length,
+        keywords: payload.keywords,
+        minKeywords: payload.debug?.minKeywords,
+        title: payload.level?.title,
+        target_words: payload.level?.target_words,
+      }),
+    )
     res.json(payload)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'generate_failed'
+    if (message.startsWith('keywords_insufficient:')) {
+      const [, count, min] = message.split(':')
+      res.status(422).json({
+        error: 'keywords_insufficient',
+        count: Number(count) || 0,
+        minKeywords: Number(min) || 9,
+        message:
+          '关键词不足，请再追加几句今日场景描述后重新生成',
+      })
+      return
+    }
+    if (message === 'deepseek_timeout') {
+      res.status(504).json({
+        error: 'deepseek_timeout',
+        message: 'DeepSeek 响应超时，请稍后再试或把最少关键词调低',
+      })
+      return
+    }
     const status =
       message === 'api_key_required' || message === 'story_required'
         ? 400
@@ -111,10 +151,11 @@ app.post('/api/family/generate-images', async (req, res) => {
     const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
     const apiKey = headerKey || bodyKey || undefined
     const forceMock = Boolean(req.body.forceMock)
+    const maxSlots = req.body.maxSlots ?? req.body.minKeywords
 
     let slots = Array.isArray(req.body.slots) ? req.body.slots : null
     if (!slots?.length && req.body.level && typeof req.body.level === 'object') {
-      slots = slotsFromLevel(req.body.level as Record<string, unknown>)
+      slots = slotsFromLevel(req.body.level as Record<string, unknown>, maxSlots)
     }
     if (!Array.isArray(slots) || !slots.length) {
       res.status(400).json({ error: 'slots_or_level_required' })
@@ -137,12 +178,32 @@ app.post('/api/family/generate-images', async (req, res) => {
       return
     }
 
+    console.log(
+      '[family/generate-images] incoming',
+      JSON.stringify({
+        date,
+        maxSlots,
+        slotSubjects: normalized.map((s) => s.subject),
+        hasKey: Boolean(apiKey),
+      }),
+    )
+
     const payload = await generateFamilyImages({
       date,
       slots: normalized,
       apiKey,
       forceMock,
+      maxSlots,
     })
+    console.log(
+      '[family/generate-images] result',
+      JSON.stringify({
+        provider: payload.provider,
+        imageCount: payload.images.length,
+        warnings: payload.warnings,
+        debug: payload.debug,
+      }),
+    )
     res.json(payload)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'generate_images_failed'

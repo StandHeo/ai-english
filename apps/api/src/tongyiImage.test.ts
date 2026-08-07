@@ -12,21 +12,24 @@ test('buildKidsPrompt includes safety prefix', () => {
   assert.match(p, /slide/)
 })
 
-test('slotsFromLevel picks scene + words capped', () => {
-  process.env.TONGYI_IMAGE_MAX = '4'
-  const slots = slotsFromLevel({
-    target_words: ['park', 'slide', 'ball', 'tree', 'extra'],
-    scene: { setting: '公园滑梯' },
-    beats: [
-      {
-        type: 'find',
-        options: [{ id: 'slide' }, { id: 'duck' }],
-      },
-    ],
-  })
+test('slotsFromLevel prefers English words and respects maxSlots', () => {
+  const slots = slotsFromLevel(
+    {
+      target_words: ['park', 'slide', 'ball', 'tree', 'duck', 'bench'],
+      scene: { setting: '公园滑梯' },
+      beats: [
+        {
+          type: 'find',
+          options: [{ id: 'slide' }, { id: 'kite' }],
+        },
+      ],
+    },
+    5,
+  )
   assert.equal(slots[0]?.role, 'scene')
-  assert.ok(slots.length <= 4)
-  assert.ok(slots.some((s) => s.subject === 'park' || s.subject.includes('公园')))
+  assert.equal(slots[0]?.subject, 'park')
+  assert.equal(slots.length, 5)
+  assert.ok(slots.every((s) => /^[a-z]/i.test(s.subject)))
 })
 
 test('mock generate-images returns data urls', async () => {

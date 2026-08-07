@@ -8,11 +8,15 @@ import {
 import {
   clearDeepseekKey,
   clearTongyiKey,
+  getAutoIconImages,
   getAutoTongyiImages,
   getDeepseekKey,
+  getMinLevelKeywords,
   getTongyiKey,
+  setAutoIconImages,
   setAutoTongyiImages,
   setDeepseekKey,
+  setMinLevelKeywords,
   setTongyiKey,
 } from '../family/store'
 import { prepareDiaryWhisperModel } from '../voice/diaryAsr'
@@ -29,7 +33,9 @@ export function FamilyStudioSettingsPage() {
   const navigate = useNavigate()
   const [apiKey, setApiKey] = useState('')
   const [tongyiKey, setTongyiKeyInput] = useState('')
-  const [autoImages, setAutoImages] = useState(false)
+  const [autoTongyi, setAutoTongyi] = useState(false)
+  const [autoIcon, setAutoIcon] = useState(false)
+  const [minKeywords, setMinKeywords] = useState(9)
   const [apiBaseInput, setApiBaseInput] = useState(() => getStoredApiBase())
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
     getDiaryWhisperModelId(),
@@ -40,7 +46,9 @@ export function FamilyStudioSettingsPage() {
   useEffect(() => {
     setApiKey(getDeepseekKey())
     setTongyiKeyInput(getTongyiKey())
-    setAutoImages(getAutoTongyiImages())
+    setAutoTongyi(getAutoTongyiImages())
+    setAutoIcon(getAutoIconImages())
+    setMinKeywords(getMinLevelKeywords())
     setApiBaseInput(getStoredApiBase())
     setWhisperModel(getDiaryWhisperModelId())
   }, [])
@@ -50,15 +58,46 @@ export function FamilyStudioSettingsPage() {
     setStatus(apiKey.trim() ? '已保存 DeepSeek Key' : 'Key 已清空')
   }
 
-  function saveTongyi() {
+  function saveMinKeywords() {
+    setMinLevelKeywords(minKeywords)
+    const n = getMinLevelKeywords()
+    setMinKeywords(n)
+    setStatus(`已保存：至少 ${n} 个关键词，配图也最多 ${n} 张`)
+  }
+
+  function saveImageSettings() {
+    if (!autoIcon && !autoTongyi) {
+      setStatus('请至少勾选一种自动配图：图标或通义')
+      return
+    }
     setTongyiKey(tongyiKey)
-    setAutoTongyiImages(autoImages)
-    setStatus(
-      [
-        tongyiKey.trim() ? '已保存通义 Key' : '通义 Key 已清空（可用 API .env）',
-        autoImages ? '自动配图：开' : '自动配图：关',
-      ].join('；'),
-    )
+    setAutoTongyiImages(autoTongyi)
+    setAutoIconImages(autoIcon)
+    const bits = [
+      tongyiKey.trim() ? '已保存通义 Key' : '通义 Key 已清空（可用 API .env）',
+      autoIcon ? '自动图标：开' : '自动图标：关',
+      autoTongyi ? '自动通义：开' : '自动通义：关',
+    ]
+    if (autoIcon && autoTongyi) {
+      bits.push('两者皆开：先图标，未匹配再通义补全')
+    }
+    setStatus(bits.join('；'))
+  }
+
+  function onToggleAutoIcon(on: boolean) {
+    if (!on && !autoTongyi) {
+      setStatus('请至少保留一种自动配图')
+      return
+    }
+    setAutoIcon(on)
+  }
+
+  function onToggleAutoTongyi(on: boolean) {
+    if (!on && !autoIcon) {
+      setStatus('请至少保留一种自动配图')
+      return
+    }
+    setAutoTongyi(on)
   }
 
   function saveApiBase() {
@@ -151,18 +190,44 @@ export function FamilyStudioSettingsPage() {
           </button>
         </div>
 
-        <h2>自动配图（通义万相）</h2>
+        <h2>关卡最少关键词数 / 配图张数</h2>
         <p className="muted">
-          默认关闭。开启后，「生成关卡」成功会再调通义文生图（最多 4 张，按张计费）。也可只用 API
-          机器上的 DASHSCOPE_API_KEY / TONGYI_API_KEY。
+          生成关卡时统计英文关键词（目标词 + 选项 id 去重），不足则不会保存关卡。同一数值也是配图槽位上限（图标 /
+          通义 / 相册），默认 9，可设 3–12。
+        </p>
+        <input
+          type="number"
+          min={3}
+          max={12}
+          value={minKeywords}
+          onChange={(e) => setMinKeywords(Number(e.target.value) || 9)}
+        />
+        <div className="row">
+          <button type="button" onClick={saveMinKeywords}>
+            保存关键词数
+          </button>
+        </div>
+
+        <h2>配图方式</h2>
+        <p className="muted">
+          至少勾选一种。可都开：先本地图标，找不到匹配再调用通义补全。图标离线免费；通义需
+          Key、按张计费。
         </p>
         <label className="toggle-row">
           <input
             type="checkbox"
-            checked={autoImages}
-            onChange={(e) => setAutoImages(e.target.checked)}
+            checked={autoIcon}
+            onChange={(e) => onToggleAutoIcon(e.target.checked)}
           />
-          <span>生成关卡后自动配图</span>
+          <span>生成关卡后自动图标配图</span>
+        </label>
+        <label className="toggle-row">
+          <input
+            type="checkbox"
+            checked={autoTongyi}
+            onChange={(e) => onToggleAutoTongyi(e.target.checked)}
+          />
+          <span>生成关卡后自动通义配图</span>
         </label>
         <input
           type="password"
@@ -172,7 +237,7 @@ export function FamilyStudioSettingsPage() {
           autoComplete="off"
         />
         <div className="row">
-          <button type="button" onClick={saveTongyi}>
+          <button type="button" onClick={saveImageSettings}>
             保存配图设置
           </button>
           <button

@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, CapacitorHttp } from '@capacitor/core'
 
 const KEY = 'ai-english-api-base-v1'
 const ENV_BASE = String(import.meta.env.VITE_API_BASE || '')
@@ -38,4 +38,86 @@ export function isNativeApp(): boolean {
 
 export function missingNativeApiBase(): boolean {
   return isNativeApp() && !getApiBase()
+}
+
+export type ApiJsonResult = {
+  ok: boolean
+  status: number
+  data: Record<string, unknown>
+  error?: string
+}
+
+/**
+ * JSON API 请求。App 内走原生 CapacitorHttp，避开 WebView Mixed Content。
+ */
+export async function apiJson(
+  path: string,
+  init: {
+    method?: string
+    headers?: Record<string, string>
+    body?: unknown
+    /** 读超时，默认 60s；通义配图建议 300s */
+    timeoutMs?: number
+  } = {},
+): Promise<ApiJsonResult> {
+  const url = apiUrl(path)
+  if (!url || url === path) {
+    return { ok: false, status: 0, data: {}, error: 'missing_api_base' }
+  }
+
+  const method = (init.method || 'GET').toUpperCase()
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...init.headers,
+  }
+  const timeoutMs = init.timeoutMs ?? 60_000
+
+  try {
+    if (isNativeApp()) {
+      const res = await CapacitorHttp.request({
+        url,
+        method,
+        headers,
+        data: init.body,
+        connectTimeout: 20_000,
+        readTimeout: timeoutMs,
+        responseType: 'json',
+      })
+      let data: Record<string, unknown> = {}
+      if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        data = res.data as Record<string, unknown>
+      } else if (typeof res.data === 'string' && res.data.trim()) {
+        try {
+          data = JSON.parse(res.data) as Record<string, unknown>
+        } catch {
+          data = { raw: res.data }
+        }
+      }
+      const ok = res.status >= 200 && res.status < 300
+      return {
+        ok,
+        status: res.status,
+        data,
+        error: ok ? undefined : String(data.error || `http_${res.status}`),
+      }
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    return {
+      ok: res.ok,
+      status: res.status,
+      data,
+      error: res.ok ? undefined : String(data.error || `http_${res.status}`),
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, status: 0, data: {}, error: msg }
+  }
 }

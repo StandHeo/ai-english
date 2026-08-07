@@ -9,7 +9,9 @@
     "sync-content": "rm -rf public/content && mkdir -p public/content && cp -R ../../content/levels public/content/ && cp -R ../../content/assets public/content/",
     "fetch-vosk-model": "node scripts/fetch-vosk-model.mjs",
     "fetch-diary-whisper": "node scripts/fetch-diary-whisper.mjs",
-    "build": "npm run sync-content && tsc -b && vite build",
+    "build-icon-pack": "node scripts/build-family-icon-pack.mjs",
+    "build": "npm run build-icon-pack && npm run sync-content && tsc -b && vite build",
+    "test:icons": "tsx --test src/icons/**/*.test.ts",
     "build:android": "npm run fetch-vosk-model && npm run fetch-diary-whisper && npm run build && npx cap sync android",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -27,12 +29,14 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
+    "@iconify-json/mdi": "^1.2.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
+    "tsx": "^4.23.11",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }

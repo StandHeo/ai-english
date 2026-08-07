@@ -8,6 +8,12 @@ export type FamilyDiaryMessage = {
   audioDataUrl?: string
 }
 
+export type FamilyIconColor = {
+  word: string
+  fg: string
+  bg: string
+}
+
 export type FamilyDayRecord = {
   date: string
   /** Merged cache of message texts for level generation */
@@ -15,6 +21,8 @@ export type FamilyDayRecord = {
   messages: FamilyDiaryMessage[]
   level: LevelScript | null
   photoHints: string[]
+  /** DeepSeek 建议的图标配色 */
+  iconColors: FamilyIconColor[]
   /** data URL or blob URL strings attached by parent */
   images: string[]
   completed: boolean
@@ -27,12 +35,16 @@ type FamilyStore = {
   deepseekApiKey: string
   /** 通义/百炼 Key（可选；也可只用 API .env） */
   tongyiApiKey: string
-  /** 生成关卡后自动配图；默认关以免误扣费 */
+  /** 生成关卡后自动通义配图；默认关以免误扣费 */
   autoTongyiImages: boolean
+  /** 生成关卡后自动图标配图；默认开；与通义同时开时优先图标 */
+  autoIconImages: boolean
+  /** 一关最少英文关键词数（target_words + 选项 id 去重） */
+  minLevelKeywords: number
 }
 
 const KEY = 'ai-english-family-v1'
-const IMAGE_SLOT_MAX = 4
+const DEFAULT_MIN_KEYWORDS = 9
 
 function emptyStore(): FamilyStore {
   return {
@@ -41,7 +53,30 @@ function emptyStore(): FamilyStore {
     deepseekApiKey: '',
     tongyiApiKey: '',
     autoTongyiImages: false,
+    autoIconImages: true,
+    minLevelKeywords: DEFAULT_MIN_KEYWORDS,
   }
+}
+
+function clampMinKeywordsStored(n: unknown): number {
+  const v = typeof n === 'number' ? n : Number(n)
+  if (!Number.isFinite(v)) return DEFAULT_MIN_KEYWORDS
+  return Math.min(12, Math.max(3, Math.floor(v)))
+}
+
+export function getMinLevelKeywords(): number {
+  return clampMinKeywordsStored(loadFamilyStore().minLevelKeywords)
+}
+
+export function setMinLevelKeywords(n: number): void {
+  const store = loadFamilyStore()
+  store.minLevelKeywords = clampMinKeywordsStored(n)
+  saveFamilyStore(store)
+}
+
+/** 配图张数上限 = 设置里的最少关键词数 */
+export function getImageSlotMax(): number {
+  return getMinLevelKeywords()
 }
 
 export function todayKey(d = new Date()): string {
@@ -81,6 +116,22 @@ function normalizeMessages(raw: unknown): FamilyDiaryMessage[] {
   return out
 }
 
+function normalizeIconColors(raw: unknown): FamilyIconColor[] {
+  if (!Array.isArray(raw)) return []
+  const hex = /^#([0-9A-Fa-f]{6})$/
+  const out: FamilyIconColor[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const word = String(o.word || '').trim().toLowerCase()
+    const fg = String(o.fg || '').trim()
+    const bg = String(o.bg || '').trim()
+    if (!word || !hex.test(fg) || !hex.test(bg)) continue
+    out.push({ word, fg: fg.toUpperCase(), bg: bg.toUpperCase() })
+  }
+  return out.slice(0, 12)
+}
+
 function normalizeDay(date: string, raw: Partial<FamilyDayRecord> | undefined): FamilyDayRecord {
   const messages = normalizeMessages(raw?.messages)
   const story =
@@ -93,6 +144,7 @@ function normalizeDay(date: string, raw: Partial<FamilyDayRecord> | undefined): 
     messages,
     level: raw?.level || null,
     photoHints: Array.isArray(raw?.photoHints) ? raw.photoHints.map(String) : [],
+    iconColors: normalizeIconColors(raw?.iconColors),
     images: Array.isArray(raw?.images) ? raw.images.map(String) : [],
     completed: Boolean(raw?.completed),
     updatedAt: typeof raw?.updatedAt === 'number' ? raw.updatedAt : Date.now(),
@@ -114,6 +166,8 @@ export function loadFamilyStore(): FamilyStore {
       deepseekApiKey: typeof parsed.deepseekApiKey === 'string' ? parsed.deepseekApiKey : '',
       tongyiApiKey: typeof parsed.tongyiApiKey === 'string' ? parsed.tongyiApiKey : '',
       autoTongyiImages: Boolean(parsed.autoTongyiImages),
+      autoIconImages: Boolean(parsed.autoIconImages),
+      minLevelKeywords: clampMinKeywordsStored(parsed.minLevelKeywords),
     }
   } catch {
     return emptyStore()
@@ -151,6 +205,7 @@ export function ensureMessagesMigrated(date: string): FamilyDayRecord {
       messages: [],
       level: null,
       photoHints: [],
+      iconColors: [],
       images: [],
       completed: false,
       updatedAt: Date.now(),
@@ -289,7 +344,7 @@ export function saveGeneratedLevel(
   date: string,
   level: LevelScript,
   photoHints: string[],
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; iconColors?: FamilyIconColor[] } = {},
 ): { ok: true; day: FamilyDayRecord } | { ok: false; reason: 'needs_confirm' } {
   const store = loadFamilyStore()
   const prev = store.days[date]
@@ -304,6 +359,7 @@ export function saveGeneratedLevel(
     messages: base.messages,
     level,
     photoHints,
+    iconColors: normalizeIconColors(opts.iconColors),
     images: [],
     completed: false,
     updatedAt: Date.now(),
@@ -317,7 +373,7 @@ export function setDayImages(date: string, images: string[]): FamilyDayRecord | 
   const store = loadFamilyStore()
   const prev = store.days[date]
   if (!prev?.level) return null
-  const next = { ...prev, images: images.slice(0, IMAGE_SLOT_MAX), updatedAt: Date.now() }
+  const next = { ...prev, images: images.slice(0, getImageSlotMax()), updatedAt: Date.now() }
   store.days[date] = next
   saveFamilyStore(store)
   return next
@@ -334,14 +390,15 @@ export function applyGeneratedImages(
   const store = loadFamilyStore()
   const prev = store.days[date]
   if (!prev?.level) return null
-  const incoming = autoImages.filter(Boolean).slice(0, IMAGE_SLOT_MAX)
+  const max = getImageSlotMax()
+  const incoming = autoImages.filter(Boolean).slice(0, max)
   let images: string[]
   if (mode === 'replace') {
     images = incoming
   } else {
-    images = [...prev.images].slice(0, IMAGE_SLOT_MAX)
+    images = [...prev.images].slice(0, max)
     for (const img of incoming) {
-      if (images.length >= IMAGE_SLOT_MAX) break
+      if (images.length >= max) break
       const hole = images.findIndex((x) => !x)
       if (hole >= 0) images[hole] = img
       else images.push(img)
@@ -413,6 +470,16 @@ export function getAutoTongyiImages(): boolean {
 export function setAutoTongyiImages(on: boolean): void {
   const store = loadFamilyStore()
   store.autoTongyiImages = Boolean(on)
+  saveFamilyStore(store)
+}
+
+export function getAutoIconImages(): boolean {
+  return loadFamilyStore().autoIconImages
+}
+
+export function setAutoIconImages(on: boolean): void {
+  const store = loadFamilyStore()
+  store.autoIconImages = Boolean(on)
   saveFamilyStore(store)
 }
 

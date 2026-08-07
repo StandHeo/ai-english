@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LevelScript } from '../types'
-import { apiUrl, isNativeApp, missingNativeApiBase } from '../api/base'
+import { apiJson, isNativeApp, missingNativeApiBase } from '../api/base'
 import {
   appendTextMessage,
   appendVoiceMessage,
   applyGeneratedImages,
   deleteMessage,
   ensureMessagesMigrated,
+  getAutoIconImages,
   getAutoTongyiImages,
   getDay,
   getDeepseekKey,
+  getImageSlotMax,
+  getMinLevelKeywords,
   getTongyiKey,
   mergeStoryFromMessages,
   removeDayImage,
@@ -20,6 +23,7 @@ import {
   updateMessageText,
   type FamilyDiaryMessage,
 } from '../family/store'
+import { generateIconImagesForLevel, missingSlotsForImages } from '../icons/familyIconSearch'
 import { getDiaryAsrStatus, transcribeDiaryAudio } from '../voice/diaryAsr'
 import {
   diaryWhisperModelLabel,
@@ -185,42 +189,123 @@ export function FamilyStudioPage() {
     }
   }
 
-  async function requestImages(level: LevelScript, mode: 'fill_empty' | 'replace') {
+  function applyIconImages(
+    level: LevelScript,
+    mode: 'fill_empty' | 'replace',
+  ): { ok: boolean; missed: string[]; count: number } {
+    const colors = getDay(date)?.iconColors
+    const maxSlots = getImageSlotMax()
+    const result = generateIconImagesForLevel(level, colors, maxSlots)
+    console.log(
+      '[family/icon] slots',
+      JSON.stringify({
+        maxSlots,
+        subjects: result.slots.map((s) => s.subject),
+        matched: result.matched,
+        missed: result.missed,
+      }),
+    )
+    if (!result.images.length) {
+      setStatus(
+        result.missed.length
+          ? `未匹配到图标（${result.missed.slice(0, 3).join('、')}）`
+          : '未匹配到图标',
+      )
+      return { ok: false, missed: result.missed, count: 0 }
+    }
+    const day = applyGeneratedImages(date, result.images, mode)
+    if (!day) {
+      setStatus('写入图标失败')
+      return { ok: false, missed: result.missed, count: 0 }
+    }
+    setImages(day.images)
+    const miss =
+      result.missed.length > 0 ? `；未匹配：${result.missed.slice(0, 3).join('、')}` : ''
+    setStatus(
+      mode === 'replace'
+        ? `已用图标配图 ${day.images.length} 张${miss}`
+        : `已用本地图标配图 ${day.images.length} 张${miss}`,
+    )
+    return { ok: true, missed: result.missed, count: day.images.length }
+  }
+
+  async function requestImages(
+    level: LevelScript,
+    mode: 'fill_empty' | 'replace',
+    opts?: { statusPrefix?: string; onlyEmpty?: boolean },
+  ): Promise<boolean> {
     if (missingNativeApiBase()) {
       setStatus('请先到「设置」填写电脑 API 地址后再配图')
-      return
+      return false
     }
+
+    const maxSlots = getImageSlotMax()
+    const existing = getDay(date)?.images || []
+    let slotsPayload: { subject: string; role?: 'scene' | 'item' }[] | undefined
+    if (opts?.onlyEmpty || mode === 'fill_empty') {
+      slotsPayload = missingSlotsForImages(level, existing, maxSlots)
+      if (!slotsPayload.length) {
+        setStatus('已有图已覆盖全部槽位；删掉不需要的图后再通义补全')
+        return false
+      }
+    }
+
     const tongyiKey = getTongyiKey()
+    const requestBody = {
+      date,
+      maxSlots,
+      minKeywords: maxSlots,
+      ...(slotsPayload ? { slots: slotsPayload } : { level }),
+      apiKey: tongyiKey || undefined,
+    }
+    console.log(
+      '[tongyi] request',
+      JSON.stringify({
+        date: requestBody.date,
+        maxSlots: requestBody.maxSlots,
+        slots: slotsPayload?.map((s) => s.subject) ?? '(from level)',
+        hasKey: Boolean(tongyiKey),
+      }),
+    )
     setImaging(true)
-    setStatus('正在配图…')
+    setStatus(`${opts?.statusPrefix || ''}正在通义配图…`.trim())
     try {
-      const res = await fetch(apiUrl('/api/family/generate-images'), {
+      const res = await apiJson('/api/family/generate-images', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ...(tongyiKey ? { 'x-tongyi-key': tongyiKey } : {}),
         },
-        body: JSON.stringify({
-          date,
-          level,
-          apiKey: tongyiKey || undefined,
-        }),
+        body: requestBody,
+        timeoutMs: 300_000,
       })
-      const data = await res.json()
+      const data = res.data
+      console.log(
+        '[tongyi] response',
+        JSON.stringify({
+          ok: res.ok,
+          status: res.status,
+          error: data.error || res.error,
+          imageCount: Array.isArray(data.images) ? data.images.length : 0,
+          warnings: data.warnings,
+          provider: data.provider,
+          debug: data.debug,
+        }),
+      )
       if (!res.ok) {
+        const err = String(data.error || res.error || res.status)
         setStatus(
-          data.error === 'image_provider_unavailable'
-            ? '关卡已生成；配图需要通义 Key（设置里填写，或 API .env 的 DASHSCOPE_API_KEY）'
-            : `关卡已生成；配图失败：${data.error || res.status}`,
+          err === 'image_provider_unavailable' || err === 'missing_api_base'
+            ? '关卡已保留；通义配图需要 Key 或可用的电脑 API 地址'
+            : `关卡已保留；通义配图失败：${err}`,
         )
-        return
+        return false
       }
       const list = Array.isArray(data.images) ? (data.images as string[]) : []
       if (!list.length) {
-        setStatus('关卡已生成；配图未返回图片，可用相册选图')
-        return
+        setStatus('关卡已保留；通义未返回图片，可继续用图标或相册')
+        return false
       }
-      const day = applyGeneratedImages(date, list, mode)
+      const day = applyGeneratedImages(date, list, mode === 'replace' ? 'replace' : 'fill_empty')
       if (day) {
         setImages(day.images)
         const warn =
@@ -229,20 +314,57 @@ export function FamilyStudioPage() {
             : ''
         setStatus(
           mode === 'replace'
-            ? `已重新配图 ${day.images.length} 张${warn}`
-            : `生成成功，已自动配图 ${day.images.length} 张${warn}`,
+            ? `已通义配图 ${day.images.length} 张${warn}`
+            : `已保留已有图，通义补全至 ${day.images.length} 张${warn}`,
         )
-      } else {
-        setStatus('关卡已生成；写入配图失败')
+        return true
       }
-    } catch {
+      setStatus('关卡已保留；写入配图失败')
+      return false
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.log('[tongyi] error', msg)
       setStatus(
         isNativeApp()
-          ? '关卡已生成；配图连不上 API，请确认电脑 apps/api 与局域网地址'
-          : '关卡已生成；配图网络错误，请确认 API 已启动',
+          ? `关卡已保留；通义连不上 API（${msg}）。请确认电脑 apps/api、同 Wi‑Fi、设置里局域网地址`
+          : `关卡已保留；通义网络错误（${msg}）`,
       )
+      return false
     } finally {
       setImaging(false)
+    }
+  }
+
+  async function autoFillImagesAfterGenerate(level: LevelScript) {
+    const wantIcon = getAutoIconImages()
+    const wantTongyi = getAutoTongyiImages()
+    if (!wantIcon && !wantTongyi) {
+      setStatus('生成成功！请到设置至少开启一种自动配图，或手动点「图标配图」/相册/通义')
+      return
+    }
+
+    const maxSlots = getImageSlotMax()
+    let needTongyi = wantTongyi
+    if (wantIcon) {
+      const iconResult = applyIconImages(level, 'fill_empty')
+      const remaining = missingSlotsForImages(level, getDay(date)?.images || [], maxSlots).length
+      if (wantTongyi) {
+        needTongyi = remaining > 0
+        if (!needTongyi && iconResult.ok) {
+          setStatus((s) => `${s}（图标已齐，无需通义）`)
+        }
+      } else {
+        needTongyi = false
+        if (!iconResult.ok) {
+          setStatus((s) => `${s}；可开通义自动或手动通义补全`)
+        }
+      }
+    }
+
+    if (needTongyi) {
+      setBusy(false)
+      const prefix = wantIcon ? '图标未全覆盖，' : ''
+      await requestImages(level, 'fill_empty', { statusPrefix: prefix, onlyEmpty: true })
     }
   }
 
@@ -258,7 +380,7 @@ export function FamilyStudioPage() {
     }
     const key = getDeepseekKey()
     setBusy(true)
-    setStatus('正在生成关卡…')
+    setStatus('正在生成关卡（DeepSeek 可能需要 1–3 分钟，请稍候）…')
     try {
       if (!force) {
         const existing = getDay(date)
@@ -271,26 +393,91 @@ export function FamilyStudioPage() {
           force = true
         }
       }
-      const res = await fetch(apiUrl('/api/family/generate-level'), {
+      const minKeywords = getMinLevelKeywords()
+      const generateBody = {
+        story,
+        date,
+        apiKey: key || undefined,
+        minKeywords,
+      }
+      console.log(
+        '[deepseek] request',
+        JSON.stringify({
+          date,
+          minKeywords,
+          storyChars: story.length,
+          storyPreview: story.slice(0, 500),
+          hasKey: Boolean(key),
+        }),
+      )
+      const res = await apiJson('/api/family/generate-level', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ...(key ? { 'x-deepseek-key': key } : {}),
         },
-        body: JSON.stringify({ story, date, apiKey: key || undefined }),
+        body: generateBody,
+        // 允许 DeepSeek 慢响应 + 一次服务端重试
+        timeoutMs: 240_000,
       })
-      const data = await res.json()
+      const data = res.data
+      const debug =
+        data.debug && typeof data.debug === 'object'
+          ? (data.debug as Record<string, unknown>)
+          : undefined
+      console.log(
+        '[deepseek] response',
+        JSON.stringify({
+          ok: res.ok,
+          status: res.status,
+          error: data.error || res.error,
+          keywords: data.keywords,
+          keywordCount: Array.isArray(data.keywords)
+            ? data.keywords.length
+            : data.count,
+          minKeywords: data.minKeywords ?? debug?.minKeywords ?? minKeywords,
+          photoHints: data.photoHints,
+          debug,
+          levelPreview: data.level
+            ? {
+                title: (data.level as LevelScript).title,
+                target_words: (data.level as LevelScript).target_words,
+                beatCount: Array.isArray((data.level as LevelScript).beats)
+                  ? (data.level as LevelScript).beats!.length
+                  : 0,
+              }
+            : undefined,
+        }),
+      )
       if (!res.ok) {
+        if (data.error === 'keywords_insufficient') {
+          const count = Number(data.count) || 0
+          const min = Number(data.minKeywords) || minKeywords
+          setStatus(
+            `关键词不足（${count}/${min}）。请再追加几句今日场景描述，然后重新点「生成关卡」。`,
+          )
+          return
+        }
+        const err = String(data.error || res.error || res.status)
+        if (/timeout|deepseek_timeout/i.test(err)) {
+          setStatus(
+            '生成超时：DeepSeek 响应较慢。请检查电脑网络后重试；也可到设置把「最少关键词」暂时调低（如 5）。',
+          )
+          return
+        }
         setStatus(
-          data.error === 'api_key_required'
+          err === 'api_key_required' || err === 'missing_api_base'
             ? '请先到「设置」填写 DeepSeek API Key（或 API .env 的 DEEPSEEK_API_KEY）'
-            : `生成失败：${data.error || res.status}`,
+            : `生成失败：${err}`,
         )
         return
       }
       const level = data.level as LevelScript
       const photoHints = (data.photoHints as string[]) || []
-      const saved = saveGeneratedLevel(date, level, photoHints, { force })
+      const iconColors = Array.isArray(data.iconColors) ? data.iconColors : []
+      const saved = saveGeneratedLevel(date, level, photoHints, {
+        force,
+        iconColors: iconColors as { word: string; fg: string; bg: string }[],
+      })
       if (!saved.ok) {
         setStatus('需要确认覆盖已通关内容')
         return
@@ -299,17 +486,17 @@ export function FamilyStudioPage() {
       setHasLevel(true)
       setImages([])
       setCompleted(false)
-      if (getAutoTongyiImages()) {
-        setBusy(false)
-        await requestImages(level, 'fill_empty')
-      } else {
-        setStatus('生成成功！可选相册图，或去「家庭日历」玩；设置里可开自动配图')
+      const kwCount = Array.isArray(data.keywords) ? data.keywords.length : undefined
+      if (kwCount) {
+        setStatus(`生成成功（关键词 ${kwCount} 个）`)
       }
-    } catch {
+      await autoFillImagesAfterGenerate(level)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
       setStatus(
         isNativeApp()
-          ? '连不上 API：请确认电脑已启动 apps/api，手机同 Wi‑Fi，且设置里 API 地址是电脑局域网 IP（不是 localhost）'
-          : '网络错误：请确认 API 已启动（apps/api 端口 8787）',
+          ? `连不上 API（${msg}）：请确认电脑已启动 apps/api，手机同 Wi‑Fi，设置里是电脑局域网 IP`
+          : `网络错误（${msg}）：请确认 API 已启动（apps/api 端口 8787）`,
       )
     } finally {
       setBusy(false)
@@ -322,21 +509,41 @@ export function FamilyStudioPage() {
       setStatus('请先生成关卡')
       return
     }
-    if (day.images.length > 0) {
-      const ok = window.confirm('重新配图会替换当前图片（含相册图）。确定继续？')
-      if (!ok) {
-        setStatus('已取消重新配图')
-        return
-      }
+    // 保留未删除的已有图（图标/相册），只对空槽位调通义
+    await requestImages(day.level, 'fill_empty', { onlyEmpty: true })
+  }
+
+  function fillWithIcons() {
+    const day = getDay(date)
+    if (!day?.level) {
+      setStatus('请先生成关卡')
+      return
     }
-    await requestImages(day.level, 'replace')
+    let mode: 'fill_empty' | 'replace' = 'fill_empty'
+    if (day.images.length > 0) {
+      const replace = window.confirm('当前已有图片。确定用图标整表替换吗？\n点「取消」则只填充空位。')
+      mode = replace ? 'replace' : 'fill_empty'
+    }
+    setImaging(true)
+    try {
+      applyIconImages(day.level, mode)
+    } finally {
+      setImaging(false)
+    }
   }
 
   async function onPickFiles(files: FileList | null) {
     if (!files?.length) return
+    const maxSlots = getImageSlotMax()
+    const existing = getDay(date)?.images || []
+    const room = Math.max(0, maxSlots - existing.length)
+    if (!room) {
+      setStatus(`已满 ${maxSlots} 张（与设置里最少关键词数一致），请先删掉再选`)
+      return
+    }
     const reads = await Promise.all(
       Array.from(files)
-        .slice(0, 4)
+        .slice(0, room)
         .map(
           (file) =>
             new Promise<string>((resolve, reject) => {
@@ -347,10 +554,10 @@ export function FamilyStudioPage() {
             }),
         ),
     )
-    const day = setDayImages(date, reads)
+    const day = setDayImages(date, [...existing, ...reads].slice(0, maxSlots))
     if (day) {
       setImages(day.images)
-      setStatus(`已挂上 ${day.images.length} 张照片`)
+      setStatus(`已挂上 ${day.images.length} 张照片（上限 ${maxSlots}）`)
     } else {
       setStatus('请先生成关卡再选图')
     }
@@ -499,7 +706,7 @@ export function FamilyStudioPage() {
           <div className="photo-block">
             <h2>关卡配图</h2>
             <p className="muted">
-              可从相册选图，或点「重新配图」用通义万相（设置里可开自动配图）
+              可用本地「图标配图」（离线免费）、相册；「通义配图」会保留已有图，只补空位
             </p>
             {hints.length > 0 && (
               <>
@@ -520,6 +727,9 @@ export function FamilyStudioPage() {
               onChange={(e) => void onPickFiles(e.target.files)}
             />
             <div className="row photo-actions">
+              <button type="button" disabled={busy || imaging} onClick={() => fillWithIcons()}>
+                图标配图
+              </button>
               <button type="button" disabled={busy || imaging} onClick={() => fileRef.current?.click()}>
                 从相册选图
               </button>
@@ -529,7 +739,7 @@ export function FamilyStudioPage() {
                 disabled={busy || imaging || recording || transcribing}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '配图中…' : '重新配图'}
+                {imaging ? '配图中…' : '通义配图'}
               </button>
             </div>
             {images.length > 0 && (
