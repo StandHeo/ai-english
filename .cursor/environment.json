@@ -1,0 +1,20 @@
+{
+  "name": "AI English · 故事冒险口语练习",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "cd apps/api && npm run dev",
+      "description": "Express API：ASR/TTS 代理、期望词匹配与家庭日记生成（默认 ASR mock，端口 8787）"
+    },
+    {
+      "name": "web",
+      "command": "cd apps/web && npm run dev",
+      "description": "React + Vite 儿童/家长端（端口 5173，已代理 /api 与 /health 到 8787）"
+    }
+  ],
+  "ports": [
+    { "name": "web", "port": 5173 },
+    { "name": "api", "port": 8787 }
+  ]
+}
