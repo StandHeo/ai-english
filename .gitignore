@@ -13,3 +13,5 @@ apps/web/.vosk-cache/
 *.local
 .idea/
 .vscode/
+apps/web/plugins/diary-whisper/android/build/
+.whisper-build/

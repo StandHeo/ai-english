@@ -15,12 +15,19 @@
 
 插件：`apps/web/plugins/diary-whisper`（Capacitor 名 `DiaryWhisper`）。
 
-1. 将模型与 CLI 放入：
+1. 准备模型与 CLI（可用脚本一键拉取/编译）：
 
-   `apps/web/plugins/diary-whisper/android/src/main/assets/diary-whisper/`
+```bash
+cd apps/web
+npm run fetch-diary-whisper
+```
 
-   - `ggml-tiny.bin` 或 `ggml-tiny-q5_1.bin`
-   - `whisper-cli`（whisper.cpp 预编译 **arm64-v8a**）
+会写入：
+
+`apps/web/plugins/diary-whisper/android/src/main/assets/diary-whisper/`
+
+- `ggml-tiny-q5_1.bin`（Whisper tiny 量化版）
+- `whisper-cli`（本机用 Android NDK 交叉编译的 **arm64-v8a**）
 
 2. 安装依赖并同步：
 
@@ -29,6 +36,7 @@ cd apps/web
 npm install
 npm run build
 npx cap sync android
+# 或一键：npm run build:android
 # Android Studio 运行或打 debug APK
 ```
 
@@ -36,6 +44,8 @@ npx cap sync android
    **不会**把日记录音默认上传到云端 OpenAI Whisper。
 
 未放入模型时：`isReady` / `prepareModel` 返回未就绪；UI 保留录音并提示手改文字。
+
+> 仓库已包含 `ggml-tiny-q5_1.bin` 与 arm64 `whisper-cli`。换机器一般无需再下载；若缺失可跑 `npm run fetch-diary-whisper`。
 
 ## 与关卡 Vosk 的隔离
 
