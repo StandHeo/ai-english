@@ -1,5 +1,7 @@
 package com.aienglish.diarywhisper;
 
+import android.content.pm.ApplicationInfo;
+import android.system.Os;
 import android.util.Base64;
 import android.util.Log;
 
@@ -20,12 +22,8 @@ import java.util.concurrent.Executors;
 /**
  * On-device Whisper bridge for family diary ASR.
  *
- * Expects assets under {@code assets/diary-whisper/}:
- * <ul>
- *   <li>{@code ggml-tiny.bin} (or {@code ggml-tiny-q5_1.bin}) — Whisper tiny model</li>
- *   <li>{@code whisper-cli} — prebuilt arm64 whisper.cpp CLI (optional but required to run)</li>
- * </ul>
- * First {@code prepareModel} copies them into the app files directory.
+ * <p>Model: {@code assets/diary-whisper/ggml-tiny*.bin} → copied to app files.
+ * CLI: {@code jniLibs/arm64-v8a/libwhisper_cli.so} (Android 10+ cannot exec from files/).
  */
 @CapacitorPlugin(name = "DiaryWhisper")
 public class DiaryWhisperPlugin extends Plugin {
@@ -36,7 +34,8 @@ public class DiaryWhisperPlugin extends Plugin {
         "ggml-tiny.bin",
         "ggml-tiny-int8.bin"
     };
-    private static final String CLI_NAME = "whisper-cli";
+    /** Packaged as .so so PackageManager extracts it into nativeLibraryDir (executable). */
+    private static final String NATIVE_CLI = "libwhisper_cli.so";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -45,7 +44,7 @@ public class DiaryWhisperPlugin extends Plugin {
         JSObject ret = new JSObject();
         File model = findModelFile();
         File cli = cliFile();
-        boolean ready = model != null && model.exists() && cli.exists() && cli.canExecute();
+        boolean ready = model != null && model.exists() && cli != null && cli.exists() && cli.canExecute();
         ret.put("ready", ready);
         if (!ready) {
             ret.put("detail", describeMissing(model, cli));
@@ -63,25 +62,19 @@ public class DiaryWhisperPlugin extends Plugin {
                     return;
                 }
                 boolean copiedModel = copyFirstExistingAsset(MODEL_NAMES, destDir);
-                boolean copiedCli = copyAssetIfPresent(CLI_NAME, new File(destDir, CLI_NAME));
-                File cli = cliFile();
-                if (cli.exists()) {
-                    //noinspection ResultOfMethodCallIgnored
-                    cli.setExecutable(true);
-                }
+                File cli = ensureCliExecutable();
                 File model = findModelFile();
-                boolean ready = model != null && model.exists() && cli.exists() && cli.canExecute();
+                boolean ready =
+                    model != null && model.exists() && cli != null && cli.exists() && cli.canExecute();
                 JSObject ret = new JSObject();
                 ret.put("ready", ready);
                 if (!ready) {
                     ret.put(
                         "detail",
-                        "请将 Whisper tiny 模型与 arm64 whisper-cli 放入 APK assets/"
-                            + ASSET_DIR
-                            + "/ 后重新打包。copiedModel="
+                        "Whisper 未就绪。copiedModel="
                             + copiedModel
-                            + " copiedCli="
-                            + copiedCli
+                            + " cli="
+                            + (cli == null ? "null" : cli.getAbsolutePath())
                             + " — "
                             + describeMissing(model, cli)
                     );
@@ -105,8 +98,8 @@ public class DiaryWhisperPlugin extends Plugin {
 
         executor.execute(() -> {
             File model = findModelFile();
-            File cli = cliFile();
-            if (model == null || !model.exists() || !cli.exists() || !cli.canExecute()) {
+            File cli = ensureCliExecutable();
+            if (model == null || !model.exists() || cli == null || !cli.exists()) {
                 reject(call, "model_not_ready", describeMissing(model, cli));
                 return;
             }
@@ -133,6 +126,8 @@ public class DiaryWhisperPlugin extends Plugin {
                 );
                 pb.redirectErrorStream(true);
                 pb.directory(modelDir());
+                // Clear LD_LIBRARY_PATH quirks; native dir is enough for static-ish cli
+                pb.environment().put("LD_LIBRARY_PATH", cli.getParent());
                 Process process = pb.start();
                 String output;
                 try (InputStream in = process.getInputStream()) {
@@ -177,8 +172,29 @@ public class DiaryWhisperPlugin extends Plugin {
         return new File(getContext().getFilesDir(), ASSET_DIR);
     }
 
+    /** Prefer nativeLibraryDir (executable on Android 10+); fall back to legacy files copy. */
     private File cliFile() {
-        return new File(modelDir(), CLI_NAME);
+        ApplicationInfo info = getContext().getApplicationInfo();
+        if (info.nativeLibraryDir != null) {
+            File nativeCli = new File(info.nativeLibraryDir, NATIVE_CLI);
+            if (nativeCli.exists()) return nativeCli;
+        }
+        File legacy = new File(modelDir(), "whisper-cli");
+        if (legacy.exists()) return legacy;
+        return null;
+    }
+
+    private File ensureCliExecutable() {
+        File cli = cliFile();
+        if (cli == null) return null;
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            cli.setExecutable(true, false);
+            Os.chmod(cli.getAbsolutePath(), 0755);
+        } catch (Exception e) {
+            Log.w(TAG, "chmod cli failed (may still run from nativeLibraryDir): " + e.getMessage());
+        }
+        return cli;
     }
 
     private File findModelFile() {
@@ -192,9 +208,14 @@ public class DiaryWhisperPlugin extends Plugin {
 
     private String describeMissing(File model, File cli) {
         StringBuilder sb = new StringBuilder();
-        if (model == null || !model.exists()) sb.append("缺少 Whisper tiny 模型; ");
-        if (cli == null || !cli.exists()) sb.append("缺少 whisper-cli; ");
-        else if (!cli.canExecute()) sb.append("whisper-cli 不可执行; ");
+        if (model == null || !model.exists()) {
+            sb.append("缺少 Whisper tiny 模型（assets/diary-whisper/*.bin）; ");
+        }
+        if (cli == null || !cli.exists()) {
+            sb.append("缺少 ").append(NATIVE_CLI).append("（jniLibs/arm64-v8a）; ");
+        } else if (!cli.canExecute()) {
+            sb.append(NATIVE_CLI).append(" 不可执行; ");
+        }
         sb.append("详见 docs/family-diary-whisper.md");
         return sb.toString().trim();
     }
@@ -248,7 +269,6 @@ public class DiaryWhisperPlugin extends Plugin {
             if (t.isEmpty()) continue;
             if (t.startsWith("whisper_") || t.startsWith("system_") || t.startsWith("main:")) continue;
             if (t.startsWith("ggml_") || t.startsWith("error:")) continue;
-            // Drop timestamp brackets like [00:00:00.000 --> 00:00:01.000]
             t = t.replaceAll("^\\[[^\\]]+\\]\\s*", "");
             if (t.isEmpty()) continue;
             if (sb.length() > 0) sb.append(' ');

@@ -15,19 +15,15 @@
 
 插件：`apps/web/plugins/diary-whisper`（Capacitor 名 `DiaryWhisper`）。
 
-1. 准备模型与 CLI（可用脚本一键拉取/编译）：
+1. 准备资源：
+
+   - 模型：`assets/diary-whisper/ggml-tiny-q5_1.bin`
+   - CLI：`jniLibs/arm64-v8a/libwhisper_cli.so`（**不要**再拷到 `files/` 执行；Android 10+ 会 Permission denied）
 
 ```bash
 cd apps/web
 npm run fetch-diary-whisper
 ```
-
-会写入：
-
-`apps/web/plugins/diary-whisper/android/src/main/assets/diary-whisper/`
-
-- `ggml-tiny-q5_1.bin`（Whisper tiny 量化版）
-- `whisper-cli`（本机用 Android NDK 交叉编译的 **arm64-v8a**）
 
 2. 安装依赖并同步：
 

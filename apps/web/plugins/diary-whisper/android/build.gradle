@@ -30,6 +30,12 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    // 把 libwhisper_cli.so 解压到文件系统，便于 ProcessBuilder 执行（Android 10+）
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 repositories {

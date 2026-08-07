@@ -1,8 +1,6 @@
 # diary-whisper 资源
 
-本目录随仓库提供：
+- 模型：`ggml-tiny-q5_1.bin`（本目录，随 APK assets 打包）
+- CLI：`../../jniLibs/arm64-v8a/libwhisper_cli.so`（必须放 jniLibs；Android 10+ 不能从 files/ 执行二进制）
 
-1. `ggml-tiny-q5_1.bin`（Whisper tiny 量化模型）
-2. `whisper-cli`（whisper.cpp **arm64-v8a** Android 可执行文件）
-
-首次调用 `prepareModel` 时会解包到应用私有目录。若本地缺失，可运行 `npm run fetch-diary-whisper`。
+若缺失可运行：`npm run fetch-diary-whisper`

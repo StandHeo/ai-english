@@ -150,6 +150,16 @@ function buildCli() {
   copyFileSync(built, cliPath)
   chmodSync(cliPath, 0o755)
   console.log(`已写入 ${cliPath}`)
+
+  const jniDir = join(
+    root,
+    'plugins/diary-whisper/android/src/main/jniLibs/arm64-v8a',
+  )
+  mkdirSync(jniDir, { recursive: true })
+  const jniCli = join(jniDir, 'libwhisper_cli.so')
+  copyFileSync(built, jniCli)
+  chmodSync(jniCli, 0o755)
+  console.log(`已写入 ${jniCli}（供 Android 10+ 可执行）`)
   return true
 }
 
