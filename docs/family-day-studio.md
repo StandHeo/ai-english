@@ -13,7 +13,9 @@
 cd apps/api
 cp -n .env.example .env
 # 可选：写入 DEEPSEEK_API_KEY=sk-...
+# 可选：写入 DASHSCOPE_API_KEY=sk-...（通义配图，见 family-tongyi-images.md）
 # 无 Key 联调可设 FAMILY_LLM_PROVIDER=mock
+# 配图联调可设 FAMILY_IMAGE_PROVIDER=mock
 npm run dev
 
 # 终端 2
@@ -26,10 +28,11 @@ npm run dev:phone
 ## 家长：做今日关卡
 
 1. 首页右上角家庭图标 → 算术验证 → **家庭日记**
-2. 用聊天气泡打字或语音记录今日故事（DeepSeek Key 在折叠的「生成与设置」里）
-3. 展开设置 → 点 **生成关卡**
-4. 按「相册搜图提示」选图（可跳过）
-5. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
+2. 用聊天气泡打字或语音记录今日故事（Key / 自动配图在 **设置**）
+3. 点 **生成关卡**；若设置开启自动配图，会再请求通义万相（也可稍后「重新配图」或相册选图）
+4. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
+
+通义开通、费用与验收见 [`family-tongyi-images.md`](./family-tongyi-images.md)。
 
 ## 孩子：玩
 

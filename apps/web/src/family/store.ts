@@ -25,12 +25,23 @@ type FamilyStore = {
   version: 1
   days: Record<string, FamilyDayRecord>
   deepseekApiKey: string
+  /** 通义/百炼 Key（可选；也可只用 API .env） */
+  tongyiApiKey: string
+  /** 生成关卡后自动配图；默认关以免误扣费 */
+  autoTongyiImages: boolean
 }
 
 const KEY = 'ai-english-family-v1'
+const IMAGE_SLOT_MAX = 4
 
 function emptyStore(): FamilyStore {
-  return { version: 1, days: {}, deepseekApiKey: '' }
+  return {
+    version: 1,
+    days: {},
+    deepseekApiKey: '',
+    tongyiApiKey: '',
+    autoTongyiImages: false,
+  }
 }
 
 export function todayKey(d = new Date()): string {
@@ -101,6 +112,8 @@ export function loadFamilyStore(): FamilyStore {
       version: 1,
       days,
       deepseekApiKey: typeof parsed.deepseekApiKey === 'string' ? parsed.deepseekApiKey : '',
+      tongyiApiKey: typeof parsed.tongyiApiKey === 'string' ? parsed.tongyiApiKey : '',
+      autoTongyiImages: Boolean(parsed.autoTongyiImages),
     }
   } catch {
     return emptyStore()
@@ -255,6 +268,18 @@ export function updateMessageText(
   return persistDay(date, { messages })
 }
 
+export function deleteMessage(
+  date: string,
+  messageId: string,
+): FamilyDayRecord | null {
+  ensureMessagesMigrated(date)
+  const prev = getDay(date)
+  if (!prev) return null
+  if (!prev.messages.some((m) => m.id === messageId)) return null
+  const messages = prev.messages.filter((m) => m.id !== messageId)
+  return persistDay(date, { messages })
+}
+
 export function getMessages(date: string): FamilyDiaryMessage[] {
   return ensureMessagesMigrated(date).messages
 }
@@ -292,6 +317,51 @@ export function setDayImages(date: string, images: string[]): FamilyDayRecord | 
   const store = loadFamilyStore()
   const prev = store.days[date]
   if (!prev?.level) return null
+  const next = { ...prev, images: images.slice(0, IMAGE_SLOT_MAX), updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+/**
+ * 写入自动配图：fill_empty 只填空位（保留相册图）；replace 整表替换（需家长确认）。
+ */
+export function applyGeneratedImages(
+  date: string,
+  autoImages: string[],
+  mode: 'fill_empty' | 'replace',
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.level) return null
+  const incoming = autoImages.filter(Boolean).slice(0, IMAGE_SLOT_MAX)
+  let images: string[]
+  if (mode === 'replace') {
+    images = incoming
+  } else {
+    images = [...prev.images].slice(0, IMAGE_SLOT_MAX)
+    for (const img of incoming) {
+      if (images.length >= IMAGE_SLOT_MAX) break
+      const hole = images.findIndex((x) => !x)
+      if (hole >= 0) images[hole] = img
+      else images.push(img)
+    }
+  }
+  const next = { ...prev, images, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+export function removeDayImage(
+  date: string,
+  imageIndex: number,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.level) return null
+  if (imageIndex < 0 || imageIndex >= prev.images.length) return null
+  const images = prev.images.filter((_, i) => i !== imageIndex)
   const next = { ...prev, images, updatedAt: Date.now() }
   store.days[date] = next
   saveFamilyStore(store)
@@ -320,6 +390,30 @@ export function setDeepseekKey(key: string): void {
 
 export function clearDeepseekKey(): void {
   setDeepseekKey('')
+}
+
+export function getTongyiKey(): string {
+  return loadFamilyStore().tongyiApiKey
+}
+
+export function setTongyiKey(key: string): void {
+  const store = loadFamilyStore()
+  store.tongyiApiKey = key.trim()
+  saveFamilyStore(store)
+}
+
+export function clearTongyiKey(): void {
+  setTongyiKey('')
+}
+
+export function getAutoTongyiImages(): boolean {
+  return loadFamilyStore().autoTongyiImages
+}
+
+export function setAutoTongyiImages(on: boolean): void {
+  const store = loadFamilyStore()
+  store.autoTongyiImages = Boolean(on)
+  saveFamilyStore(store)
 }
 
 /** Apply album/placeholder images onto a copy of the level for play */

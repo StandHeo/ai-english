@@ -13,8 +13,12 @@ npx cap sync android
 
 ## 模型资源
 
-将 Whisper tiny 与 `whisper-cli` 放入：
+将 Whisper 模型与 `whisper-cli` 放入：
 
 `plugins/diary-whisper/android/src/main/assets/diary-whisper/`
+
+- `ggml-tiny-q5_1.bin`（默认）
+- `ggml-base-q5_1.bin`（设置可切换）
+- `ggml-small-q5_1.bin`（设置可切换，更准更慢）
 
 详见该目录 `README.md` 与仓库 `docs/family-diary-whisper.md`。

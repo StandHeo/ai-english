@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listPackIds, loadPack } from '../content/loader'
+import { assetUrl, listPackIds, loadPack } from '../content/loader'
 import { listDaysWithLevels } from '../family/store'
 import {
   getPackProgress,
@@ -52,6 +52,8 @@ export function ParentPage({ progress, onProgress }: Props) {
     [progress],
   )
 
+  const recentDays = useMemo(() => listDaysWithLevels().slice(0, 5), [gated])
+
   function onGate(e: FormEvent) {
     e.preventDefault()
     if (Number(answer) === a + b) setGated(true)
@@ -81,7 +83,8 @@ export function ParentPage({ progress, onProgress }: Props) {
 
   if (!gated) {
     return (
-      <div className="parent-screen">
+      <div className="parent-screen parent-gate">
+        <img className="parent-hero-img" src={assetUrl('assets/characters/bunny.png')} alt="" />
         <h1>家长入口</h1>
         <p>请先完成简单验证</p>
         <form onSubmit={onGate}>
@@ -100,34 +103,73 @@ export function ParentPage({ progress, onProgress }: Props) {
 
   return (
     <div className="parent-screen">
-      <h1>家长中心</h1>
-      <section>
-        <h2>家庭日记关卡</h2>
-        <p>和孩子聊今天，生成当晚可玩的英语小关</p>
-        <button type="button" onClick={() => navigate('/family/studio')}>
-          家庭日记
+      <header className="parent-header">
+        <img className="parent-avatar" src={assetUrl('assets/characters/bunny.png')} alt="" />
+        <div>
+          <h1>家长中心</h1>
+          <p className="muted">今日已玩约 {todayMin} 分钟 · 星星 {progress.stars}</p>
+        </div>
+      </header>
+
+      <div className="parent-card-grid">
+        <button
+          type="button"
+          className="parent-feature-card"
+          onClick={() => navigate('/family/studio')}
+        >
+          <img src={assetUrl('assets/scenes/friend-park.png')} alt="" />
+          <span className="card-label">
+            <strong>家庭日记</strong>
+            <small>聊今天 · 生成英语小关</small>
+          </span>
         </button>
-        <button type="button" className="linkish" onClick={() => navigate('/family')}>
-          查看家庭日历
+        <button
+          type="button"
+          className="parent-feature-card"
+          onClick={() => navigate('/family')}
+        >
+          <img src={assetUrl('assets/scenes/orchard.png')} alt="" />
+          <span className="card-label">
+            <strong>家庭日历</strong>
+            <small>查看与玩每日关卡</small>
+          </span>
         </button>
-        <ul className="family-day-list">
-          {listDaysWithLevels()
-            .slice(0, 7)
-            .map((d) => (
+      </div>
+
+      {recentDays.length > 0 && (
+        <section className="parent-recent">
+          <h2>最近日记关卡</h2>
+          <ul className="family-day-cards">
+            {recentDays.map((d) => (
               <li key={d.date}>
-                {d.date}
-                {d.completed ? ' · 已通关' : ' · 未通关'}
-                {d.level ? ` · ${d.level.title}` : ''}
+                <button type="button" onClick={() => navigate(`/family/${d.date}/play`)}>
+                  <img
+                    src={
+                      d.images[0] ||
+                      d.level?.scene?.image ||
+                      assetUrl('assets/scenes/map.png')
+                    }
+                    alt=""
+                  />
+                  <span>
+                    {d.date}
+                    {d.completed ? ' · 已通关' : ' · 未通关'}
+                  </span>
+                </button>
               </li>
             ))}
-        </ul>
-      </section>
+          </ul>
+        </section>
+      )}
 
-      <section>
-        <h2>英语朗读声音</h2>
-        <p className="muted">
-          仍使用手机/浏览器系统朗读。可选风格并微调；默认「小女孩」更活泼一点。实际音色因手机品牌而异。
-        </p>
+      <section className="parent-voice">
+        <div className="section-head">
+          <img src={assetUrl('assets/scenes/beep-hall.png')} alt="" className="section-thumb" />
+          <div>
+            <h2>英语朗读声音</h2>
+            <p className="muted">系统朗读 · 默认小女孩更活泼</p>
+          </div>
+        </div>
         <div className="voice-grid">
           {VOICE_PERSONA_OPTIONS.map((opt) => (
             <button
@@ -167,51 +209,61 @@ export function ParentPage({ progress, onProgress }: Props) {
             />
           </label>
         </div>
-        <button type="button" onClick={() => void previewVoice()}>
-          试听
-        </button>
-        <button
-          type="button"
-          className="linkish"
-          onClick={() => {
-            const d = defaultVoicePrefs()
-            setVoicePrefs(d)
-            saveVoicePrefs(d)
-            setVoiceSaved('已恢复默认（小女孩）')
-          }}
-        >
-          恢复默认
-        </button>
+        <div className="row-actions">
+          <button type="button" onClick={() => void previewVoice()}>
+            试听
+          </button>
+          <button
+            type="button"
+            className="linkish"
+            onClick={() => {
+              const d = defaultVoicePrefs()
+              setVoicePrefs(d)
+              saveVoicePrefs(d)
+              setVoiceSaved('已恢复默认（小女孩）')
+            }}
+          >
+            恢复默认
+          </button>
+        </div>
         {voiceSaved && <p className="muted">{voiceSaved}</p>}
       </section>
 
-      <section>
-        <h2>今日游玩</h2>
-        <p>约 {todayMin} 分钟</p>
+      <section className="parent-packs">
+        <h2>主题进度</h2>
+        <div className="pack-progress-grid">
+          {packs.map((pack) => {
+            const pp = getPackProgress(progress, pack.id)
+            return (
+              <button
+                key={pack.id}
+                type="button"
+                className="pack-progress-card"
+                onClick={() => navigate(`/map/${pack.id}`)}
+              >
+                <img src={assetUrl(pack.homeImage || pack.mapImage)} alt="" />
+                <span>
+                  <strong>{PACK_LABELS_ZH[pack.id] || pack.title}</strong>
+                  <small>
+                    通关 {pp.completed.length} · 贴纸 {pp.stickers.length}
+                  </small>
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </section>
-      {packs.map((pack) => {
-        const pp = getPackProgress(progress, pack.id)
-        return (
-          <section key={pack.id}>
-            <h2>{PACK_LABELS_ZH[pack.id] || pack.title}</h2>
-            <p>已通关：{pp.completed.length ? pp.completed.join('、') : '暂无'}</p>
-            <p>贴纸：{pp.stickers.length ? pp.stickers.join('、') : '暂无'}</p>
-          </section>
-        )
-      })}
-      <section>
-        <h2>星星合计</h2>
-        <p>{progress.stars}</p>
-      </section>
+
       <section>
         <h2>每日时长上限（分钟）</h2>
-        <p>留空表示不限制</p>
+        <p className="muted">留空表示不限制</p>
         <input value={limit} onChange={(e) => setLimit(e.target.value)} inputMode="numeric" />
         <button type="button" onClick={saveLimit}>
           保存
         </button>
       </section>
-      <button type="button" onClick={() => navigate('/')}>
+
+      <button type="button" className="home-back" onClick={() => navigate('/')}>
         返回首页
       </button>
     </div>

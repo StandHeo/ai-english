@@ -1,4 +1,9 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import {
+  diaryWhisperModelLabel,
+  getDiaryWhisperModelId,
+  type DiaryWhisperModelId,
+} from './diaryWhisperModel'
 
 export type DiaryAsrErrorCode =
   | 'unavailable'
@@ -8,23 +13,29 @@ export type DiaryAsrErrorCode =
   | 'unknown'
 
 export type DiaryAsrResult =
-  | { ok: true; text: string }
+  | { ok: true; text: string; modelId: DiaryWhisperModelId }
   | { ok: false; code: DiaryAsrErrorCode; message: string }
 
 export type DiaryAsrStatus = {
   available: boolean
   platform: 'web' | 'native'
   modelReady: boolean
+  modelId: DiaryWhisperModelId
   detail?: string
 }
 
 type DiaryWhisperPlugin = {
-  isReady(): Promise<{ ready: boolean; detail?: string }>
-  prepareModel(): Promise<{ ready: boolean; detail?: string }>
+  listModels(): Promise<{
+    models: Array<{ id: string; label: string; ready: boolean; packaged: boolean }>
+    defaultId: string
+  }>
+  isReady(options?: { modelId?: string }): Promise<{ ready: boolean; detail?: string; modelId?: string }>
+  prepareModel(options?: { modelId?: string }): Promise<{ ready: boolean; detail?: string; modelId?: string }>
   transcribe(options: {
     wavBase64: string
     language?: string
-  }): Promise<{ text: string }>
+    modelId?: string
+  }): Promise<{ text: string; modelId?: string }>
 }
 
 const DiaryWhisper = registerPlugin<DiaryWhisperPlugin>('DiaryWhisper', {
@@ -46,31 +57,48 @@ function friendly(code: DiaryAsrErrorCode, detail?: string): string {
   }
 }
 
-export async function getDiaryAsrStatus(): Promise<DiaryAsrStatus> {
+export async function getDiaryAsrStatus(
+  modelId: DiaryWhisperModelId = getDiaryWhisperModelId(),
+): Promise<DiaryAsrStatus> {
   if (!Capacitor.isNativePlatform()) {
     return {
       available: false,
       platform: 'web',
       modelReady: false,
+      modelId,
       detail: friendly('unavailable'),
     }
   }
   try {
-    const ready = await DiaryWhisper.isReady()
+    let ready = await DiaryWhisper.isReady({ modelId })
+    // 模型在 assets，需 prepare 解包到 files；首屏不要误报「缺少模型」
+    if (!ready.ready) {
+      ready = await DiaryWhisper.prepareModel({ modelId })
+    }
     return {
       available: true,
       platform: 'native',
       modelReady: Boolean(ready.ready),
-      detail: ready.detail,
+      modelId,
+      detail: ready.ready
+        ? `端侧 Whisper ${diaryWhisperModelLabel(modelId)} 已就绪`
+        : friendly('model_not_ready', ready.detail),
     }
   } catch {
     return {
       available: true,
       platform: 'native',
       modelReady: false,
+      modelId,
       detail: friendly('model_not_ready', '原生 Whisper 插件未正确加载'),
     }
   }
+}
+
+export async function prepareDiaryWhisperModel(
+  modelId: DiaryWhisperModelId = getDiaryWhisperModelId(),
+): Promise<DiaryAsrStatus> {
+  return getDiaryAsrStatus(modelId)
 }
 
 export async function isDiaryAsrAvailable(): Promise<boolean> {
@@ -85,6 +113,7 @@ export async function isDiaryAsrAvailable(): Promise<boolean> {
 export async function transcribeDiaryAudio(
   wavBase64: string,
   language = 'zh',
+  modelId: DiaryWhisperModelId = getDiaryWhisperModelId(),
 ): Promise<DiaryAsrResult> {
   if (!wavBase64) {
     return { ok: false, code: 'invalid_audio', message: friendly('invalid_audio') }
@@ -94,9 +123,9 @@ export async function transcribeDiaryAudio(
   }
 
   try {
-    let ready = await DiaryWhisper.isReady()
+    let ready = await DiaryWhisper.isReady({ modelId })
     if (!ready.ready) {
-      ready = await DiaryWhisper.prepareModel()
+      ready = await DiaryWhisper.prepareModel({ modelId })
     }
     if (!ready.ready) {
       return {
@@ -105,7 +134,7 @@ export async function transcribeDiaryAudio(
         message: friendly('model_not_ready', ready.detail),
       }
     }
-    const { text } = await DiaryWhisper.transcribe({ wavBase64, language })
+    const { text } = await DiaryWhisper.transcribe({ wavBase64, language, modelId })
     const trimmed = (text || '').trim()
     if (!trimmed) {
       return {
@@ -114,7 +143,7 @@ export async function transcribeDiaryAudio(
         message: friendly('transcribe_failed', '没听清'),
       }
     }
-    return { ok: true, text: trimmed }
+    return { ok: true, text: trimmed, modelId }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (/model|ready|asset|missing/i.test(msg)) {

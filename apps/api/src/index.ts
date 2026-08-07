@@ -6,13 +6,17 @@ import { matchExpect } from './match.js'
 import { recognizeSpeech } from './asr.js'
 import { synthesizeSpeech } from './tts.js'
 import { generateFamilyLevel } from './familyGenerate.js'
+import {
+  generateFamilyImages,
+  slotsFromLevel,
+} from './tongyiImage.js'
 
 const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5_000_000 } })
 const port = Number(process.env.PORT || 8787)
 
 app.use(cors())
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({ limit: '2mb' }))
 
 app.get('/health', (_req, res) => {
   res.json({
@@ -20,6 +24,7 @@ app.get('/health', (_req, res) => {
     asr: process.env.ASR_PROVIDER || 'mock',
     tts: process.env.TTS_PROVIDER || 'browser-hint',
     familyLlm: process.env.FAMILY_LLM_PROVIDER || 'deepseek',
+    familyImage: process.env.FAMILY_IMAGE_PROVIDER || 'tongyi',
   })
 })
 
@@ -95,6 +100,57 @@ app.post('/api/family/generate-level', async (req, res) => {
           ? 422
           : 500
     console.error('[family/generate-level]', message)
+    res.status(status).json({ error: message })
+  }
+})
+
+app.post('/api/family/generate-images', async (req, res) => {
+  try {
+    const date = String(req.body.date || '').trim() || new Date().toISOString().slice(0, 10)
+    const headerKey = String(req.header('x-tongyi-key') || req.header('x-dashscope-key') || '').trim()
+    const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
+    const apiKey = headerKey || bodyKey || undefined
+    const forceMock = Boolean(req.body.forceMock)
+
+    let slots = Array.isArray(req.body.slots) ? req.body.slots : null
+    if (!slots?.length && req.body.level && typeof req.body.level === 'object') {
+      slots = slotsFromLevel(req.body.level as Record<string, unknown>)
+    }
+    if (!Array.isArray(slots) || !slots.length) {
+      res.status(400).json({ error: 'slots_or_level_required' })
+      return
+    }
+
+    const normalized = slots
+      .map((s: unknown) => {
+        if (!s || typeof s !== 'object') return null
+        const o = s as { subject?: unknown; role?: unknown }
+        const subject = String(o.subject || '').trim()
+        if (!subject) return null
+        const role = o.role === 'scene' || o.role === 'item' ? o.role : undefined
+        return { subject, role }
+      })
+      .filter(Boolean) as { subject: string; role?: 'scene' | 'item' }[]
+
+    if (!normalized.length) {
+      res.status(400).json({ error: 'slots_or_level_required' })
+      return
+    }
+
+    const payload = await generateFamilyImages({
+      date,
+      slots: normalized,
+      apiKey,
+      forceMock,
+    })
+    res.json(payload)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'generate_images_failed'
+    const status =
+      message === 'image_provider_unavailable' || message === 'slots_or_level_required'
+        ? 400
+        : 500
+    console.error('[family/generate-images]', message)
     res.status(status).json({ error: message })
   }
 })

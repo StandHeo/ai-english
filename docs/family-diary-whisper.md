@@ -17,7 +17,7 @@
 
 1. 准备资源：
 
-   - 模型：`assets/diary-whisper/ggml-tiny-q5_1.bin`
+   - 模型：`assets/diary-whisper/ggml-tiny-q5_1.bin`（默认）、`ggml-base-q5_1.bin`、`ggml-small-q5_1.bin`
    - CLI：`jniLibs/arm64-v8a/libwhisper_cli.so`（**不要**再拷到 `files/` 执行；Android 10+ 会 Permission denied）
 
 ```bash
@@ -39,9 +39,11 @@ npx cap sync android
 3. 首次语音会调用 `prepareModel`：把 assets 解包到应用私有目录，再本地转写。  
    **不会**把日记录音默认上传到云端 OpenAI Whisper。
 
+4. **切换模型对比**：家庭日记 → 展开「生成与设置」→ **语音转写模型**，在 Tiny / Base / Small 之间切换后各录一段对比。选择会记在本机。录音结束后会显示「正在转写成文字」loading。
+
 未放入模型时：`isReady` / `prepareModel` 返回未就绪；UI 保留录音并提示手改文字。
 
-> 仓库已包含 `ggml-tiny-q5_1.bin` 与 arm64 `whisper-cli`。换机器一般无需再下载；若缺失可跑 `npm run fetch-diary-whisper`。
+> 仓库可包含 `ggml-tiny-q5_1.bin`、`ggml-base-q5_1.bin`、`ggml-small-q5_1.bin` 与 arm64 `whisper-cli`。换机器若缺失可跑 `npm run fetch-diary-whisper`。
 
 ## 与关卡 Vosk 的隔离
 

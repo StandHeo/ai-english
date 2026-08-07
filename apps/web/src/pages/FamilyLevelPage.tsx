@@ -35,7 +35,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
   const finishingRef = useRef(false)
-  const { recording, toggleListen, cancelAutoStop } = usePressToTalk()
+  const { recording, toggleListen, cancelAutoStop, nativeVosk, listenMs } = usePressToTalk()
 
   useEffect(() => {
     beatIndexRef.current = beatIndex
@@ -56,6 +56,13 @@ export function FamilyLevelPage({ onProgress }: Props) {
       setShowDevType(true)
     }
   }, [date, navigate])
+
+  // 录音结束后清掉「正在听」，避免一直挂着
+  useEffect(() => {
+    if (!recording && micTip === 'listening') {
+      setMicTip(null)
+    }
+  }, [recording, micTip])
 
   const persistPlayTime = useCallback(() => {
     const seconds = (Date.now() - startedAt.current) / 1000
@@ -94,6 +101,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
     ;(async () => {
       setBusy(true)
       setPhase('speak')
+      setMicTip(null)
       await requestTts(beat.npc_say)
       if (cancelled) return
       if (beat.type === 'introduce') {
@@ -133,20 +141,35 @@ export function FamilyLevelPage({ onProgress }: Props) {
       await requestTts(beat?.hint_say || beat?.npc_say || '')
       setBusy(false)
       setPhase('listen')
+      setMicTip('再试一次，或点右下角打字')
       return
     }
     setPhase('fallback')
+    setMicTip(null)
   }
 
   async function handleCapture(capture: TalkCapture) {
     if (!beat?.expect || finishingRef.current) return
     finishingRef.current = true
+    setMicTip(null)
     setBusy(true)
     try {
+      if (capture.error === 'denied') {
+        setMicTip('请允许麦克风权限')
+        setShowDevType(true)
+        setPhase('listen')
+        return
+      }
+      if (capture.error === 'insecure') {
+        setMicTip('当前环境无法开麦，请用打字')
+        setShowDevType(true)
+        setPhase('fallback')
+        return
+      }
       if (!capture.transcript && !capture.blob) {
         setShowDevType(true)
         setMicTip('没有听到，请再说或打字')
-        setPhase('fallback')
+        setPhase('listen')
         return
       }
       const result = await submitSpeech({
@@ -156,7 +179,9 @@ export function FamilyLevelPage({ onProgress }: Props) {
       })
       await onOralResult(result.matched)
     } catch {
-      setPhase('fallback')
+      setMicTip('识别出错，可打字再试')
+      setShowDevType(true)
+      setPhase('listen')
     } finally {
       setBusy(false)
       finishingRef.current = false
@@ -165,11 +190,15 @@ export function FamilyLevelPage({ onProgress }: Props) {
 
   async function handleMicTap() {
     if (busy || phase !== 'listen' || !beat?.expect) return
-    const result = await toggleListen((capture) => {
-      void handleCapture(capture)
-    })
+    const result = await toggleListen(
+      (capture) => {
+        void handleCapture(capture)
+      },
+      { grammarWords: beat.expect },
+    )
     if (result === 'started') {
-      setMicTip('正在听…')
+      setMicTip('listening')
+      setShowDevType(false)
       return
     }
     cancelAutoStop()
@@ -191,6 +220,13 @@ export function FamilyLevelPage({ onProgress }: Props) {
   const findOptions = beat?.options || beat?.fallback?.options
   if (!level) return <div className="screen loading-dot" />
 
+  const tipText =
+    micTip === 'listening'
+      ? nativeVosk
+        ? `正在听（离线）… 约 ${Math.round(listenMs / 1000)} 秒，或再点麦克风结束`
+        : `正在听… 约 ${Math.round(listenMs / 1000)} 秒，或再点麦克风结束`
+      : micTip
+
   return (
     <div className="level-screen" style={{ backgroundImage: `url(${level.scene.image})` }}>
       <button
@@ -204,13 +240,16 @@ export function FamilyLevelPage({ onProgress }: Props) {
       {beat?.show && phase !== 'find' && (
         <img className={`focus-item ${phase === 'listen' ? 'bounce' : ''}`} src={beat.show} alt="" />
       )}
-      {micTip && phase === 'listen' && <div className="mic-tip">{micTip}</div>}
+      {tipText && (phase === 'listen' || phase === 'fallback') && (
+        <div className="mic-tip">{tipText}</div>
+      )}
       {phase === 'listen' && (
         <button
           className={`mic-btn ${recording ? 'hot' : ''}`}
           type="button"
           disabled={busy && !recording}
           onClick={() => void handleMicTap()}
+          aria-label={recording ? '结束聆听' : '开始说话'}
         />
       )}
       {(phase === 'find' || phase === 'fallback') && findOptions && (
@@ -231,7 +270,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
       <button className="dev-toggle" type="button" onClick={() => setShowDevType((v) => !v)}>
         ·
       </button>
-      {showDevType && phase === 'listen' && (
+      {showDevType && (phase === 'listen' || phase === 'fallback') && (
         <div className="dev-type">
           <input value={devText} onChange={(e) => setDevText(e.target.value)} placeholder="park" />
           <button

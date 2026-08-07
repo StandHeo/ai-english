@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
  * 准备家庭日记端侧 Whisper 资源：
- * - 下载 ggml-tiny-q5_1.bin
+ * - 下载 ggml-tiny-q5_1.bin（默认）与 ggml-base-q5_1.bin（更准）
  * - 若本机已有 Android NDK，则交叉编译 arm64 whisper-cli
  *
  * 用法：
  *   node scripts/fetch-diary-whisper.mjs
  *   node scripts/fetch-diary-whisper.mjs --model-only
+ *   node scripts/fetch-diary-whisper.mjs --tiny-only
+ *   node scripts/fetch-diary-whisper.mjs --base-only
+ *   node scripts/fetch-diary-whisper.mjs --small-only
  */
 import { existsSync, mkdirSync, chmodSync, copyFileSync, statSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
@@ -20,15 +23,21 @@ const destDir = join(
   root,
   'plugins/diary-whisper/android/src/main/assets/diary-whisper',
 )
-const modelName = 'ggml-tiny-q5_1.bin'
-const modelPath = join(destDir, modelName)
 const cliPath = join(destDir, 'whisper-cli')
 const modelOnly = process.argv.includes('--model-only')
+const tinyOnly = process.argv.includes('--tiny-only')
+const baseOnly = process.argv.includes('--base-only')
 
-const modelUrls = [
-  `https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/${modelName}`,
-  `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${modelName}`,
-]
+const models = [
+  { id: 'tiny', name: 'ggml-tiny-q5_1.bin', minBytes: 1_000_000 },
+  { id: 'base', name: 'ggml-base-q5_1.bin', minBytes: 10_000_000 },
+  { id: 'small', name: 'ggml-small-q5_1.bin', minBytes: 50_000_000 },
+].filter((m) => {
+  if (tinyOnly) return m.id === 'tiny'
+  if (baseOnly) return m.id === 'base'
+  if (process.argv.includes('--small-only')) return m.id === 'small'
+  return true
+})
 
 mkdirSync(destDir, { recursive: true })
 
@@ -37,12 +46,17 @@ function run(cmd, args, opts = {}) {
   return r.status === 0
 }
 
-function downloadModel() {
-  if (existsSync(modelPath) && statSync(modelPath).size > 1_000_000) {
+function downloadOne(modelName, minBytes) {
+  const modelPath = join(destDir, modelName)
+  if (existsSync(modelPath) && statSync(modelPath).size > minBytes) {
     console.log(`模型已存在：${modelPath}`)
     return true
   }
-  for (const url of modelUrls) {
+  const urls = [
+    `https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/${modelName}`,
+    `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${modelName}`,
+  ]
+  for (const url of urls) {
     console.log(`下载模型 ${url}`)
     const ok = run('curl', [
       '-L',
@@ -61,13 +75,20 @@ function downloadModel() {
       modelPath,
       url,
     ])
-    if (ok && existsSync(modelPath) && statSync(modelPath).size > 1_000_000) {
+    if (ok && existsSync(modelPath) && statSync(modelPath).size > minBytes) {
       console.log(`模型就绪：${modelPath} (${statSync(modelPath).size} bytes)`)
       return true
     }
   }
-  console.error('模型下载失败')
+  console.error(`模型下载失败：${modelName}`)
   return false
+}
+
+function downloadModels() {
+  for (const m of models) {
+    if (!downloadOne(m.name, m.minBytes)) return false
+  }
+  return true
 }
 
 function findNdk() {
@@ -163,6 +184,6 @@ function buildCli() {
   return true
 }
 
-if (!downloadModel()) process.exit(1)
+if (!downloadModels()) process.exit(1)
 if (!modelOnly && !buildCli()) process.exit(1)
 console.log('完成。接着：cd apps/web && npm run build && npx cap sync android')

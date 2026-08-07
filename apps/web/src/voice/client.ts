@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
+import { apiUrl } from '../api/base'
 import { matchExpect } from './match'
 import {
   loadVoicePrefs,
@@ -8,8 +9,6 @@ import {
   resolveVoice,
   type VoiceResolved,
 } from './prefs'
-
-const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 async function speakNative(text: string, resolved: VoiceResolved): Promise<void> {
   await TextToSpeech.stop()
@@ -111,7 +110,7 @@ export async function requestTts(text: string): Promise<void> {
     return
   }
   try {
-    const res = await fetch(`${API_BASE}/api/tts`, {
+    const res = await fetch(apiUrl('/api/tts'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
@@ -156,7 +155,7 @@ export async function submitSpeech(opts: {
   form.append('expect', opts.expect.join('|'))
   if (opts.blob) form.append('audio', opts.blob, 'speech.webm')
 
-  const res = await fetch(`${API_BASE}/api/asr`, { method: 'POST', body: form })
+  const res = await fetch(apiUrl('/api/asr'), { method: 'POST', body: form })
   const raw = await res.text()
   if (!res.ok) {
     throw new Error(
