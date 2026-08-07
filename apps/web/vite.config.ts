@@ -7,6 +7,9 @@ const phone = process.env.VITE_PHONE === '1'
 
 export default defineConfig({
   plugins: [react(), ...(phone ? [basicSsl()] : [])],
+  optimizeDeps: {
+    exclude: ['monosklet'],
+  },
   server: {
     host: phone ? '0.0.0.0' : undefined,
     proxy: {

@@ -32,7 +32,24 @@ npx cap open android
 
 ## 麦克风权限
 
-确保 `AndroidManifest.xml` 含 `RECORD_AUDIO`。Capacitor 新项目通常需在权限插件或清单中声明。
+确保 `AndroidManifest.xml` 含：
+
+- `RECORD_AUDIO`
+- `MODIFY_AUDIO_SETTINGS`（离线 Vosk 采集建议声明）
+
+## 离线语音（Vosk，仅 App）
+
+安卓 App 内使用 **Vosk（monosklet WASM）** 做英语短词识别；手机浏览器仍走 Web Speech / 手动输入。
+
+```bash
+cd apps/web
+npm run fetch-vosk-model   # 生成 public/models/en-us-small.tar（约 40–70MB）
+npm run build
+npx cap sync android
+# 或一键：npm run build:android
+```
+
+首次进关卡会加载模型；识别结果界面会标注「来源：App 离线 Vosk」。
 
 ## 技术选型结论（任务 3.5）
 

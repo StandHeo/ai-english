@@ -4,18 +4,34 @@ import {
   isMicAllowedByBrowser,
   type BrowserSpeechRecognition,
 } from './secureContext'
+import {
+  isNativeVoskAvailable,
+  startVoskPcmCapture,
+  type VoskPcmSession,
+} from './voskNative'
 
 export type TalkCapture = {
   transcript?: string
   blob?: Blob
-  error?: 'insecure' | 'denied' | 'unsupported' | 'empty' | 'unknown'
+  /** 浏览器端是否挂上了 SpeechRecognition / App Vosk */
+  recognitionUsed?: boolean
+  error?: 'insecure' | 'denied' | 'unsupported' | 'empty' | 'unknown' | 'recognition'
+  /** 给人看的补充说明（如 Web Speech 的 error code） */
+  detail?: string
+  source?: 'vosk' | 'browser-speech' | 'none'
 }
 
 const LISTEN_MS = 3500
 
+export type ListenOptions = {
+  /** 关卡期望词，传给 Vosk grammar 提高短词准确率 */
+  grammarWords?: string[]
+}
+
 /**
  * 手机优先：点一下开始听（约 3.5 秒），再点可提前结束。
- * 先申请 getUserMedia 权限，再并行尝试浏览器语音识别 + 录音。
+ * - App（Capacitor）：离线 Vosk
+ * - 网页：浏览器 SpeechRecognition + 录音兜底
  */
 export function usePressToTalk() {
   const [recording, setRecording] = useState(false)
@@ -23,7 +39,12 @@ export function usePressToTalk() {
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null)
+  const voskSessionRef = useRef<VoskPcmSession | null>(null)
+  const grammarRef = useRef<string[] | undefined>(undefined)
   const transcriptRef = useRef('')
+  const recognitionUsedRef = useRef(false)
+  const recognitionErrorRef = useRef<string | null>(null)
+  const recognitionSourceRef = useRef<'vosk' | 'browser-speech' | 'none'>('none')
   const startPromiseRef = useRef<Promise<TalkCapture | null> | null>(null)
   const activeRef = useRef(false)
   const autoTimerRef = useRef<number | null>(null)
@@ -47,15 +68,21 @@ export function usePressToTalk() {
 
     const run = (async (): Promise<TalkCapture | null> => {
       transcriptRef.current = ''
+      recognitionUsedRef.current = false
+      recognitionErrorRef.current = null
+      recognitionSourceRef.current = 'none'
       chunksRef.current = []
       recognitionRef.current = null
+      voskSessionRef.current = null
       mediaRef.current = null
 
       if (!isMicAllowedByBrowser()) {
-        return { error: 'insecure' }
+        return {
+          error: 'insecure',
+          detail: `当前协议 ${window.location.protocol}，非安全上下文无法使用麦克风`,
+        }
       }
 
-      // 立刻给 UI 反馈，再异步要权限
       activeRef.current = true
       setRecording(true)
 
@@ -63,6 +90,7 @@ export function usePressToTalk() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
+            channelCount: 1,
             echoCancellation: true,
             noiseSuppression: true,
           },
@@ -73,13 +101,18 @@ export function usePressToTalk() {
         setRecording(false)
         const name = err instanceof DOMException ? err.name : ''
         if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-          return { error: 'denied' }
+          return { error: 'denied', detail: name }
         }
-        if (name === 'NotFoundError') return { error: 'unsupported' }
-        return { error: 'unknown' }
+        if (name === 'NotFoundError') {
+          return { error: 'unsupported', detail: '未找到麦克风设备' }
+        }
+        return {
+          error: 'unknown',
+          detail: err instanceof Error ? err.message : String(err),
+        }
       }
 
-      // 录音兜底（mock / whisper 可用）
+      // 录音兜底（仍可上传给服务端）
       try {
         const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
@@ -97,33 +130,60 @@ export function usePressToTalk() {
         mediaRef.current = recorder
         recorder.start(100)
       } catch {
-        // 部分机型 MediaRecorder 失败时仍可走语音识别
+        // 部分机型 MediaRecorder 失败时仍可走识别
       }
 
-      // 浏览器英语识别（安卓 Chrome 在 HTTPS + 已授权后通常可用）
+      if (isNativeVoskAvailable()) {
+        try {
+          voskSessionRef.current = await startVoskPcmCapture(stream)
+          recognitionUsedRef.current = true
+          recognitionSourceRef.current = 'vosk'
+        } catch (err) {
+          voskSessionRef.current = null
+          recognitionUsedRef.current = false
+          recognitionErrorRef.current =
+            err instanceof Error ? `Vosk 启动失败: ${err.message}` : 'Vosk 启动失败'
+        }
+        return null
+      }
+
+      // 网页：浏览器英语识别
       const SpeechRecognition = getSpeechRecognitionCtor()
       if (SpeechRecognition) {
         try {
           const recognition = new SpeechRecognition()
           recognition.lang = 'en-US'
-          recognition.continuous = true
+          recognition.continuous = false
           recognition.interimResults = true
           recognition.maxAlternatives = 3
           recognition.onresult = (ev) => {
-            let text = ''
+            let finalText = ''
+            let interimText = ''
             for (let i = 0; i < ev.results.length; i += 1) {
-              text += ev.results[i][0]?.transcript || ''
+              const piece = ev.results[i][0]?.transcript || ''
+              if (ev.results[i].isFinal) finalText += piece
+              else interimText += piece
             }
-            transcriptRef.current = text.trim()
+            const next = (finalText || interimText).trim()
+            if (next) transcriptRef.current = next
           }
-          recognition.onerror = () => {
-            /* stop 时读取已有结果 */
+          recognition.onerror = (ev) => {
+            if (ev.error === 'aborted') return
+            recognitionErrorRef.current = ev.error || 'recognition_error'
           }
           recognitionRef.current = recognition
+          recognitionUsedRef.current = true
+          recognitionSourceRef.current = 'browser-speech'
           recognition.start()
-        } catch {
+        } catch (err) {
           recognitionRef.current = null
+          recognitionUsedRef.current = false
+          recognitionErrorRef.current =
+            err instanceof Error ? err.message : 'SpeechRecognition.start failed'
         }
+      } else {
+        recognitionErrorRef.current =
+          '当前浏览器不支持 Web Speech API（SpeechRecognition）'
       }
 
       return null
@@ -140,7 +200,6 @@ export function usePressToTalk() {
   const stop = useCallback(async (): Promise<TalkCapture> => {
     cleanupTimer()
 
-    // 短按：等 start 完成再停
     if (startPromiseRef.current) {
       const early = await startPromiseRef.current
       if (early?.error) {
@@ -149,16 +208,33 @@ export function usePressToTalk() {
         releaseStream()
         return early
       }
-      // 给识别一点时间（点一下就松的情况）
       await new Promise((r) => window.setTimeout(r, 600))
     }
 
-    if (!activeRef.current && !mediaRef.current && !recognitionRef.current) {
+    if (
+      !activeRef.current &&
+      !mediaRef.current &&
+      !recognitionRef.current &&
+      !voskSessionRef.current
+    ) {
       setRecording(false)
-      return { error: 'empty' }
+      return {
+        error: 'empty',
+        recognitionUsed: recognitionUsedRef.current,
+        detail: recognitionErrorRef.current || '录音尚未开始',
+        source: recognitionSourceRef.current,
+      }
     }
 
     activeRef.current = false
+
+    const voskSession = voskSessionRef.current
+    voskSessionRef.current = null
+    if (voskSession) {
+      const vosk = await voskSession.stop(grammarRef.current)
+      if (vosk.text) transcriptRef.current = vosk.text
+      if (vosk.detail) recognitionErrorRef.current = vosk.detail
+    }
 
     const recognition = recognitionRef.current
     recognitionRef.current = null
@@ -204,18 +280,44 @@ export function usePressToTalk() {
     setRecording(false)
 
     const transcript = transcriptRef.current.trim()
-    if (transcript) return { transcript, blob }
-    if (blob) return { blob }
-    return { error: 'empty' }
+    const recognitionUsed = recognitionUsedRef.current
+    const detail = recognitionErrorRef.current || undefined
+    const source = recognitionSourceRef.current
+    if (transcript) {
+      return { transcript, blob, recognitionUsed, detail, source }
+    }
+    if (blob) {
+      return {
+        blob,
+        recognitionUsed,
+        source,
+        detail:
+          detail ||
+          (source === 'vosk'
+            ? '已录音，但 Vosk 没有给出文字'
+            : recognitionUsed
+              ? '已录音，但浏览器语音识别没有给出文字'
+              : '已录音，但当前环境没有语音识别'),
+      }
+    }
+    return {
+      error: detail && !recognitionUsed ? 'unsupported' : 'empty',
+      recognitionUsed,
+      source,
+      detail: detail || '没有听到有效语音，也没有录到音频',
+    }
   }, [])
 
-  /** 点一下：开始听，超时自动结束；再点一次提前结束 */
   const toggleListen = useCallback(
-    async (onAutoStop: (capture: TalkCapture) => void): Promise<'started' | 'stopped' | TalkCapture> => {
+    async (
+      onAutoStop: (capture: TalkCapture) => void,
+      options?: ListenOptions,
+    ): Promise<'started' | 'stopped' | TalkCapture> => {
       if (recording || activeRef.current) {
         const capture = await stop()
         return capture
       }
+      grammarRef.current = options?.grammarWords
       const early = await start()
       if (early?.error) return early
 
@@ -232,5 +334,13 @@ export function usePressToTalk() {
     cleanupTimer()
   }, [])
 
-  return { recording, start, stop, toggleListen, cancelAutoStop, listenMs: LISTEN_MS }
+  return {
+    recording,
+    start,
+    stop,
+    toggleListen,
+    cancelAutoStop,
+    listenMs: LISTEN_MS,
+    nativeVosk: isNativeVoskAvailable(),
+  }
 }

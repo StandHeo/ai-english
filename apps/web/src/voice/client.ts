@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
+import { matchExpect } from './match'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -57,6 +58,11 @@ export async function cancelSpeak(): Promise<void> {
 }
 
 export async function requestTts(text: string): Promise<void> {
+  // App 离线：直接本地朗读，不依赖电脑 API
+  if (Capacitor.isNativePlatform()) {
+    await speakBrowser(text)
+    return
+  }
   try {
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: 'POST',
@@ -80,13 +86,48 @@ export async function submitSpeech(opts: {
   blob?: Blob
   text?: string
   expect: string[]
-}): Promise<{ transcript: string; matched: boolean }> {
+}): Promise<{
+  transcript: string
+  matched: boolean
+  source?: 'browser' | 'openai' | 'none' | 'local'
+  hasAudio?: boolean
+}> {
+  const text = opts.text?.trim() || ''
+
+  // 已有识别文字（Vosk / 浏览器 / 打字）：本地匹配，App 无需电脑 API
+  if (text) {
+    return {
+      transcript: text,
+      matched: matchExpect(text, opts.expect),
+      source: 'local',
+      hasAudio: Boolean(opts.blob),
+    }
+  }
+
+  // 只有录音、没有文字：才需要服务端 ASR（网页联调 / Whisper）
   const form = new FormData()
   form.append('expect', opts.expect.join('|'))
-  if (opts.text) form.append('text', opts.text)
   if (opts.blob) form.append('audio', opts.blob, 'speech.webm')
 
   const res = await fetch(`${API_BASE}/api/asr`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error('asr_failed')
-  return res.json()
+  const raw = await res.text()
+  if (!res.ok) {
+    throw new Error(
+      raw.startsWith('<!') || raw.startsWith('<')
+        ? 'API 不可达（收到 HTML）。App 请用离线 Vosk；网页请确认电脑 API 在 8787'
+        : `asr_failed: ${res.status}`,
+    )
+  }
+  try {
+    return JSON.parse(raw) as {
+      transcript: string
+      matched: boolean
+      source?: 'browser' | 'openai' | 'none' | 'local'
+      hasAudio?: boolean
+    }
+  } catch {
+    throw new Error(
+      'API 返回不是 JSON（常见于 App 访问不到电脑 /api）。有文字时应走本地匹配。',
+    )
+  }
 }

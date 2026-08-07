@@ -120,6 +120,39 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
+.voice-status {
+  position: relative;
+  z-index: 3;
+  max-width: min(92vw, 360px);
+  margin: 0 12px 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  word-break: break-word;
+}
+
+.voice-status--info {
+  background: rgba(232, 244, 255, 0.97);
+  color: #1d3a5c;
+}
+
+.voice-status--ok {
+  background: rgba(226, 247, 230, 0.97);
+  color: #1d5c2e;
+}
+
+.voice-status--warn {
+  background: rgba(255, 243, 220, 0.97);
+  color: #6a4a12;
+}
+
+.voice-status--error {
+  background: rgba(255, 232, 230, 0.97);
+  color: #7a1f1a;
+}
+
 .choice-row {
   display: flex;
   gap: 18px;
@@ -152,6 +185,7 @@
   background: radial-gradient(circle, rgba(255, 220, 100, 0.55), transparent 70%);
   pointer-events: none;
   animation: pop 0.8s ease;
+  z-index: 4;
 }
 
 @keyframes pop {
@@ -162,6 +196,89 @@
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+.result-flash {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  min-width: min(78vw, 280px);
+  padding: 22px 20px 18px;
+  border-radius: 28px;
+  text-align: center;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+  animation: flash-in 0.35s ease;
+  pointer-events: none;
+}
+
+.result-flash--ok {
+  background: rgba(232, 250, 236, 0.98);
+  color: #1f6b34;
+}
+
+.result-flash--retry {
+  background: rgba(255, 246, 232, 0.98);
+  color: #8a4b16;
+}
+
+.result-flash__mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  animation: mark-bounce 0.55s ease;
+}
+
+.result-flash--ok .result-flash__mark {
+  background: #2f9e55;
+  color: #fff;
+}
+
+.result-flash--retry .result-flash__mark {
+  background: #f0a35a;
+  color: #fff;
+}
+
+.result-flash__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.result-flash__line {
+  font-size: 1rem;
+  opacity: 0.92;
+  line-height: 1.35;
+}
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes mark-bounce {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 

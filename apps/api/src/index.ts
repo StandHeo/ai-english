@@ -30,14 +30,20 @@ app.post('/api/asr', upload.single('audio'), async (req, res) => {
       .map((s) => s.trim())
       .filter(Boolean)
     const forcedText = typeof req.body.text === 'string' ? req.body.text : undefined
-    const transcript = await recognizeSpeech({
+    const asr = await recognizeSpeech({
       audio: req.file?.buffer,
       mimeType: req.file?.mimetype,
       forcedText,
       expectHint: expect,
     })
-    const matched = matchExpect(transcript, expect)
-    res.json({ transcript, matched, expect })
+    const matched = matchExpect(asr.text, expect)
+    res.json({
+      transcript: asr.text,
+      matched,
+      expect,
+      source: asr.source,
+      hasAudio: asr.hasAudio,
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'asr_failed' })

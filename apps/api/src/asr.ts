@@ -5,29 +5,42 @@ export type AsrInput = {
   expectHint?: string[]
 }
 
+export type AsrResult = {
+  text: string
+  /** browser=前端识别/打字；openai=云端；none=没有真实转写 */
+  source: 'browser' | 'openai' | 'none'
+  hasAudio: boolean
+}
+
 /**
  * Vendor-agnostic ASR.
- * - forcedText：浏览器语音识别或家长打字
- * - mock：仅在确有音频时，用期望词模拟成功（方便无密钥联调）；无音频/无文本则返回空
+ * - forcedText：浏览器语音识别或家长打字（真实文本）
+ * - mock：不再用期望词假装听懂；没有文本就返回空，避免联调误导
  * - openai：Whisper（需 ASR_API_KEY）
  */
-export async function recognizeSpeech(input: AsrInput): Promise<string> {
+export async function recognizeSpeech(input: AsrInput): Promise<AsrResult> {
+  const hasAudio = Boolean(input.audio && input.audio.length > 0)
+
   if (input.forcedText && input.forcedText.trim()) {
-    return input.forcedText.trim()
+    return {
+      text: input.forcedText.trim(),
+      source: 'browser',
+      hasAudio,
+    }
   }
 
   const provider = process.env.ASR_PROVIDER || 'mock'
-  const hasAudio = Boolean(input.audio && input.audio.length > 0)
 
   if (provider === 'mock') {
-    if (!hasAudio) return ''
-    if (input.expectHint?.[0]) return input.expectHint[0]
-    return ''
+    // 旧行为会在有音频时直接返回 expectHint[0]（如 banana），造成「没听也算对」。
+    // 真实听写请依赖浏览器 SpeechRecognition，或配置 openai。
+    return { text: '', source: 'none', hasAudio }
   }
 
   if (provider === 'openai' || provider === 'whisper') {
-    if (!hasAudio) return ''
-    return whisperOpenAI(input.audio!, input.mimeType || 'audio/webm')
+    if (!hasAudio) return { text: '', source: 'none', hasAudio }
+    const text = await whisperOpenAI(input.audio!, input.mimeType || 'audio/webm')
+    return { text, source: 'openai', hasAudio }
   }
 
   throw new Error(

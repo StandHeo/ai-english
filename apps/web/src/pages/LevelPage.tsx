@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import {
   assetUrl,
   findPackIdForLevel,
@@ -10,18 +11,61 @@ import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
+import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import './level.css'
 
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
 const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
+const ENCOURAGE = [
+  'Nice try! You can do it!',
+  'Almost! Try again!',
+  'Good effort! Say it once more!',
+  'No worries! One more time!',
+]
 
 type MicTip = 'insecure' | 'denied' | 'empty' | 'listening' | null
+
+type VoiceStatus = {
+  tone: 'info' | 'ok' | 'warn' | 'error'
+  lines: string[]
+}
+
+type ResultFlash = {
+  kind: 'ok' | 'retry'
+  title: string
+  line: string
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
 
 type Props = {
   progress: ProgressState
   onProgress: (p: ProgressState) => void
+}
+
+function captureErrorMessage(capture: TalkCapture): string {
+  switch (capture.error) {
+    case 'insecure':
+      return '非安全页面，无法开麦克风'
+    case 'denied':
+      return '麦克风权限被拒绝'
+    case 'unsupported':
+      return '当前环境不支持录音/语音识别'
+    case 'recognition':
+      return '语音识别出错'
+    case 'empty':
+      return '没有识别到语音'
+    case 'unknown':
+      return '麦克风启动失败'
+    default:
+      return '语音输入失败'
+  }
 }
 
 export function LevelPage({ onProgress }: Props) {
@@ -39,12 +83,14 @@ export function LevelPage({ onProgress }: Props) {
   const [showDevType, setShowDevType] = useState(false)
   const [devText, setDevText] = useState('')
   const [micTip, setMicTip] = useState<MicTip>(null)
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null)
+  const [resultFlash, setResultFlash] = useState<ResultFlash | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
-  const { recording, toggleListen, cancelAutoStop } = usePressToTalk()
+  const { recording, toggleListen, cancelAutoStop, nativeVosk } = usePressToTalk()
 
   const goMap = useCallback(() => {
     navigate(packId ? `/map/${packId}` : '/')
@@ -59,6 +105,31 @@ export function LevelPage({ onProgress }: Props) {
       setMicTip('insecure')
       setShowDevType(true)
     }
+  }, [])
+
+  useEffect(() => {
+    if (!isNativeVoskAvailable()) return
+    setVoiceStatus({
+      tone: 'info',
+      lines: ['正在加载离线语音模型（Vosk）…'],
+    })
+    void ensureVoskModel()
+      .then(() => {
+        setVoiceStatus({
+          tone: 'ok',
+          lines: ['离线语音已就绪（App Vosk）', '点麦克风说英语单词即可'],
+        })
+      })
+      .catch((err) => {
+        setVoiceStatus({
+          tone: 'error',
+          lines: [
+            '离线语音模型加载失败',
+            err instanceof Error ? err.message : String(err),
+            '请确认 APK 已包含 public/models/en-us-small.tar',
+          ],
+        })
+      })
   }, [])
 
   useEffect(() => {
@@ -155,6 +226,8 @@ export function LevelPage({ onProgress }: Props) {
       return
     }
     setRetries(0)
+    setVoiceStatus(null)
+    setResultFlash(null)
     setBeatIndex((i) => i + 1)
   }, [finishLevel, level])
 
@@ -192,7 +265,18 @@ export function LevelPage({ onProgress }: Props) {
     const line =
       beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
     setPhase('celebrate')
+    setResultFlash({ kind: 'ok', title: '太棒了！', line })
     await requestTts(line)
+    await sleep(700)
+    setResultFlash(null)
+  }
+
+  async function playRetryEncourage() {
+    const line = ENCOURAGE[retries % ENCOURAGE.length] || 'Nice try! Try again!'
+    setResultFlash({ kind: 'retry', title: '再试一次～', line })
+    await requestTts(line)
+    await sleep(500)
+    setResultFlash(null)
   }
 
   async function onOralResult(matched: boolean) {
@@ -202,14 +286,16 @@ export function LevelPage({ onProgress }: Props) {
       return
     }
     const nextRetry = retries + 1
+    setBusy(true)
+    await playRetryEncourage()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
-      setBusy(true)
       await requestTts(beat?.hint_say || beat?.npc_say || '')
       setBusy(false)
       setPhase('listen')
       return
     }
+    setBusy(false)
     setPhase('fallback')
   }
 
@@ -226,27 +312,137 @@ export function LevelPage({ onProgress }: Props) {
     setBusy(true)
     setMicTip(null)
     try {
-      if (capture.error === 'insecure') {
-        openTypeFallback('insecure')
+      if (capture.error) {
+        const lines = [captureErrorMessage(capture)]
+        if (capture.detail) lines.push(capture.detail)
+        if (capture.recognitionUsed === false) {
+          lines.push('浏览器语音识别未启用')
+        }
+        setVoiceStatus({ tone: 'error', lines })
+        if (capture.error === 'insecure') openTypeFallback('insecure')
+        else if (capture.error === 'denied') openTypeFallback('denied')
+        else {
+          openTypeFallback('empty')
+          setPhase('fallback')
+        }
         return
       }
-      if (capture.error === 'denied') {
-        openTypeFallback('denied')
-        return
-      }
+
       if (!capture.transcript && !capture.blob) {
+        const lines = ['没有听到声音，也没有录到音频']
+        if (capture.detail) lines.push(capture.detail)
+        setVoiceStatus({ tone: 'error', lines })
         openTypeFallback('empty')
         setPhase('fallback')
         return
       }
-      const result = await submitSpeech({
-        text: capture.transcript,
-        blob: capture.blob,
-        expect: beat.expect,
+
+      const localHeard = capture.transcript?.trim() || ''
+      if (localHeard) {
+        setVoiceStatus({
+          tone: 'info',
+          lines: [`听到了：「${localHeard}」`, '正在核对…'],
+        })
+      } else {
+        setVoiceStatus({
+          tone: 'warn',
+          lines: [
+            '浏览器没有识别出文字',
+            capture.detail || '将尝试把录音发给服务器',
+            `期望：${beat.expect.join(' / ')}`,
+          ],
+        })
+      }
+
+      // App 只有录音、没有文字时：不能访问电脑 API，直接提示
+      if (
+        Capacitor.isNativePlatform() &&
+        !localHeard
+      ) {
+        setVoiceStatus({
+          tone: 'warn',
+          lines: [
+            '离线 Vosk 没有识别出文字',
+            capture.detail || '请再说一次期望单词',
+            `期望：${beat.expect.join(' / ')}`,
+            'App 不连接电脑 API，无法用服务端转写',
+          ],
+        })
+        await onOralResult(false)
+        return
+      }
+
+      let result: {
+        transcript: string
+        matched: boolean
+        source?: 'browser' | 'openai' | 'none' | 'local'
+        hasAudio?: boolean
+      }
+      try {
+        result = await submitSpeech({
+          text: capture.transcript,
+          blob: capture.blob,
+          expect: beat.expect,
+        })
+      } catch (err) {
+        setVoiceStatus({
+          tone: 'error',
+          lines: [
+            '提交语音失败（/api/asr）',
+            err instanceof Error ? err.message : String(err),
+            '请确认电脑上的 API 服务在跑（端口 8787）',
+          ],
+        })
+        setPhase('fallback')
+        return
+      }
+
+      const heard = (result.transcript || localHeard || '').trim()
+      if (!heard) {
+        setVoiceStatus({
+          tone: 'warn',
+          lines: [
+            '没有得到真实识别文字',
+            localHeard
+              ? `浏览器：「${localHeard}」`
+              : '浏览器语音识别：空',
+            result.hasAudio
+              ? '已录到音频，但服务端 mock ASR 不会假装听懂（以前会直接返回 banana）'
+              : '也没有录到音频',
+            capture.detail || '请用 Chrome，并大声说期望单词',
+            `期望：${beat.expect.join(' / ')}`,
+          ],
+        })
+        await onOralResult(false)
+        return
+      }
+
+      const sourceLabel =
+        capture.source === 'vosk'
+          ? '来源：App 离线 Vosk'
+          : result.source === 'local' && capture.source === 'browser-speech'
+            ? '来源：浏览器语音识别（本地匹配）'
+            : result.source === 'local'
+              ? '来源：本地匹配'
+              : result.source === 'browser' || capture.source === 'browser-speech'
+                ? '来源：浏览器语音识别'
+                : result.source === 'openai'
+                  ? '来源：云端 Whisper'
+                  : capture.detail?.includes('Vosk')
+                    ? '来源：App 离线 Vosk'
+                    : '来源：未知'
+
+      setVoiceStatus({
+        tone: result.matched ? 'ok' : 'warn',
+        lines: [
+          `识别结果：「${heard}」`,
+          sourceLabel,
+          result.matched
+            ? `匹配成功（期望：${beat.expect.join(' / ')}）`
+            : `未匹配（期望：${beat.expect.join(' / ')}）`,
+        ],
       })
       await onOralResult(result.matched)
-    } catch {
-      setPhase('fallback')
     } finally {
       setBusy(false)
       finishingRef.current = false
@@ -255,16 +451,25 @@ export function LevelPage({ onProgress }: Props) {
 
   async function handleMicTap() {
     if (busy || phase !== 'listen' || !beat?.expect) return
-    const result = await toggleListen((capture) => {
-      void handleCapture(capture)
-    })
+    const result = await toggleListen(
+      (capture) => {
+        void handleCapture(capture)
+      },
+      { grammarWords: beat.expect },
+    )
     if (result === 'started') {
       setMicTip('listening')
       setShowDevType(false)
+      setVoiceStatus({
+        tone: 'info',
+        lines: [
+          nativeVosk ? '正在听（离线 Vosk）…' : '正在听… 请说英语单词',
+          `期望：${beat.expect.join(' / ')}`,
+        ],
+      })
       return
     }
     if (result === 'stopped') return
-    // 提前结束或启动失败
     cancelAutoStop()
     if (typeof result === 'object') {
       await handleCapture(result)
@@ -276,8 +481,29 @@ export function LevelPage({ onProgress }: Props) {
     cancelAutoStop()
     setBusy(true)
     try {
+      setVoiceStatus({
+        tone: 'info',
+        lines: [`手动输入：「${devText}」`, '正在核对…'],
+      })
       const result = await submitSpeech({ text: devText, expect: beat.expect })
+      setVoiceStatus({
+        tone: result.matched ? 'ok' : 'warn',
+        lines: [
+          `识别结果：「${result.transcript || devText}」`,
+          result.matched
+            ? `匹配成功（期望：${beat.expect.join(' / ')}）`
+            : `未匹配（期望：${beat.expect.join(' / ')}）`,
+        ],
+      })
       await onOralResult(result.matched)
+    } catch (err) {
+      setVoiceStatus({
+        tone: 'error',
+        lines: [
+          '提交失败',
+          err instanceof Error ? err.message : String(err),
+        ],
+      })
     } finally {
       setBusy(false)
     }
@@ -287,13 +513,15 @@ export function LevelPage({ onProgress }: Props) {
     if (!correct) {
       const nextRetry = retries + 1
       setBusy(true)
-      await requestTts(beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || '')
-      setBusy(false)
+      await playRetryEncourage()
       if (phase === 'find' && nextRetry < MAX_RETRIES) {
         setRetries(nextRetry)
+        await requestTts(beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || '')
+        setBusy(false)
         return
       }
       await requestTts(beat?.expect?.[0] || beat?.hint_say || '')
+      setBusy(false)
       await advance()
       return
     }
@@ -371,6 +599,14 @@ export function LevelPage({ onProgress }: Props) {
             />
           )}
 
+          {voiceStatus && (
+            <div className={`voice-status voice-status--${voiceStatus.tone}`} role="status">
+              {voiceStatus.lines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          )}
+
           {tipText && (phase === 'listen' || micTip === 'insecure') && (
             <div className="mic-tip" role="status">
               {tipText}
@@ -406,6 +642,20 @@ export function LevelPage({ onProgress }: Props) {
           )}
 
           {phase === 'celebrate' && <div className="burst" />}
+
+          {resultFlash && (
+            <div
+              className={`result-flash result-flash--${resultFlash.kind}`}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="result-flash__mark" aria-hidden>
+                {resultFlash.kind === 'ok' ? '✓' : '✗'}
+              </div>
+              <div className="result-flash__title">{resultFlash.title}</div>
+              <div className="result-flash__line">{resultFlash.line}</div>
+            </div>
+          )}
 
           <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
             ·

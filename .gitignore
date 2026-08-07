@@ -7,6 +7,9 @@ apps/web/android/
 apps/web/ios/
 apps/web/.capacitor/
 apps/web/public/content/
+apps/web/public/models/*.tar
+apps/web/.vosk-tmp/
+apps/web/.vosk-cache/
 *.local
 .idea/
 .vscode/

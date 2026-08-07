@@ -7,7 +7,9 @@
     "dev": "npm run sync-content && vite",
     "dev:phone": "npm run sync-content && VITE_PHONE=1 vite --host 0.0.0.0 --port 5173",
     "sync-content": "rm -rf public/content && mkdir -p public/content && cp -R ../../content/levels public/content/ && cp -R ../../content/assets public/content/",
+    "fetch-vosk-model": "node scripts/fetch-vosk-model.mjs",
     "build": "npm run sync-content && tsc -b && vite build",
+    "build:android": "npm run fetch-vosk-model && npm run build && npx cap sync android",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -16,6 +18,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "monosklet": "^1.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"
