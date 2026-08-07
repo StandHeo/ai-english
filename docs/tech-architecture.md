@@ -287,6 +287,7 @@ cd apps/web && npm run dev:phone
 3. **TTS**：仅系统朗读，无云端精品音色管线。
 4. **存储**：日记音频以 data URL 进 localStorage，存在配额风险；无多设备同步。
 5. **Android 工程**：需本机生成；云端环境通常不直接产出 APK。
+6. **PaddleSpeech 备选调研**：开源 ASR/TTS 官方支持矩阵（仅官方仓库依据）见 [`paddlespeech-support-matrix.md`](./paddlespeech-support-matrix.md)。
 
 ---
 
