@@ -91,6 +91,10 @@ node content/validate.mjs
 
 → 详见 **[`docs/family-day-studio.md`](docs/family-day-studio.md)**
 
+## 英语朗读声音
+
+默认更偏「小女孩」活泼音色（仍用系统 TTS）。家长中心可切换：小女孩 / 小男孩 / 女声 / 男声 / 老奶奶 / 老爷爷，并微调语速与音调。
+
 （可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
 
 ## Capacitor / Android APK
