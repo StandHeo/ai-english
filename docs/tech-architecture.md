@@ -181,8 +181,8 @@
 
 ### 7.1 TTS
 
-- 偏好键：`ai-english-voice-prefs-v1`（小女孩默认等 persona + 语速/音调）。
-- **App 原生**：优先 **Sherpa-ONNX + Piper**（`plugins/piper-tts`，默认 amy-low-int8）；失败降级 `@capacitor-community/text-to-speech`。
+- 偏好键：`ai-english-voice-prefs-v1`（persona、语速/音调、`ttsEngine`: `piper`|`system`）。
+- **App 原生**：默认 **Sherpa-ONNX + Piper**（`plugins/piper-tts`）；家长可选强制系统 TTS；Piper 失败仍降级 `@capacitor-community/text-to-speech`。
 - Web：`speechSynthesis`；API `/api/tts` 在 browser 模式下只起协调作用。
 - 说明见 [`piper-tts.md`](./piper-tts.md)。
 
@@ -228,7 +228,7 @@
 | `ai-english-progress-v2` | 主题进度、星星、每日时长 |
 | `ai-english-progress-v1` | 遗留，加载时迁移 |
 | `ai-english-family-v1` | 家庭日记消息/音频 data URL、生成关、DeepSeek Key |
-| `ai-english-voice-prefs-v1` | TTS 人设与微调 |
+| `ai-english-voice-prefs-v1` | TTS 人设、微调与引擎（piper/system） |
 
 关卡与美术为静态资源；API 无状态（不落用户库）。
 

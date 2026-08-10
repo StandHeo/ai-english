@@ -12,6 +12,7 @@ import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import { ensurePiperReady } from '../voice/piperTts'
+import { loadVoicePrefs } from '../voice/prefs'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import './level.css'
@@ -135,6 +136,7 @@ export function LevelPage({ onProgress }: Props) {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
+    if (loadVoicePrefs().ttsEngine !== 'piper') return
     void ensurePiperReady().catch(() => {
       // 预热失败则朗读时降级系统 TTS
     })

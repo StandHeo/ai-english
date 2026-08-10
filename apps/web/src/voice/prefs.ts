@@ -6,11 +6,16 @@ export type VoicePersona =
   | 'elder-woman'
   | 'elder-man'
 
+/** App 原生朗读引擎：Piper（Sherpa）或手机系统 TTS */
+export type TtsEngine = 'piper' | 'system'
+
 export type VoicePrefs = {
   persona: VoicePersona
   /** 0.5–1.5, 会叠在 persona 默认值上微调 */
   rateBoost: number
   pitchBoost: number
+  /** 仅 Capacitor App 生效；浏览器始终用 speechSynthesis */
+  ttsEngine: TtsEngine
 }
 
 export type VoiceResolved = {
@@ -48,8 +53,21 @@ const PERSONA_BASE: Record<
   'elder-man': { rate: 0.74, pitch: 0.78, preferFemale: false, preferYoung: false, preferElder: true },
 }
 
+export const TTS_ENGINE_OPTIONS: { id: TtsEngine; label: string; hint: string }[] = [
+  {
+    id: 'piper',
+    label: 'Piper（推荐）',
+    hint: 'App 内离线神经音；失败仍会降级系统音',
+  },
+  {
+    id: 'system',
+    label: '系统 TTS',
+    hint: '手机自带朗读，不加载 Piper 模型',
+  },
+]
+
 export function defaultVoicePrefs(): VoicePrefs {
-  return { persona: 'child-girl', rateBoost: 0, pitchBoost: 0 }
+  return { persona: 'child-girl', rateBoost: 0, pitchBoost: 0, ttsEngine: 'piper' }
 }
 
 export function loadVoicePrefs(): VoicePrefs {
@@ -60,10 +78,12 @@ export function loadVoicePrefs(): VoicePrefs {
     const persona = VOICE_PERSONA_OPTIONS.some((o) => o.id === parsed.persona)
       ? (parsed.persona as VoicePersona)
       : 'child-girl'
+    const ttsEngine: TtsEngine = parsed.ttsEngine === 'system' ? 'system' : 'piper'
     return {
       persona,
       rateBoost: clamp(Number(parsed.rateBoost) || 0, -0.25, 0.25),
       pitchBoost: clamp(Number(parsed.pitchBoost) || 0, -0.35, 0.35),
+      ttsEngine,
     }
   } catch {
     return defaultVoicePrefs()
