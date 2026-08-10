@@ -1,0 +1,55 @@
+{
+  "id": "fish-01-fish",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Catch a Fish",
+  "target_words": ["fish"],
+  "scene": {
+    "setting": "A sunny fishing pond by the grass",
+    "image": "assets/scenes/fish-pond.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/fish.png",
+      "npc_say": "Look! In the water!",
+      "hint_say": "Fish!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the fish!",
+      "hint_say": "Fish!",
+      "success_say": "Yes! Fish!",
+      "options": [
+        { "id": "fish", "image": "assets/items/fish.png", "correct": true },
+        { "id": "rod", "image": "assets/items/rod.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/fish.png",
+      "npc_say": "What is swimming?",
+      "expect": ["fish", "a fish"],
+      "hint_say": "Fish. Can you say fish?",
+      "success_say": "Yay! Fish!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "fish", "image": "assets/items/fish.png", "correct": true },
+          { "id": "cloud", "image": "assets/items/cloud.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/fish.png",
+      "npc_say": "Hello, fish!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-fish",
+    "stickerImage": "assets/items/fish.png",
+    "stars": 1
+  }
+}

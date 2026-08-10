@@ -1,0 +1,70 @@
+{
+  "id": "fish-07-sky",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Sky and Clouds",
+  "target_words": ["sky", "cloud"],
+  "scene": {
+    "setting": "A blue sky over the river meadow",
+    "image": "assets/scenes/sky-meadow.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/sky.png",
+      "npc_say": "Look up! So blue!",
+      "hint_say": "Sky!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the sky!",
+      "hint_say": "Sky!",
+      "success_say": "Yes! Sky!",
+      "options": [
+        { "id": "sky", "image": "assets/items/sky.png", "correct": true },
+        { "id": "grass", "image": "assets/items/grass.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/cloud.png",
+      "npc_say": "What is fluffy white?",
+      "expect": ["cloud", "a cloud", "clouds"],
+      "hint_say": "Cloud!",
+      "success_say": "Soft cloud!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "cloud", "image": "assets/items/cloud.png", "correct": true },
+          { "id": "river", "image": "assets/items/river.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/sky.png",
+      "npc_say": "What is blue up high?",
+      "expect": ["sky", "the sky"],
+      "hint_say": "Sky!",
+      "success_say": "Blue sky!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "sky", "image": "assets/items/sky.png", "correct": true },
+          { "id": "soup", "image": "assets/items/soup.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/cloud.png",
+      "npc_say": "Pretty sky!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-sky",
+    "stickerImage": "assets/items/sky.png",
+    "stars": 1
+  }
+}

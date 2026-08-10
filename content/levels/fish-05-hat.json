@@ -1,0 +1,55 @@
+{
+  "id": "fish-05-hat",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Sun Hat",
+  "target_words": ["hat"],
+  "scene": {
+    "setting": "A sun hat resting by the river grass",
+    "image": "assets/scenes/hat-bank.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/sunhat.png",
+      "npc_say": "On your head! Sunny!",
+      "hint_say": "Hat!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the hat!",
+      "hint_say": "Hat!",
+      "success_say": "Yes! Hat!",
+      "options": [
+        { "id": "hat", "image": "assets/items/sunhat.png", "correct": true },
+        { "id": "soup", "image": "assets/items/soup.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/sunhat.png",
+      "npc_say": "What do we wear?",
+      "expect": ["hat", "a hat", "sun hat", "a sun hat"],
+      "hint_say": "Hat!",
+      "success_say": "Cool hat!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "hat", "image": "assets/items/sunhat.png", "correct": true },
+          { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/sunhat.png",
+      "npc_say": "Sunny hat!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-sunhat",
+    "stickerImage": "assets/items/sunhat.png",
+    "stars": 1
+  }
+}

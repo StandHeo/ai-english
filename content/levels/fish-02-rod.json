@@ -1,0 +1,55 @@
+{
+  "id": "fish-02-rod",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Fishing Rod",
+  "target_words": ["rod"],
+  "scene": {
+    "setting": "A grassy bank with a fishing rod",
+    "image": "assets/scenes/rod-bank.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/rod.png",
+      "npc_say": "Hold this! For fishing!",
+      "hint_say": "Rod!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the rod!",
+      "hint_say": "Rod!",
+      "success_say": "Yes! Rod!",
+      "options": [
+        { "id": "rod", "image": "assets/items/rod.png", "correct": true },
+        { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/rod.png",
+      "npc_say": "What do we hold?",
+      "expect": ["rod", "a rod", "fishing rod", "a fishing rod"],
+      "hint_say": "Rod!",
+      "success_say": "Cool rod!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "rod", "image": "assets/items/rod.png", "correct": true },
+          { "id": "fish", "image": "assets/items/fish.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/rod.png",
+      "npc_say": "Nice rod!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-rod",
+    "stickerImage": "assets/items/rod.png",
+    "stars": 1
+  }
+}

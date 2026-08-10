@@ -1,0 +1,55 @@
+{
+  "id": "fish-03-river",
+  "approved": true,
+  "theme": "fishing",
+  "title": "By the River",
+  "target_words": ["river"],
+  "scene": {
+    "setting": "A bright blue river beside tall grass",
+    "image": "assets/scenes/riverbank-fish.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/river.png",
+      "npc_say": "Blue water! Splash!",
+      "hint_say": "River!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the river!",
+      "hint_say": "River!",
+      "success_say": "Yes! River!",
+      "options": [
+        { "id": "river", "image": "assets/items/river.png", "correct": true },
+        { "id": "sky", "image": "assets/items/sky.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/river.png",
+      "npc_say": "Where do fish swim?",
+      "expect": ["river", "a river", "the river"],
+      "hint_say": "River!",
+      "success_say": "Yes! River!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "river", "image": "assets/items/river.png", "correct": true },
+          { "id": "grass", "image": "assets/items/grass.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/river.png",
+      "npc_say": "Pretty river!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-river",
+    "stickerImage": "assets/items/river.png",
+    "stars": 1
+  }
+}

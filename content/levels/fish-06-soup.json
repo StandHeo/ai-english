@@ -1,0 +1,55 @@
+{
+  "id": "fish-06-soup",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Fish Soup",
+  "target_words": ["soup"],
+  "scene": {
+    "setting": "Warm fish soup by the riverside",
+    "image": "assets/scenes/soup-bank.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/soup.png",
+      "npc_say": "Yum! Hot and yummy!",
+      "hint_say": "Soup!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the soup!",
+      "hint_say": "Soup!",
+      "success_say": "Yes! Soup!",
+      "options": [
+        { "id": "soup", "image": "assets/items/soup.png", "correct": true },
+        { "id": "fish", "image": "assets/items/fish.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/soup.png",
+      "npc_say": "What can we eat?",
+      "expect": ["soup", "a soup", "fish soup"],
+      "hint_say": "Soup!",
+      "success_say": "Yum soup!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "soup", "image": "assets/items/soup.png", "correct": true },
+          { "id": "cloud", "image": "assets/items/cloud.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/soup.png",
+      "npc_say": "Mmm, soup!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-soup",
+    "stickerImage": "assets/items/soup.png",
+    "stars": 1
+  }
+}
