@@ -4,7 +4,7 @@
   "theme": "fishing",
   "character": "bunny",
   "mapImage": "assets/scenes/fishing-map.png",
-  "homeImage": "assets/items/home-fishing.png",
+  "homeImage": "assets/scenes/diaoyu1.jpeg",
   "levels": [
     "fish-01-fish",
     "fish-02-rod",

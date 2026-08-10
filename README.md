@@ -52,6 +52,8 @@ pup → dog → truck → badge → hat → bone → help → 复习
 
 鱼（fish）→ 鱼竿（rod）→ 河（river）→ 遮阳伞（umbrella）→ 遮阳帽（hat）→ 鱼汤（soup）→ 蓝天白云（sky/cloud）→ 青草野餐复习
 
+首关使用家庭实拍 `assets/scenes/diaoyu1.jpeg` 与短视频 `assets/videos/diaoyu.mp4`（约 6 秒）。
+
 > 英雄与小狗均为原创卡通风格，不使用官方商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 
 ## 本地运行

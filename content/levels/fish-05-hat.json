@@ -5,8 +5,8 @@
   "title": "Sun Hat",
   "target_words": ["hat"],
   "scene": {
-    "setting": "A sun hat resting by the river grass",
-    "image": "assets/scenes/hat-bank.png",
+    "setting": "A sun hat ready for fishing day",
+    "image": "assets/scenes/diaoyu1.jpeg",
     "character": "bunny"
   },
   "beats": [

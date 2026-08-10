@@ -5,9 +5,11 @@
   "title": "Catch a Fish",
   "target_words": ["fish"],
   "scene": {
-    "setting": "A sunny fishing pond by the grass",
-    "image": "assets/scenes/fish-pond.png",
-    "character": "bunny"
+    "setting": "Our fishing day by the sunny river",
+    "image": "assets/scenes/diaoyu1.jpeg",
+    "character": "bunny",
+    "video": "assets/videos/diaoyu.mp4",
+    "video_max_seconds": 6
   },
   "beats": [
     {
