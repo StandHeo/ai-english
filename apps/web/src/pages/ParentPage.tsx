@@ -207,6 +207,9 @@ export function ParentPage({ progress, onProgress }: Props) {
           {!Capacitor.isNativePlatform() && (
             <p className="muted">浏览器联调始终用系统朗读；此选项在安装 APK 后生效。</p>
           )}
+          {Capacitor.getPlatform() === 'ios' && (
+            <p className="muted">当前 iOS 包尚未接入 Piper，请选「系统 TTS」（听感通常已不错）。</p>
+          )}
         </div>
         <div className="voice-grid">
           {VOICE_PERSONA_OPTIONS.map((opt) => (
