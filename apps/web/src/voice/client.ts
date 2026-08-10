@@ -82,23 +82,25 @@ async function speakWeb(text: string, resolved: VoiceResolved): Promise<void> {
 
 /**
  * 本地朗读：
- * - App：优先 Sherpa-ONNX + Piper，失败降级系统 TTS
+ * - App：按家长设置 Piper 或系统 TTS（选 Piper 时失败仍降级系统）
  * - 浏览器：speechSynthesis
  */
 export async function speakBrowser(text: string): Promise<void> {
   const prefs = loadVoicePrefs()
   const resolved = resolveVoice(prefs)
   if (Capacitor.isNativePlatform()) {
-    try {
-      const piperOk = await ensurePiperReady()
-      if (piperOk) {
-        const tune = piperSpeakTuning(prefs)
-        await speakPiper(text, tune.rate, tune.pitch, tune.voiceId)
-        return
+    if (prefs.ttsEngine === 'piper') {
+      try {
+        const piperOk = await ensurePiperReady()
+        if (piperOk) {
+          const tune = piperSpeakTuning(prefs)
+          await speakPiper(text, tune.rate, tune.pitch, tune.voiceId)
+          return
+        }
+        console.warn('[tts] Piper 未就绪，降级系统 TTS')
+      } catch (err) {
+        console.warn('[tts] Piper 失败，降级系统 TTS', err)
       }
-      console.warn('[tts] Piper 未就绪，降级系统 TTS')
-    } catch (err) {
-      console.warn('[tts] Piper 失败，降级系统 TTS', err)
     }
     try {
       await speakNative(text, resolved)
@@ -123,7 +125,7 @@ export async function cancelSpeak(): Promise<void> {
 }
 
 export async function requestTts(text: string): Promise<void> {
-  // App 离线：Piper → 系统 TTS，不依赖电脑 API
+  // App 离线：按设置 Piper 或系统 TTS，不依赖电脑 API
   if (Capacitor.isNativePlatform()) {
     await speakBrowser(text)
     return

@@ -98,7 +98,7 @@ node content/validate.mjs
 
 ## 英语朗读声音
 
-App 优先 **Sherpa-ONNX + Piper** 离线朗读（更自然）；失败才用系统 TTS。浏览器联调仍为系统朗读。家长中心可切换 persona 并微调语速与音调。
+App 默认 **Sherpa-ONNX + Piper** 离线朗读；家长中心可改选系统 TTS。浏览器联调仍为系统朗读。家长中心可切换 persona 并微调语速与音调。
 
 → [`docs/piper-tts.md`](docs/piper-tts.md)
 

@@ -7,6 +7,12 @@ App（Capacitor Android）英文 NPC / 提示朗读优先使用 **Sherpa-ONNX + 
 
 失败或未打包模型时降级系统 TTS。浏览器联调仍用 `speechSynthesis`。
 
+家长中心「英语朗读声音」可选 **Piper** 或 **系统 TTS**（存于 `ai-english-voice-prefs-v1` 的 `ttsEngine`；默认 Piper）。选系统时不加载 Piper。
+
+## iOS
+
+**本仓库当前未做 iOS 壳与 Piper 插件。** Sherpa-ONNX / Piper 技术上可在 iOS 跑，但需单独接 Capacitor iOS 原生桥与模型打包；现插件仅 Android。将来 iOS 首版可先用系统 TTS。
+
 ## 打包
 
 ```bash
@@ -33,8 +39,9 @@ npm run build:android     # 已包含 fetch-piper-tts
 打出含模型的 APK 后，断网验证：
 
 1. 家长中心试听 Amy 人设（小女孩）与 Danny 人设（小男孩）：音色明显不同
-2. 关卡 NPC 短句：有声
-3. 试听/朗读中切换页面或再次点试听：可取消/打断，无卡住
-4. 故意去掉模型重打包：应降级系统 TTS，不静音崩溃
+2. 切换「系统 TTS」试听：应明显变为手机系统音；再切回 Piper
+3. 关卡 NPC 短句：有声
+4. 试听/朗读中切换页面或再次点试听：可取消/打断，无卡住
+5. 故意去掉模型重打包：应降级系统 TTS，不静音崩溃
 
 云端环境通常无 `android/` 工程，冒烟在本地 Android Studio / `cap sync` 后完成。

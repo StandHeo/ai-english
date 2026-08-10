@@ -14,7 +14,9 @@ import {
   defaultVoicePrefs,
   loadVoicePrefs,
   saveVoicePrefs,
+  TTS_ENGINE_OPTIONS,
   VOICE_PERSONA_OPTIONS,
+  type TtsEngine,
   type VoicePersona,
   type VoicePrefs,
 } from '../voice/prefs'
@@ -51,6 +53,7 @@ export function ParentPage({ progress, onProgress }: Props) {
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
+    if (loadVoicePrefs().ttsEngine !== 'piper') return
     void ensurePiperReady().catch(() => {
       // 试听前预热；失败则 requestTts 降级系统 TTS
     })
@@ -180,6 +183,30 @@ export function ParentPage({ progress, onProgress }: Props) {
               Amy=女声线，Danny=男声线；小男孩是 Danny 拉高音调（库内无真童声）
             </p>
           </div>
+        </div>
+        <div className="voice-engine">
+          <p className="voice-engine-label">朗读引擎（仅 App）</p>
+          <div className="voice-grid voice-grid-engine">
+            {TTS_ENGINE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`voice-chip ${voicePrefs.ttsEngine === opt.id ? 'active' : ''}`}
+                onClick={() => {
+                  patchVoice({ ttsEngine: opt.id as TtsEngine })
+                  if (opt.id === 'piper' && Capacitor.isNativePlatform()) {
+                    void ensurePiperReady().catch(() => undefined)
+                  }
+                }}
+              >
+                {opt.label}
+                <small>{opt.hint}</small>
+              </button>
+            ))}
+          </div>
+          {!Capacitor.isNativePlatform() && (
+            <p className="muted">浏览器联调始终用系统朗读；此选项在安装 APK 后生效。</p>
+          )}
         </div>
         <div className="voice-grid">
           {VOICE_PERSONA_OPTIONS.map((opt) => (
