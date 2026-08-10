@@ -98,7 +98,9 @@ node content/validate.mjs
 
 ## 英语朗读声音
 
-默认更偏「小女孩」活泼音色（仍用系统 TTS）。家长中心可切换：小女孩 / 小男孩 / 女声 / 男声 / 老奶奶 / 老爷爷，并微调语速与音调。
+App 优先 **Sherpa-ONNX + Piper** 离线朗读（更自然）；失败才用系统 TTS。浏览器联调仍为系统朗读。家长中心可切换 persona 并微调语速与音调。
+
+→ [`docs/piper-tts.md`](docs/piper-tts.md)
 
 （可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
 

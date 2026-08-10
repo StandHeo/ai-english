@@ -18,7 +18,9 @@ import {
   type VoicePersona,
   type VoicePrefs,
 } from '../voice/prefs'
+import { Capacitor } from '@capacitor/core'
 import { requestTts } from '../voice/client'
+import { ensurePiperReady } from '../voice/piperTts'
 import type { ContentPack, ProgressState } from '../types'
 import './parent.css'
 
@@ -46,6 +48,13 @@ export function ParentPage({ progress, onProgress }: Props) {
       .then(setPacks)
       .catch(() => setPacks([]))
   }, [])
+
+  useEffect(() => {
+    if (!gated || !Capacitor.isNativePlatform()) return
+    void ensurePiperReady().catch(() => {
+      // 试听前预热；失败则 requestTts 降级系统 TTS
+    })
+  }, [gated])
 
   const todayMin = useMemo(
     () => Math.round(getTodayPlaySeconds(progress) / 60),

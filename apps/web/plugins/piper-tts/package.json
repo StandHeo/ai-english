@@ -1,0 +1,23 @@
+{
+  "name": "piper-tts",
+  "version": "0.1.0",
+  "description": "On-device Piper TTS via Sherpa-ONNX (Capacitor)",
+  "main": "index.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "android/libs/",
+    "index.js",
+    "README.md"
+  ],
+  "author": "ai-english",
+  "license": "MIT",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

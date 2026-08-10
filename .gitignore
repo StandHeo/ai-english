@@ -14,4 +14,8 @@ apps/web/.vosk-cache/
 .idea/
 .vscode/
 apps/web/plugins/diary-whisper/android/build/
+apps/web/plugins/piper-tts/android/build/
+apps/web/plugins/piper-tts/android/libs/*.aar
+apps/web/plugins/piper-tts/android/src/main/assets/piper-tts/vits-*/
+apps/web/plugins/piper-tts/android/src/main/assets/piper-tts/*.tar.bz2
 .whisper-build/

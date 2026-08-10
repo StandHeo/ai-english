@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import { apiUrl } from '../api/base'
 import { matchExpect } from './match'
+import { ensurePiperReady, speakPiper, stopPiper } from './piperTts'
 import {
   loadVoicePrefs,
   loadWebVoices,
@@ -78,15 +79,28 @@ async function speakWeb(text: string, resolved: VoiceResolved): Promise<void> {
   })
 }
 
-/** App（Capacitor）走系统 TTS；手机/电脑浏览器仍用 speechSynthesis。 */
+/**
+ * 本地朗读：
+ * - App：优先 Sherpa-ONNX + Piper，失败降级系统 TTS
+ * - 浏览器：speechSynthesis
+ */
 export async function speakBrowser(text: string): Promise<void> {
   const resolved = resolveVoice(loadVoicePrefs())
   if (Capacitor.isNativePlatform()) {
     try {
+      const piperOk = await ensurePiperReady()
+      if (piperOk) {
+        await speakPiper(text, resolved.rate)
+        return
+      }
+    } catch {
+      // Piper 失败则降级
+    }
+    try {
       await speakNative(text, resolved)
       return
     } catch {
-      // 原生失败时再试 WebView speechSynthesis
+      // 原生系统 TTS 失败时再试 WebView speechSynthesis
     }
   }
   await speakWeb(text, resolved)
@@ -94,6 +108,7 @@ export async function speakBrowser(text: string): Promise<void> {
 
 export async function cancelSpeak(): Promise<void> {
   if (Capacitor.isNativePlatform()) {
+    await stopPiper()
     try {
       await TextToSpeech.stop()
     } catch {
@@ -104,7 +119,7 @@ export async function cancelSpeak(): Promise<void> {
 }
 
 export async function requestTts(text: string): Promise<void> {
-  // App 离线：直接本地朗读，不依赖电脑 API
+  // App 离线：Piper → 系统 TTS，不依赖电脑 API
   if (Capacitor.isNativePlatform()) {
     await speakBrowser(text)
     return
