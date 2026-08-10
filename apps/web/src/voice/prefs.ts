@@ -27,24 +27,25 @@ export type VoiceResolved = {
 const KEY = 'ai-english-voice-prefs-v1'
 
 export const VOICE_PERSONA_OPTIONS: { id: VoicePersona; label: string; hint: string }[] = [
-  { id: 'child-girl', label: '小女孩', hint: '更尖、更快一点，偏可爱' },
-  { id: 'child-boy', label: '小男孩', hint: '略高、活泼' },
-  { id: 'woman', label: '女声', hint: '清晰温和的成人女声' },
-  { id: 'man', label: '男声', hint: '偏低沉的成人男声' },
-  { id: 'elder-woman', label: '老奶奶', hint: '稍慢、柔和' },
-  { id: 'elder-man', label: '老爷爷', hint: '稍慢、偏低' },
+  { id: 'child-girl', label: '小女孩', hint: 'Amy · 更高更快，偏可爱' },
+  { id: 'child-boy', label: '小男孩', hint: 'Danny · 拉高音调近似男孩（非真童声）' },
+  { id: 'woman', label: '女声', hint: 'Amy · 清晰温和' },
+  { id: 'man', label: '男声', hint: 'Danny · 偏低沉' },
+  { id: 'elder-woman', label: '老奶奶', hint: 'Amy · 稍慢柔和' },
+  { id: 'elder-man', label: '老爷爷', hint: 'Danny · 稍慢偏低' },
 ]
 
 const PERSONA_BASE: Record<
   VoicePersona,
   { rate: number; pitch: number; preferFemale: boolean; preferYoung: boolean; preferElder: boolean }
 > = {
-  'child-girl': { rate: 0.92, pitch: 1.35, preferFemale: true, preferYoung: true, preferElder: false },
-  'child-boy': { rate: 0.95, pitch: 1.18, preferFemale: false, preferYoung: true, preferElder: false },
-  woman: { rate: 0.9, pitch: 1.08, preferFemale: true, preferYoung: false, preferElder: false },
-  man: { rate: 0.88, pitch: 0.92, preferFemale: false, preferYoung: false, preferElder: false },
-  'elder-woman': { rate: 0.78, pitch: 1.02, preferFemale: true, preferYoung: false, preferElder: true },
-  'elder-man': { rate: 0.76, pitch: 0.85, preferFemale: false, preferYoung: false, preferElder: true },
+  // Amy=女声线；Danny=男声线。小男孩靠 Danny + 很高 pitch 近似（库内无真童声）
+  'child-girl': { rate: 1.1, pitch: 1.45, preferFemale: true, preferYoung: true, preferElder: false },
+  'child-boy': { rate: 1.12, pitch: 1.58, preferFemale: false, preferYoung: true, preferElder: false },
+  woman: { rate: 0.95, pitch: 1.05, preferFemale: true, preferYoung: false, preferElder: false },
+  man: { rate: 0.88, pitch: 0.85, preferFemale: false, preferYoung: false, preferElder: false },
+  'elder-woman': { rate: 0.78, pitch: 0.98, preferFemale: true, preferYoung: false, preferElder: true },
+  'elder-man': { rate: 0.74, pitch: 0.78, preferFemale: false, preferYoung: false, preferElder: true },
 }
 
 export function defaultVoicePrefs(): VoicePrefs {
@@ -78,11 +79,41 @@ export function resolveVoice(prefs: VoicePrefs = loadVoicePrefs()): VoiceResolve
   return {
     lang: 'en-US',
     rate: clamp(base.rate + prefs.rateBoost, 0.55, 1.35),
-    pitch: clamp(base.pitch + prefs.pitchBoost, 0.6, 1.8),
+    pitch: clamp(base.pitch + prefs.pitchBoost, 0.6, 1.85),
     preferFemale: base.preferFemale,
     preferYoung: base.preferYoung,
     preferElder: base.preferElder,
   }
+}
+
+/** Piper 音色：女声/女孩 → Amy；男声/男孩 → Danny */
+export type PiperVoiceId = 'amy' | 'danny'
+
+export function piperVoiceForPersona(persona: VoicePersona): PiperVoiceId {
+  return PERSONA_BASE[persona].preferFemale ? 'amy' : 'danny'
+}
+
+export function piperVoiceForPrefs(prefs: VoicePrefs = loadVoicePrefs()): PiperVoiceId {
+  return piperVoiceForPersona(prefs.persona)
+}
+
+/**
+ * Piper 播放参数：小男孩在 Danny 上额外抬高 pitch（成人男声近似童声）。
+ */
+export function piperSpeakTuning(prefs: VoicePrefs = loadVoicePrefs()): {
+  voiceId: PiperVoiceId
+  rate: number
+  pitch: number
+} {
+  const resolved = resolveVoice(prefs)
+  const voiceId = piperVoiceForPersona(prefs.persona)
+  let rate = resolved.rate
+  let pitch = resolved.pitch
+  if (prefs.persona === 'child-boy') {
+    rate = clamp(rate * 1.06, 0.55, 1.35)
+    pitch = clamp(pitch * 1.12, 0.6, 1.85)
+  }
+  return { voiceId, rate, pitch }
 }
 
 function clamp(n: number, min: number, max: number) {

@@ -176,7 +176,9 @@ export function ParentPage({ progress, onProgress }: Props) {
           <img src={assetUrl('assets/scenes/beep-hall.png')} alt="" className="section-thumb" />
           <div>
             <h2>英语朗读声音</h2>
-            <p className="muted">系统朗读 · 默认小女孩更活泼</p>
+            <p className="muted">
+              Amy=女声线，Danny=男声线；小男孩是 Danny 拉高音调（库内无真童声）
+            </p>
           </div>
         </div>
         <div className="voice-grid">

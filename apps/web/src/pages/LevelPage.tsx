@@ -7,7 +7,7 @@ import {
   loadApprovedLevels,
   loadLevel,
 } from '../content/loader'
-import { addPlaySeconds, completeLevel, loadProgress } from '../progress/store'
+import { addPlaySeconds, completeLevel, isDailyLimitReached, loadProgress } from '../progress/store'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
@@ -222,7 +222,14 @@ export function LevelPage({ onProgress }: Props) {
       onProgress(next)
       persistPlayTime()
       await requestTts('Yay!')
-      window.setTimeout(() => navigate(`/map/${packId}`), 1200)
+      const limited = isDailyLimitReached(loadProgress())
+      window.setTimeout(() => {
+        if (nextId && !limited) {
+          navigate(`/level/${nextId}?pack=${packId}`, { replace: true })
+        } else {
+          navigate(`/map/${packId}`)
+        }
+      }, 1200)
     },
     [navigate, onProgress, packId, persistPlayTime],
   )

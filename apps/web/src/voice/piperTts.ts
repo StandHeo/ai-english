@@ -11,7 +11,12 @@ export type PiperTtsStatus = {
 type PiperTtsPlugin = {
   isReady(): Promise<{ ready: boolean; voiceId?: string; detail?: string }>
   prepareModel(): Promise<{ ready: boolean; voiceId?: string; detail?: string }>
-  speak(options: { text: string; rate?: number }): Promise<{ status: string; voiceId?: string }>
+  speak(options: {
+    text: string
+    rate?: number
+    pitch?: number
+    voiceId?: string
+  }): Promise<{ status: string; voiceId?: string }>
   stop(): Promise<{ status: string }>
 }
 
@@ -73,10 +78,15 @@ export async function ensurePiperReady(): Promise<boolean> {
 }
 
 /** Speak with Piper. Throws if unavailable — caller should fall back to system TTS. */
-export async function speakPiper(text: string, rate = 1): Promise<void> {
+export async function speakPiper(
+  text: string,
+  rate = 1,
+  pitch = 1,
+  voiceId: 'amy' | 'danny' = 'amy',
+): Promise<void> {
   const ok = await ensurePiperReady()
   if (!ok) throw new Error('piper_not_ready')
-  await PiperTts.speak({ text, rate })
+  await PiperTts.speak({ text, rate, pitch, voiceId })
 }
 
 export async function stopPiper(): Promise<void> {

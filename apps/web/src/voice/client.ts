@@ -7,6 +7,7 @@ import {
   loadVoicePrefs,
   loadWebVoices,
   pickWebVoice,
+  piperSpeakTuning,
   resolveVoice,
   type VoiceResolved,
 } from './prefs'
@@ -85,22 +86,25 @@ async function speakWeb(text: string, resolved: VoiceResolved): Promise<void> {
  * - 浏览器：speechSynthesis
  */
 export async function speakBrowser(text: string): Promise<void> {
-  const resolved = resolveVoice(loadVoicePrefs())
+  const prefs = loadVoicePrefs()
+  const resolved = resolveVoice(prefs)
   if (Capacitor.isNativePlatform()) {
     try {
       const piperOk = await ensurePiperReady()
       if (piperOk) {
-        await speakPiper(text, resolved.rate)
+        const tune = piperSpeakTuning(prefs)
+        await speakPiper(text, tune.rate, tune.pitch, tune.voiceId)
         return
       }
-    } catch {
-      // Piper 失败则降级
+      console.warn('[tts] Piper 未就绪，降级系统 TTS')
+    } catch (err) {
+      console.warn('[tts] Piper 失败，降级系统 TTS', err)
     }
     try {
       await speakNative(text, resolved)
       return
-    } catch {
-      // 原生系统 TTS 失败时再试 WebView speechSynthesis
+    } catch (err) {
+      console.warn('[tts] 系统 TTS 失败，尝试 WebView speechSynthesis', err)
     }
   }
   await speakWeb(text, resolved)

@@ -10,7 +10,12 @@ export class PiperTtsWeb extends WebPlugin {
     return { ready: false, detail: 'web_unavailable' }
   }
 
-  async speak(_options: { text: string; rate?: number }): Promise<{ status: string }> {
+  async speak(_options: {
+    text: string
+    rate?: number
+    pitch?: number
+    voiceId?: string
+  }): Promise<{ status: string }> {
     throw this.unavailable('PiperTts is only available in the native App')
   }
 
