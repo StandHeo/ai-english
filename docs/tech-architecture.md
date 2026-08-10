@@ -11,7 +11,7 @@
 |----|------|
 | 名称 | AI English · 故事冒险口语练习 |
 | 用户 | 4–6 岁儿童（全英沉浸游玩）+ 家长（门禁后的设置与家庭日记） |
-| 平台优先级 | **Android 优先**；开发期以 Web 为主，经 Capacitor 打 APK |
+| 平台优先级 | **Android 优先**；可用 Capacitor 在 Mac 上侧载 iOS（不上架）；开发期以 Web 为主 |
 | 核心玩法 | 选主题包 → 地图关卡 → 听 / 找 / 说目标词 → 贴纸与星星 |
 | 扩展玩法 | 家庭日记：家长聊今日故事 → LLM 生成一关 → 日历囤关游玩 |
 
@@ -235,17 +235,18 @@
 
 ---
 
-## 11. Android / Capacitor 打包
+## 11. Android / iOS（Capacitor）打包
 
 | 项 | 现状 |
 |----|------|
 | 配置 | `apps/web/capacitor.config.ts`：`com.aienglish.fruitforest` / `Fruit Forest` / `webDir: dist` |
-| 工程 | 仓库通常**不含**完整 `android/`，需本机 `npx cap add android` + `cap sync` |
-| 产物 | Android Studio 打 debug/release APK |
-| 权限 | 麦克风等见 `docs/android-capacitor.md` |
-| 日记模型 | 打进插件 assets 后再 sync（见 Whisper 文档） |
+| 工程 | 仓库通常**不含**完整 `android/`、`ios/`，需本机 `npx cap add …` + `cap sync` |
+| Android 产物 | Android Studio 打 debug/release APK |
+| iOS 产物 | Mac + Xcode 真机侧载（不上架）；见 `docs/ios-phone-guide.md` |
+| 权限 | 安卓见 `docs/android-capacitor.md`；iOS 需 `NSMicrophoneUsageDescription` |
+| 日记模型 / Piper | 目前以 Android 插件为主；iOS 朗读用系统 TTS |
 
-零基础真机体验可先走浏览器 HTTPS 联调：`docs/android-phone-guide.md`。
+零基础真机体验可先走浏览器 HTTPS 联调：安卓 `docs/android-phone-guide.md`；iPhone `docs/ios-phone-guide.md`。
 
 ---
 

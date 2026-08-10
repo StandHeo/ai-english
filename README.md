@@ -95,6 +95,13 @@ node content/validate.mjs
 
 → 详见 **[`docs/android-phone-guide.md`](docs/android-phone-guide.md)**
 
+## 在 iPhone 上玩
+
+**不会 iOS 开发也没关系**（需一台 Mac）。可先用 Safari 打开电脑网页，再按需用 Xcode 装到自己手机（不上架）：
+
+→ 详见 **[`docs/ios-phone-guide.md`](docs/ios-phone-guide.md)**  
+→ Capacitor 工程笔记：[`docs/ios-capacitor.md`](docs/ios-capacitor.md)
+
 ## 家庭日记关卡（当晚生成）
 
 家长聊「今天做了什么」→ DeepSeek 生成关卡 → 家庭日历游玩：
@@ -108,11 +115,16 @@ App 默认 **Sherpa-ONNX + Piper** 离线朗读；家长中心可改选系统 TT
 
 → [`docs/piper-tts.md`](docs/piper-tts.md)
 
-（可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。
+（可选）打成 APK 的 Capacitor 笔记：[`docs/android-capacitor.md`](docs/android-capacitor.md)。  
+（可选）iPhone 侧载：[`docs/ios-phone-guide.md`](docs/ios-phone-guide.md)。
 
 ## Capacitor / Android APK
 
 偏工程向的简要步骤见 [`docs/android-capacitor.md`](docs/android-capacitor.md)。零基础请先看手机运行指南。
+
+## Capacitor / iOS（本机侧载）
+
+零基础请看 [`docs/ios-phone-guide.md`](docs/ios-phone-guide.md)；工程细节见 [`docs/ios-capacitor.md`](docs/ios-capacitor.md)。
 
 ## OpenSpec
 
