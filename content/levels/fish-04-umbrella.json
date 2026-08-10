@@ -1,0 +1,55 @@
+{
+  "id": "fish-04-umbrella",
+  "approved": true,
+  "theme": "fishing",
+  "title": "Sunny Umbrella",
+  "target_words": ["umbrella"],
+  "scene": {
+    "setting": "A flower umbrella on the riverbank",
+    "image": "assets/scenes/umbrella-bank.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/umbrella.png",
+      "npc_say": "Shade for sunny day!",
+      "hint_say": "Umbrella!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the umbrella!",
+      "hint_say": "Umbrella!",
+      "success_say": "Yes! Umbrella!",
+      "options": [
+        { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": true },
+        { "id": "sunhat", "image": "assets/items/sunhat.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/umbrella.png",
+      "npc_say": "What keeps us cool?",
+      "expect": ["umbrella", "an umbrella", "the umbrella"],
+      "hint_say": "Umbrella!",
+      "success_say": "Nice umbrella!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": true },
+          { "id": "rod", "image": "assets/items/rod.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/umbrella.png",
+      "npc_say": "Open umbrella!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-umbrella",
+    "stickerImage": "assets/items/umbrella.png",
+    "stars": 1
+  }
+}

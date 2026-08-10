@@ -8,6 +8,7 @@ const BIKE = 'bike-world'
 const ROBOT = 'robot-lab'
 const HERO = 'hero-world'
 const PUP = 'pup-patrol'
+const FISH = 'fishing-day'
 
 const FIRST_LEVEL: Record<string, string> = {
   [FRUIT]: 'fruit-01-apple',
@@ -15,6 +16,7 @@ const FIRST_LEVEL: Record<string, string> = {
   [ROBOT]: 'robot-01-robot',
   [HERO]: 'hero-01-hero',
   [PUP]: 'pup-01-pup',
+  [FISH]: 'fish-01-fish',
 }
 
 function emptyPack(firstLevelId: string): PackProgress {
@@ -33,6 +35,7 @@ const defaultState = (): ProgressState => ({
     [ROBOT]: emptyPack(FIRST_LEVEL[ROBOT]),
     [HERO]: emptyPack(FIRST_LEVEL[HERO]),
     [PUP]: emptyPack(FIRST_LEVEL[PUP]),
+    [FISH]: emptyPack(FIRST_LEVEL[FISH]),
   },
   stars: 0,
   dailyLimitMinutes: 30,
@@ -177,7 +180,7 @@ export function updateSettings(
   return next
 }
 
-export const PACK_IDS = { FRUIT, BIKE, ROBOT, HERO, PUP } as const
+export const PACK_IDS = { FRUIT, BIKE, ROBOT, HERO, PUP, FISH } as const
 
 export const PACK_LABELS_ZH: Record<string, string> = {
   [FRUIT]: '水果森林',
@@ -185,4 +188,5 @@ export const PACK_LABELS_ZH: Record<string, string> = {
   [ROBOT]: '机器人实验室',
   [HERO]: '英雄世界',
   [PUP]: '小狗救援队',
+  [FISH]: '钓鱼日',
 }

@@ -1,0 +1,18 @@
+{
+  "id": "fishing-day",
+  "title": "Fishing Day",
+  "theme": "fishing",
+  "character": "bunny",
+  "mapImage": "assets/scenes/fishing-map.png",
+  "homeImage": "assets/items/home-fishing.png",
+  "levels": [
+    "fish-01-fish",
+    "fish-02-rod",
+    "fish-03-river",
+    "fish-04-umbrella",
+    "fish-05-hat",
+    "fish-06-soup",
+    "fish-07-sky",
+    "fish-08-picnic"
+  ]
+}

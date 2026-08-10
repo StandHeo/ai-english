@@ -1,13 +1,13 @@
 # AI English · 故事冒险口语练习
 
-面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**、**小狗救援队**。
+面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**、**小狗救援队**、**钓鱼日**。
 
 ## 仓库结构
 
 ```
 apps/web          # React + Vite 儿童/家长端
 apps/api          # Express：ASR/TTS 代理与期望词匹配
-content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup）
+content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup / fishing）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
 docs/             # 使用说明与技术方案
@@ -47,6 +47,10 @@ hero → monster → light → fly → kick → shield → go → 复习
 见 `openspec/changes/pup-patrol-pack/content/pup-patrol-story.md`
 
 pup → dog → truck → badge → hat → bone → help → 复习
+
+### 钓鱼日
+
+鱼（fish）→ 鱼竿（rod）→ 河（river）→ 遮阳伞（umbrella）→ 遮阳帽（hat）→ 鱼汤（soup）→ 蓝天白云（sky/cloud）→ 青草野餐复习
 
 > 英雄与小狗均为原创卡通风格，不使用官方商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 

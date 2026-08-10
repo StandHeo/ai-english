@@ -1,0 +1,85 @@
+{
+  "id": "fish-08-picnic",
+  "approved": true,
+  "theme": "fishing",
+  "title": "River Picnic",
+  "target_words": ["grass", "fish", "umbrella", "soup"],
+  "scene": {
+    "setting": "A picnic on the grassy riverbank",
+    "image": "assets/scenes/fishing-picnic.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/grass.png",
+      "npc_say": "Picnic on the grass!",
+      "hint_say": "Grass!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the grass!",
+      "hint_say": "Grass!",
+      "success_say": "Yes!",
+      "options": [
+        { "id": "grass", "image": "assets/items/grass.png", "correct": true },
+        { "id": "cloud", "image": "assets/items/cloud.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/fish.png",
+      "npc_say": "What did we catch?",
+      "expect": ["fish", "a fish"],
+      "hint_say": "Fish!",
+      "success_say": "Yes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "fish", "image": "assets/items/fish.png", "correct": true },
+          { "id": "rod", "image": "assets/items/rod.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/umbrella.png",
+      "npc_say": "What gives shade?",
+      "expect": ["umbrella", "an umbrella"],
+      "hint_say": "Umbrella!",
+      "success_say": "Yes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": true },
+          { "id": "sunhat", "image": "assets/items/sunhat.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/soup.png",
+      "npc_say": "Last one! What do we eat?",
+      "expect": ["soup", "fish soup"],
+      "hint_say": "Soup!",
+      "success_say": "Party!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "soup", "image": "assets/items/soup.png", "correct": true },
+          { "id": "river", "image": "assets/items/river.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Great fishing day!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-fishing-picnic",
+    "stickerImage": "assets/scenes/fishing-picnic.png",
+    "stars": 2
+  }
+}
