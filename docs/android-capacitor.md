@@ -44,12 +44,13 @@ npx cap open android
 ```bash
 cd apps/web
 npm run fetch-vosk-model   # 生成 public/models/en-us-small.tar（约 40–70MB）
+npm run fetch-piper-tts    # Sherpa AAR + Piper amy-low-int8（大文件不入库）
 npm run build
 npx cap sync android
-# 或一键：npm run build:android
+# 或一键：npm run build:android（已串入上述 fetch）
 ```
 
-首次进关卡会加载模型；识别结果界面会标注「来源：App 离线 Vosk」。
+首次进关卡会加载 Vosk；朗读优先 Piper（见 [`piper-tts.md`](./piper-tts.md)）。识别结果界面会标注「来源：App 离线 Vosk」。
 
 ## 技术选型结论（任务 3.5）
 

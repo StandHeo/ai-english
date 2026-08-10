@@ -29,15 +29,15 @@
 │  ├─ 进度 / TTS 偏好 / 家庭日记（localStorage）               │
 │  ├─ 关卡口语：浏览器 SpeechRecognition + MediaRecorder       │
 │  ├─ 日记语音：MediaRecorder → Capacitor DiaryWhisper         │
-│  └─ 系统 TTS（Web speechSynthesis / 原生 TTS 插件）          │
+│  └─ TTS：App Piper / 降级系统 TTS；Web speechSynthesis       │
 └───────────────┬─────────────────────────────┬───────────────┘
                 │ /api/*（开发期 Vite 代理）   │ Capacitor 原生
                 ▼                             ▼
 ┌───────────────────────────┐    ┌────────────────────────────┐
 │  apps/api（Express :8787） │    │  Android（Capacitor 8）     │
-│  · ASR 匹配 / mock|openai  │    │  · @capacitor-community/tts│
-│  · TTS 提示（browser 模式）│    │  · diary-whisper 插件      │
-│  · DeepSeek 家庭关卡生成   │    │    （端侧 Whisper CLI）     │
+│  · ASR 匹配 / mock|openai  │    │  · piper-tts（Sherpa+Piper）│
+│  · TTS 提示（browser 模式）│    │  · 降级 community/tts      │
+│  · DeepSeek 家庭关卡生成   │    │  · diary-whisper（Whisper） │
 └───────────────────────────┘    └────────────────────────────┘
                 ▲
                 │ 构建时拷贝
@@ -78,7 +78,8 @@
 | 构建 | Vite + `@vitejs/plugin-react` | Vite ^8 |
 | Lint | oxlint | — |
 | 原生壳 | Capacitor（core / cli / android） | ^8.5 |
-| 原生 TTS | `@capacitor-community/text-to-speech` | ^8 |
+| 原生 TTS（主） | 本地包 `piper-tts`（Sherpa-ONNX + Piper） | 0.1 |
+| 原生 TTS（降级） | `@capacitor-community/text-to-speech` | ^8 |
 | 日记 ASR | 本地包 `diary-whisper`（`file:plugins/diary-whisper`） | 0.1 |
 
 ### 4.2 主要路由
@@ -181,8 +182,9 @@
 ### 7.1 TTS
 
 - 偏好键：`ai-english-voice-prefs-v1`（小女孩默认等 persona + 语速/音调）。
-- Web：`speechSynthesis`；原生：Capacitor Text-to-Speech 插件。
-- API `/api/tts` 在 browser 模式下只起协调作用。
+- **App 原生**：优先 **Sherpa-ONNX + Piper**（`plugins/piper-tts`，默认 amy-low-int8）；失败降级 `@capacitor-community/text-to-speech`。
+- Web：`speechSynthesis`；API `/api/tts` 在 browser 模式下只起协调作用。
+- 说明见 [`piper-tts.md`](./piper-tts.md)。
 
 ### 7.2 端侧 Whisper（日记）
 
@@ -284,7 +286,7 @@ cd apps/web && npm run dev:phone
 
 1. **关卡 Vosk**：方案上与日记 Whisper 隔离，但客户端 Vosk 尚未合入 `apps/`；现网关卡依赖浏览器识别 + API mock/openai。
 2. **日记 Whisper**：桥接与插件已具备；tiny 模型与 `whisper-cli` 需自行放入 assets 才能在 APK 转写。
-3. **TTS**：仅系统朗读，无云端精品音色管线。
+3. **TTS**：App 优先 Piper（需 `fetch-piper-tts`）；浏览器仍为系统朗读；无云端精品音色管线。
 4. **存储**：日记音频以 data URL 进 localStorage，存在配额风险；无多设备同步。
 5. **Android 工程**：需本机生成；云端环境通常不直接产出 APK。
 6. **PaddleSpeech 备选调研**：开源 ASR/TTS 官方支持矩阵（仅官方仓库依据）见 [`paddlespeech-support-matrix.md`](./paddlespeech-support-matrix.md)。
