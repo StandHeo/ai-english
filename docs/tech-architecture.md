@@ -143,7 +143,7 @@
 
 ### 6.1 主题包
 
-首页五包（另加 Family 入口）：
+首页六包（另加 Family 入口）：
 
 1. 水果森林 `fruit-forest`
 2. 自行车世界 `bike-world`
@@ -151,10 +151,6 @@
 4. 英雄世界 `hero-world`
 5. 小狗救援队 `pup-patrol`
 6. 钓鱼日 `fishing-day`
-2. 自行车世界 `bike-world`
-3. 机器人实验室 `robot-lab`
-4. 英雄世界 `hero-world`
-5. 小狗救援队 `pup-patrol`
 
 索引：`content/levels/packs.json`；每包约 8 关，进度**按 pack 分桶**。
 
