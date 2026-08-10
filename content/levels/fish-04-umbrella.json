@@ -5,8 +5,8 @@
   "title": "Sunny Umbrella",
   "target_words": ["umbrella"],
   "scene": {
-    "setting": "A flower umbrella on the riverbank",
-    "image": "assets/scenes/umbrella-bank.png",
+    "setting": "A flower umbrella shading the fishing chair",
+    "image": "assets/scenes/diaoyu1.jpeg",
     "character": "bunny"
   },
   "beats": [

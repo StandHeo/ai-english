@@ -5,8 +5,8 @@
   "title": "By the River",
   "target_words": ["river"],
   "scene": {
-    "setting": "A bright blue river beside tall grass",
-    "image": "assets/scenes/riverbank-fish.png",
+    "setting": "Our river bank with grass and blue sky",
+    "image": "assets/scenes/diaoyu1.jpeg",
     "character": "bunny"
   },
   "beats": [
