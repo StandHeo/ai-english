@@ -1,0 +1,55 @@
+{
+  "id": "swim-02-goggles",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Swim Goggles",
+  "target_words": ["goggles"],
+  "scene": {
+    "setting": "Goggles waiting by the pool",
+    "image": "assets/scenes/goggles-deck.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/goggles.png",
+      "npc_say": "On your eyes!",
+      "hint_say": "Goggles!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the goggles!",
+      "hint_say": "Goggles!",
+      "success_say": "Yes! Goggles!",
+      "options": [
+        { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
+        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/goggles.png",
+      "npc_say": "What do we wear on our eyes?",
+      "expect": ["goggles", "swim goggles"],
+      "hint_say": "Goggles!",
+      "success_say": "Cool goggles!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
+          { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/goggles.png",
+      "npc_say": "Put on goggles!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-goggles",
+    "stickerImage": "assets/items/goggles.png",
+    "stars": 1
+  }
+}

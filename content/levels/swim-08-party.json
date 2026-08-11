@@ -1,0 +1,85 @@
+{
+  "id": "swim-08-party",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Pool Party",
+  "target_words": ["pool", "goggles", "ring", "cap"],
+  "scene": {
+    "setting": "A sunny pool party",
+    "image": "assets/scenes/swim-party.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Pool party! Yay!",
+      "hint_say": "Yay!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the pool!",
+      "hint_say": "Pool!",
+      "success_say": "Yes!",
+      "options": [
+        { "id": "pool", "image": "assets/items/pool.png", "correct": true },
+        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/goggles.png",
+      "npc_say": "What goes on your eyes?",
+      "expect": ["goggles", "swim goggles"],
+      "hint_say": "Goggles!",
+      "success_say": "Yes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
+          { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/swimring.png",
+      "npc_say": "What helps us float?",
+      "expect": ["ring", "swim ring", "float"],
+      "hint_say": "Ring!",
+      "success_say": "Yes!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
+          { "id": "pool", "image": "assets/items/pool.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/swimcap.png",
+      "npc_say": "Last one! What is on your head?",
+      "expect": ["cap", "swim cap", "a cap"],
+      "hint_say": "Cap!",
+      "success_say": "Party!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
+          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/characters/bunny.png",
+      "npc_say": "Great swimming day!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-swim-party",
+    "stickerImage": "assets/scenes/swim-party.png",
+    "stars": 2
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "swim-03-cap",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Swim Cap",
+  "target_words": ["cap"],
+  "scene": {
+    "setting": "Colorful swim caps by the pool",
+    "image": "assets/scenes/cap-deck.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/swimcap.png",
+      "npc_say": "On your head!",
+      "hint_say": "Cap!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the cap!",
+      "hint_say": "Cap!",
+      "success_say": "Yes! Cap!",
+      "options": [
+        { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
+        { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/swimcap.png",
+      "npc_say": "What is on your head?",
+      "expect": ["cap", "a cap", "swim cap", "a swim cap"],
+      "hint_say": "Cap!",
+      "success_say": "Nice cap!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
+          { "id": "pool", "image": "assets/items/pool.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/swimcap.png",
+      "npc_say": "Swim cap!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-swimcap",
+    "stickerImage": "assets/items/swimcap.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "swim-05-breaststroke",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Breaststroke",
+  "target_words": ["breaststroke"],
+  "scene": {
+    "setting": "Swim lanes for learning strokes",
+    "image": "assets/scenes/stroke-lanes.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/breaststroke.png",
+      "npc_say": "Frog kick! Push!",
+      "hint_say": "Breaststroke!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find breaststroke!",
+      "hint_say": "Breaststroke!",
+      "success_say": "Yes!",
+      "options": [
+        { "id": "breaststroke", "image": "assets/items/breaststroke.png", "correct": true },
+        { "id": "backstroke", "image": "assets/items/backstroke.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/breaststroke.png",
+      "npc_say": "What stroke is this?",
+      "expect": ["breaststroke", "breast stroke"],
+      "hint_say": "Breaststroke!",
+      "success_say": "Great!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "breaststroke", "image": "assets/items/breaststroke.png", "correct": true },
+          { "id": "butterfly", "image": "assets/items/butterfly.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/breaststroke.png",
+      "npc_say": "Breaststroke! Wow!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-breaststroke",
+    "stickerImage": "assets/items/breaststroke.png",
+    "stars": 1
+  }
+}

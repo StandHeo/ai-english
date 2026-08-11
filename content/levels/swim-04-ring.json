@@ -1,0 +1,55 @@
+{
+  "id": "swim-04-ring",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Swim Ring",
+  "target_words": ["ring"],
+  "scene": {
+    "setting": "Orange swim rings on the blue pool",
+    "image": "assets/scenes/ring-pool.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/swimring.png",
+      "npc_say": "Float and splash!",
+      "hint_say": "Ring!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the ring!",
+      "hint_say": "Ring!",
+      "success_say": "Yes! Ring!",
+      "options": [
+        { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
+        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/swimring.png",
+      "npc_say": "What helps us float?",
+      "expect": ["ring", "a ring", "swim ring", "float", "a float"],
+      "hint_say": "Ring!",
+      "success_say": "Fun ring!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
+          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/swimring.png",
+      "npc_say": "Big swim ring!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-swimring",
+    "stickerImage": "assets/items/swimring.png",
+    "stars": 1
+  }
+}
