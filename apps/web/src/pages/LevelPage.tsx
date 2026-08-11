@@ -103,6 +103,8 @@ export function LevelPage({ onProgress }: Props) {
   }, [beatIndex])
 
   useEffect(() => {
+    // App 内不因 capacitor: 误判；仅浏览器 http 提示不安全
+    if (Capacitor.isNativePlatform()) return
     if (!isMicAllowedByBrowser() || pageProtocolHint() === 'http') {
       setMicTip('insecure')
       setShowDevType(true)
@@ -554,9 +556,13 @@ export function LevelPage({ onProgress }: Props) {
   const hasVideo = Boolean(level.scene.video)
   const tipText =
     micTip === 'insecure'
-      ? `当前是 ${pageProtocolHint() === 'http' ? 'http' : '非安全'} 页面，手机不能开麦克风。请在电脑运行 npm run dev:phone，手机用 https://电脑IP:5173 打开（证书点继续访问）；或先在下方输入单词。`
+      ? Capacitor.isNativePlatform()
+        ? `App 无法开麦克风。请确认 Info.plist 有「Privacy - Microphone Usage Description」，在本机执行 npm run patch:ios-plist 后重新 Xcode Run；也可先在下方输入单词。`
+        : `当前是 ${pageProtocolHint() === 'http' ? 'http' : '非安全'} 页面，手机不能开麦克风。请在电脑运行 npm run dev:phone，手机用 https://电脑IP:5173 打开（证书点继续访问）；或先在下方输入单词。`
       : micTip === 'denied'
-        ? '未获得麦克风权限。请在浏览器弹窗点「允许」，或到网站设置里打开麦克风；也可在下方输入单词。'
+        ? Capacitor.isNativePlatform()
+          ? '未获得麦克风权限。请到 iPhone「设置 → Fruit Forest」允许麦克风；也可在下方输入单词。'
+          : '未获得麦克风权限。请在浏览器弹窗点「允许」，或到网站设置里打开麦克风；也可在下方输入单词。'
         : micTip === 'listening'
           ? '正在听… 请大声说英语单词，约 3 秒后自动结束；再点一次麦克风可提前结束。'
           : micTip === 'empty'

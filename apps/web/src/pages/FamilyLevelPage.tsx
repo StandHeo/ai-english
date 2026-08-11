@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import {
   getDay,
   markDayCompleted,
@@ -51,7 +52,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
     setBeatIndex(0)
     setRetries(0)
     startedAt.current = Date.now()
-    if (!isMicAllowedByBrowser() || pageProtocolHint() === 'http') {
+    if (!Capacitor.isNativePlatform() && (!isMicAllowedByBrowser() || pageProtocolHint() === 'http')) {
       setMicTip('当前可能无法开麦克风，可用右下角打字。')
       setShowDevType(true)
     }

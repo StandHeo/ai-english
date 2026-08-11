@@ -47,6 +47,8 @@ npm run build:ios        # build + cap sync ios
 
 ## 麦克风 Info.plist
 
+**必做。** 没有这一项时，iOS WKWebView 里 `navigator.mediaDevices` 会是 `undefined`，关卡会报「非安全页面 / 无法开麦克风」。
+
 在 `ios/App/App/Info.plist` 增加：
 
 ```xml
@@ -54,7 +56,15 @@ npm run build:ios        # build + cap sync ios
 <string>用于关卡英语口语练习</string>
 ```
 
+或在 `apps/web` 执行（`build:ios` 已自动串入）：
+
+```bash
+npm run patch:ios-plist
+```
+
 Xcode 图形界面：Target → Info → 自定义 iOS 目标属性 → `+` → Privacy - Microphone Usage Description。
+
+> 说明：iOS 本地包协议仍是 `capacitor:`（不能改成真正的 https 加载本地资源）。开麦依赖 **Info.plist 权限说明**，不是改 `iosScheme`。
 
 ## 本地开发连 Mac 上的 Vite（可选）
 
@@ -90,6 +100,7 @@ server: {
 3. **白屏**：先确认 `npm run build` 成功且 `dist/` 有内容，再 `cap sync ios`。
 4. **ATS / 局域网 HTTP**：开发连家用 API 时，可能需在 Info.plist 放宽本地网络或继续用 `CapacitorHttp`；离线关卡可不管。
 5. **future Xcode project file format**：工程格式比当前 Xcode 新。优先 App Store 升级 Xcode；或见 [`ios-phone-guide.md`](./ios-phone-guide.md) FAQ §7。可用 `xcodebuild -version` 核对本机版本。
+6. **关卡提示「非安全页面 / capacitor:」**：旧逻辑误把 App WebView 当浏览器 http。请拉最新代码后 `npm run build && npx cap sync ios` 再 Run；并确认 Info.plist 有 `NSMicrophoneUsageDescription`，`capacitor.config.ts` 里 `iosScheme: 'https'`。
 
 ## 云端说明
 

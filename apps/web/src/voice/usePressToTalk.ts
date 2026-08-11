@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import {
   getSpeechRecognitionCtor,
   isMicAllowedByBrowser,
@@ -83,6 +84,16 @@ export function usePressToTalk() {
         }
       }
 
+      if (!navigator.mediaDevices?.getUserMedia) {
+        return {
+          error: Capacitor.isNativePlatform() ? 'denied' : 'insecure',
+          detail: Capacitor.isNativePlatform()
+            ? 'App 未暴露麦克风接口。请确认 Info.plist 已加 NSMicrophoneUsageDescription，执行 npm run patch:ios-plist 后重新 Run。'
+            : `当前协议 ${window.location.protocol}，浏览器未提供 mediaDevices`,
+        }
+      }
+
+      // App 内：若仍不是安全上下文，getUserMedia 可能失败；先尝试，失败再报 denied/unknown
       activeRef.current = true
       setRecording(true)
 
@@ -106,9 +117,17 @@ export function usePressToTalk() {
         if (name === 'NotFoundError') {
           return { error: 'unsupported', detail: '未找到麦克风设备' }
         }
+        // WKWebView 偶发把 capacitor: 当非安全 → 提示重建 https scheme
+        const msg = err instanceof Error ? err.message : String(err)
+        if (/secure|permission|denied|NotSupported/i.test(msg) && Capacitor.isNativePlatform()) {
+          return {
+            error: 'denied',
+            detail: `App 开麦失败（${window.location.protocol}）。请确认 Info.plist 麦克风权限后重新 Run。${msg}`,
+          }
+        }
         return {
           error: 'unknown',
-          detail: err instanceof Error ? err.message : String(err),
+          detail: msg,
         }
       }
 

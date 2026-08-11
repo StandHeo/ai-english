@@ -139,19 +139,22 @@ npx cap open ios
 
 ### 麦克风权限（必做一次）
 
-`npx cap add ios` 之后，在 Xcode 打开：
+`npx cap add ios` / `cap sync ios` 之后，**必须**有麦克风说明，否则 iPhone 上 `mediaDevices` 为空，会误报「非安全页面」。
 
-`apps/web/ios/App/App/Info.plist`
+在 `apps/web` 执行：
 
-增加（若还没有）：
+```bash
+npm run patch:ios-plist
+# 或完整：npm run build:ios   # 已自动包含 patch
+```
+
+也可在 Xcode 打开 `apps/web/ios/App/App/Info.plist` 手动增加：
 
 | Key | Type | Value（示例） |
 |-----|------|----------------|
 | `Privacy - Microphone Usage Description` | String | `用于关卡英语口语练习` |
 
-对应原始键名：`NSMicrophoneUsageDescription`。
-
-没有这一条，点麦克风会直接失败。
+对应原始键名：`NSMicrophoneUsageDescription`。改完后 **重新 Run**（最好先卸载旧 App 再装，让系统重新弹权限）。
 
 ---
 

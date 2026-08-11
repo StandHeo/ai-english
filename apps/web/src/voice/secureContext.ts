@@ -1,6 +1,14 @@
-/** 手机用 http://局域网IP 打开时通常不是安全上下文，浏览器会禁止麦克风。 */
+import { Capacitor } from '@capacitor/core'
+
+/**
+ * 是否允许尝试打开麦克风。
+ * - 浏览器：必须是安全上下文（https / localhost）
+ * - Capacitor App：WKWebView 内允许尝试（需系统麦克风权限；勿因 capacitor: 误判拦死）
+ */
 export function isMicAllowedByBrowser(): boolean {
   if (typeof window === 'undefined') return false
+  // App：即使暂时没有 mediaDevices（常见于缺 Info.plist 麦克风说明），也允许走到开麦逻辑给出明确错误
+  if (Capacitor.isNativePlatform()) return true
   if (!window.isSecureContext) return false
   return Boolean(navigator.mediaDevices?.getUserMedia)
 }
@@ -10,6 +18,12 @@ export function pageProtocolHint(): 'https' | 'http' | 'other' {
   if (window.location.protocol === 'https:') return 'https'
   if (window.location.protocol === 'http:') return 'http'
   return 'other'
+}
+
+/** 给用户看的简短协议说明 */
+export function pageProtocolLabel(): string {
+  if (typeof window === 'undefined') return 'unknown'
+  return window.location.protocol.replace(/:$/, '') || 'unknown'
 }
 
 export type BrowserSpeechRecognition = {
