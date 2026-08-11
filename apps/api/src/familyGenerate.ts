@@ -50,6 +50,7 @@ find beats MUST have "options" with at least 2 items and one correct.
 CRITICAL vocabulary rule: Across target_words PLUS every picture-option "id", the UNIQUE short English keywords MUST meet the minimum count given in the user message (default 9). Use many distinct concrete nouns as option ids (park, slide, bus, ball, friend, home, tree, duck, cake, …). Avoid repeating the same id.
 Prefer words like park, slide, rice, friend, ball, bus, home — avoid long phrases.
 Use image:"placeholder" everywhere; photos are attached later.
+Do NOT include beep_talk (optional kid-robot tail dialogue is authored only for official packs).
 iconColors: give ONE entry per target_word (and important option ids if useful). Colors must be warm, soft, kid-friendly hex pairs (peach, coral, sky, mint, sunshine, lavender). fg = icon fill (medium saturation), bg = light pastel card background. Never use neon, pure black, or pure white as fg.`
 
 const HEX = /^#([0-9A-Fa-f]{6})$/
@@ -399,6 +400,7 @@ export async function generateFamilyLevel(input: {
     }
     L.approved = true
     L.theme = 'family'
+    delete L.beep_talk
     const keywords = collectLevelKeywords(L)
     console.log(
       '[deepseek] keywords',

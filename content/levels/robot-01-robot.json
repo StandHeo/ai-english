@@ -72,5 +72,82 @@
     "sticker": "sticker-robot",
     "stickerImage": "assets/items/robot.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": ["robot", "a robot"],
+        "hint_say": "Say robot!",
+        "success_say": "Yes! Robot!",
+        "show": "assets/items/robot.png",
+        "next": "big",
+        "on_fail_next": "big",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "robot",
+              "image": "assets/items/robot.png",
+              "correct": true
+            },
+            {
+              "id": "gear",
+              "image": "assets/items/gear.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "big": {
+        "robot_say": "Big robot or small?",
+        "expect": ["big", "big robot"],
+        "hint_say": "Say big!",
+        "success_say": "Big robot!",
+        "show": "assets/items/robot.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "robot",
+              "image": "assets/items/robot.png",
+              "correct": true
+            },
+            {
+              "id": "button",
+              "image": "assets/items/button.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, robot friend!",
+        "expect": ["bye", "bye bye", "goodbye"],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/robot.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "robot",
+              "image": "assets/items/robot.png",
+              "correct": true
+            },
+            {
+              "id": "wheel",
+              "image": "assets/items/wheel.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

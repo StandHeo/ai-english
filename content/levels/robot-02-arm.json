@@ -72,5 +72,82 @@
     "sticker": "sticker-arm",
     "stickerImage": "assets/items/arm.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What can grab?",
+        "expect": ["arm", "an arm"],
+        "hint_say": "Say arm!",
+        "success_say": "Yes! Arm!",
+        "show": "assets/items/arm.png",
+        "next": "move",
+        "on_fail_next": "move",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "arm",
+              "image": "assets/items/arm.png",
+              "correct": true
+            },
+            {
+              "id": "wheel",
+              "image": "assets/items/wheel.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "move": {
+        "robot_say": "Can the arm move?",
+        "expect": ["yes", "move", "yes move"],
+        "hint_say": "Say yes!",
+        "success_say": "Move, move!",
+        "show": "assets/items/arm.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "arm",
+              "image": "assets/items/arm.png",
+              "correct": true
+            },
+            {
+              "id": "robot",
+              "image": "assets/items/robot.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Strong arm! Bye-bye!",
+        "expect": ["bye", "bye bye", "goodbye"],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/arm.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "arm",
+              "image": "assets/items/arm.png",
+              "correct": true
+            },
+            {
+              "id": "gear",
+              "image": "assets/items/gear.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }
