@@ -1,13 +1,13 @@
 # AI English · 故事冒险口语练习
 
-面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**、**小狗救援队**、**钓鱼日**。
+面向 4–6 岁儿童的全英沉浸故事冒险口语练习。Android 优先（Web + Capacitor）。首页可选 **水果森林**、**自行车世界**、**机器人实验室**、**英雄世界**、**小狗救援队**、**钓鱼日**、**游泳日**。
 
 ## 仓库结构
 
 ```
 apps/web          # React + Vite 儿童/家长端
 apps/api          # Express：ASR/TTS 代理与期望词匹配
-content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup / fishing）
+content/levels    # 关卡 JSON + packs/（fruit / bike / robot / hero / pup / fishing / swim）
 content/assets    # 角色/道具/场景图片与家庭视频
 openspec/         # 产品规格与变更
 docs/             # 使用说明与技术方案
@@ -53,6 +53,10 @@ pup → dog → truck → badge → hat → bone → help → 复习
 鱼（fish）→ 鱼竿（rod）→ 河（river）→ 遮阳伞（umbrella）→ 遮阳帽（hat）→ 鱼汤（soup）→ 蓝天白云（sky/cloud）→ 青草野餐复习
 
 首关使用家庭实拍 `assets/scenes/diaoyu1.jpeg` 与短视频 `assets/videos/diaoyu.mp4`（约 6 秒）。
+
+### 游泳日
+
+游泳池（pool）→ 泳镜（goggles）→ 泳帽（cap）→ 游泳圈（ring）→ 蛙泳（breaststroke）→ 仰泳（backstroke）→ 蝶泳（butterfly）→ 泳池派对复习
 
 > 英雄与小狗均为原创卡通风格，不使用官方商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 

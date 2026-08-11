@@ -1,0 +1,55 @@
+{
+  "id": "swim-01-pool",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Swimming Pool",
+  "target_words": ["pool"],
+  "scene": {
+    "setting": "A sunny outdoor swimming pool",
+    "image": "assets/scenes/swim-pool.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/pool.png",
+      "npc_say": "Blue water! Splash!",
+      "hint_say": "Pool!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the pool!",
+      "hint_say": "Pool!",
+      "success_say": "Yes! Pool!",
+      "options": [
+        { "id": "pool", "image": "assets/items/pool.png", "correct": true },
+        { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/pool.png",
+      "npc_say": "Where do we swim?",
+      "expect": ["pool", "a pool", "the pool", "swimming pool"],
+      "hint_say": "Pool!",
+      "success_say": "Yay! Pool!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "pool", "image": "assets/items/pool.png", "correct": true },
+          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/pool.png",
+      "npc_say": "Nice pool!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-pool",
+    "stickerImage": "assets/items/pool.png",
+    "stars": 1
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "swim-07-butterfly",
+  "approved": true,
+  "theme": "swimming",
+  "title": "Butterfly",
+  "target_words": ["butterfly"],
+  "scene": {
+    "setting": "Swim lanes for learning strokes",
+    "image": "assets/scenes/stroke-lanes.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/butterfly.png",
+      "npc_say": "Both arms! Fly!",
+      "hint_say": "Butterfly!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find butterfly!",
+      "hint_say": "Butterfly!",
+      "success_say": "Yes!",
+      "options": [
+        { "id": "butterfly", "image": "assets/items/butterfly.png", "correct": true },
+        { "id": "backstroke", "image": "assets/items/backstroke.png", "correct": false }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/butterfly.png",
+      "npc_say": "What stroke is this?",
+      "expect": ["butterfly", "butterfly stroke"],
+      "hint_say": "Butterfly!",
+      "success_say": "Wow!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          { "id": "butterfly", "image": "assets/items/butterfly.png", "correct": true },
+          { "id": "breaststroke", "image": "assets/items/breaststroke.png", "correct": false }
+        ]
+      }
+    },
+    {
+      "type": "introduce",
+      "show": "assets/items/butterfly.png",
+      "npc_say": "Butterfly! Strong!"
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-butterfly",
+    "stickerImage": "assets/items/butterfly.png",
+    "stars": 1
+  }
+}

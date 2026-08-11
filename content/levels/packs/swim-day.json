@@ -1,0 +1,18 @@
+{
+  "id": "swim-day",
+  "title": "Swim Day",
+  "theme": "swimming",
+  "character": "bunny",
+  "mapImage": "assets/scenes/swim-map.png",
+  "homeImage": "assets/items/home-swim.png",
+  "levels": [
+    "swim-01-pool",
+    "swim-02-goggles",
+    "swim-03-cap",
+    "swim-04-ring",
+    "swim-05-breaststroke",
+    "swim-06-backstroke",
+    "swim-07-butterfly",
+    "swim-08-party"
+  ]
+}
