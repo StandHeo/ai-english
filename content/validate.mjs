@@ -56,6 +56,39 @@ function validateLevel(id) {
       fail(`${id}: scene.video_max_seconds 应在 1–30`)
     }
   }
+  const beepTalkAssetRefs = []
+  if (level.beep_talk) {
+    const talk = level.beep_talk
+    const nodes = talk.nodes && typeof talk.nodes === 'object' ? talk.nodes : null
+    const nodeIds = nodes ? Object.keys(nodes) : []
+    if (!talk.start || !nodes?.[talk.start]) {
+      fail(`${id}: beep_talk.start 必须指向已有节点`)
+    }
+    if (nodeIds.length < 3 || nodeIds.length > 5) {
+      fail(`${id}: beep_talk.nodes 数量应在 3–5（当前 ${nodeIds.length}）`)
+    }
+    let hasFallback = false
+    for (const nid of nodeIds) {
+      const node = nodes[nid]
+      if (!node?.robot_say) fail(`${id} beep_talk.${nid}: 缺少 robot_say`)
+      if (!Array.isArray(node.expect) || node.expect.length === 0) {
+        fail(`${id} beep_talk.${nid}: expect 不能为空`)
+      }
+      if (!('next' in node)) fail(`${id} beep_talk.${nid}: 缺少 next`)
+      for (const key of ['next', 'on_fail_next']) {
+        const target = node[key]
+        if (target != null && typeof target === 'string' && !nodes[target]) {
+          fail(`${id} beep_talk.${nid}.${key} 指向未知节点 ${target}`)
+        }
+      }
+      if (node.fallback?.options?.length >= 2) hasFallback = true
+      if (node.show) beepTalkAssetRefs.push(node.show)
+      for (const o of node.fallback?.options || []) {
+        if (o.image) beepTalkAssetRefs.push(o.image)
+      }
+    }
+    if (!hasFallback) fail(`${id}: beep_talk 至少需要一个带 fallback 的节点`)
+  }
   const assetRefs = [
     level.scene?.image,
     level.scene?.video,
@@ -65,6 +98,7 @@ function validateLevel(id) {
       ...(beat.fallback?.options || []).map((o) => o.image),
       ...(beat.options || []).map((o) => o.image),
     ]),
+    ...beepTalkAssetRefs,
   ].filter(Boolean)
   for (const ref of assetRefs) {
     if (!fs.existsSync(path.join(root, ref))) fail(`${id}: 缺少资源 ${ref}`)

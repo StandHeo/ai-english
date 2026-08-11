@@ -27,6 +27,8 @@ const LISTEN_MS = 3500
 export type ListenOptions = {
   /** 关卡期望词，传给 Vosk grammar 提高短词准确率 */
   grammarWords?: string[]
+  /** 自动结束聆听毫秒数；默认 3500 */
+  listenMs?: number
 }
 
 /**
@@ -340,10 +342,14 @@ export function usePressToTalk() {
       const early = await start()
       if (early?.error) return early
 
+      const listenMs =
+        typeof options?.listenMs === 'number' && options.listenMs > 0
+          ? options.listenMs
+          : LISTEN_MS
       cleanupTimer()
       autoTimerRef.current = window.setTimeout(() => {
         void stop().then(onAutoStop)
-      }, LISTEN_MS)
+      }, listenMs)
       return 'started'
     },
     [recording, start, stop],

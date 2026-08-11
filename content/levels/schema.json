@@ -78,6 +78,55 @@
         }
       }
     },
+    "beep_talk": {
+      "type": "object",
+      "required": ["start", "nodes"],
+      "properties": {
+        "start": { "type": "string", "minLength": 1 },
+        "nodes": {
+          "type": "object",
+          "minProperties": 3,
+          "maxProperties": 5,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["robot_say", "expect", "next"],
+            "properties": {
+              "robot_say": { "type": "string" },
+              "expect": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              },
+              "hint_say": { "type": "string" },
+              "success_say": { "type": "string" },
+              "next": { "type": ["string", "null"] },
+              "on_fail_next": { "type": ["string", "null"] },
+              "show": { "type": "string" },
+              "fallback": {
+                "type": "object",
+                "required": ["type", "options"],
+                "properties": {
+                  "type": { "const": "picture_choice" },
+                  "options": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "image", "correct"],
+                      "properties": {
+                        "id": { "type": "string" },
+                        "image": { "type": "string" },
+                        "correct": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "reward": {
       "type": "object",
       "required": ["sticker", "stickerImage", "stars"],

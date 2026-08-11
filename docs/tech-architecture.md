@@ -246,6 +246,7 @@
 | iOS 产物 | Mac + Xcode 真机侧载（不上架）；见 `docs/ios-phone-guide.md` |
 | 权限 | 安卓见 `docs/android-capacitor.md`；iOS 需 `NSMicrophoneUsageDescription` |
 | 日记模型 / Piper | Android 与 iOS 均有原生插件；iOS 需 `npm run build:ios` 拉 XCFramework 与模型（Whisper 要求 iOS 16.4+） |
+| Beep 尾声对话 | 官方关可选 `beep_talk`；末拍后约束对话再发贴纸；见 `docs/beep-tail-talk.md` |
 
 零基础真机体验可先走浏览器 HTTPS 联调：安卓 `docs/android-phone-guide.md`；iPhone `docs/ios-phone-guide.md`。
 

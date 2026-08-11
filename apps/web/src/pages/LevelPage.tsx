@@ -15,6 +15,7 @@ import { ensurePiperReady } from '../voice/piperTts'
 import { loadVoicePrefs } from '../voice/prefs'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
+import { BeepTalkPanel } from './BeepTalkPanel'
 import './level.css'
 
 const MAX_RETRIES = 2
@@ -78,7 +79,7 @@ export function LevelPage({ onProgress }: Props) {
   const [packId, setPackId] = useState(search.get('pack') || '')
   const [beatIndex, setBeatIndex] = useState(0)
   const [phase, setPhase] = useState<
-    'speak' | 'listen' | 'find' | 'fallback' | 'celebrate'
+    'speak' | 'listen' | 'find' | 'fallback' | 'celebrate' | 'beepTalk'
   >('speak')
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -147,6 +148,7 @@ export function LevelPage({ onProgress }: Props) {
   useEffect(() => {
     setBeatIndex(0)
     setRetries(0)
+    setPhase('speak')
     setSceneReady(false)
     setVideoPlaying(false)
     startedAt.current = Date.now()
@@ -241,6 +243,13 @@ export function LevelPage({ onProgress }: Props) {
   const advance = useCallback(async () => {
     if (!level) return
     if (beatIndexRef.current >= level.beats.length - 1) {
+      if (level.beep_talk?.start && level.beep_talk.nodes?.[level.beep_talk.start]) {
+        setRetries(0)
+        setVoiceStatus(null)
+        setResultFlash(null)
+        setPhase('beepTalk')
+        return
+      }
       await finishLevel(level)
       return
     }
@@ -254,6 +263,8 @@ export function LevelPage({ onProgress }: Props) {
 
   useEffect(() => {
     if (!beat || !level || !sceneReady) return
+    // Beep 尾声由 BeepTalkPanel 自己播报，勿再跑 Bunny 拍逻辑
+    if (phase === 'beepTalk') return
     let cancelled = false
     let timer: number | undefined
     ;(async () => {
@@ -278,6 +289,8 @@ export function LevelPage({ onProgress }: Props) {
       if (timer) window.clearTimeout(timer)
       void cancelSpeak()
     }
+    // phase 有意不进依赖：仅在拍切换时播报；beepTalk 时提前 return
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [advance, beat, level, sceneReady])
 
   async function playSuccess() {
@@ -611,7 +624,11 @@ export function LevelPage({ onProgress }: Props) {
         />
       )}
 
-      {sceneReady && (
+      {sceneReady && phase === 'beepTalk' && level.beep_talk && (
+        <BeepTalkPanel talk={level.beep_talk} onComplete={() => void finishLevel(level)} />
+      )}
+
+      {sceneReady && phase !== 'beepTalk' && (
         <>
           <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
           {beat?.show && phase !== 'find' && (
