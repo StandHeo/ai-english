@@ -20,7 +20,7 @@
   _modelPath = [modelPath copy];
   _tokensPath = [tokensPath copy];
   _dataDir = [dataDir copy];
-  _tts = nullptr;
+  _tts = NULL;
 
   SherpaOnnxOfflineTtsConfig config;
   memset(&config, 0, sizeof(config));
@@ -48,12 +48,12 @@
 - (void)dealloc {
   if (_tts) {
     SherpaOnnxDestroyOfflineTts(_tts);
-    _tts = nullptr;
+    _tts = NULL;
   }
 }
 
 - (BOOL)isReady {
-  return _tts != nullptr;
+  return _tts != NULL;
 }
 
 - (int)sampleRate {

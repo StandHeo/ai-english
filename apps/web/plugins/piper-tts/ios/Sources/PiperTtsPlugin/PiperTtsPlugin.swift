@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import AVFoundation
+import PiperSherpaBridge
 
 /**
  * On-device Piper TTS via Sherpa-ONNX (iOS).
@@ -164,47 +165,73 @@ public class PiperTtsPlugin: CAPPlugin, CAPBridgedPlugin {
             && FileManager.default.fileExists(atPath: dataDir.path)
     }
 
+    /// SPM 资源在 `Bundle.module`（如 PiperTts_PiperTtsPlugin.bundle）；CocoaPods 可能在主 Bundle。
+    private func resourceBundles() -> [Bundle] {
+        var bundles: [Bundle] = []
+        #if SWIFT_PACKAGE
+        bundles.append(Bundle.module)
+        #endif
+        let names = [
+            "PiperTts_PiperTtsPlugin",
+            "PiperTtsPlugin",
+            "PiperTts",
+        ]
+        for name in names {
+            if let url = Bundle.main.url(forResource: name, withExtension: "bundle"),
+               let b = Bundle(url: url)
+            {
+                bundles.append(b)
+            }
+        }
+        bundles.append(.main)
+        // de-dupe by bundlePath
+        var seen = Set<String>()
+        return bundles.filter { seen.insert($0.bundlePath).inserted }
+    }
+
     private func bundleURL(_ dir: String, _ file: String) -> URL? {
-        let relative = "\(resourceRoot)/\(dir)/\(file)"
-        if let url = Bundle.main.url(forResource: file, withExtension: nil, subdirectory: "\(resourceRoot)/\(dir)") {
-            return url
+        let sub = "\(resourceRoot)/\(dir)"
+        let relative = "\(sub)/\(file)"
+        for bundle in resourceBundles() {
+            if let url = bundle.url(forResource: file, withExtension: nil, subdirectory: sub)
+                ?? bundle.url(forResource: file, withExtension: nil, subdirectory: dir)
+            {
+                return url
+            }
+            let candidates = [
+                bundle.bundleURL.appendingPathComponent(relative),
+                bundle.resourceURL?.appendingPathComponent(relative),
+            ].compactMap { $0 }
+            if let hit = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+                return hit
+            }
         }
-        // Resource bundles (CocoaPods resource_bundles)
-        if let bundleUrl = Bundle.main.url(forResource: "PiperTts", withExtension: "bundle"),
-           let rb = Bundle(url: bundleUrl),
-           let url = rb.url(forResource: file, withExtension: nil, subdirectory: "\(resourceRoot)/\(dir)")
-            ?? rb.url(forResource: file, withExtension: nil, subdirectory: dir)
-        {
-            return url
-        }
-        let candidates = [
-            Bundle.main.bundleURL.appendingPathComponent(relative),
-            Bundle.main.resourceURL?.appendingPathComponent(relative),
-        ].compactMap { $0 }
-        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+        return nil
     }
 
     private func bundleDirectory(_ dir: String, _ name: String) -> URL? {
-        let relative = "\(resourceRoot)/\(dir)/\(name)"
-        if let url = Bundle.main.url(forResource: name, withExtension: nil, subdirectory: "\(resourceRoot)/\(dir)") {
-            return url
+        let sub = "\(resourceRoot)/\(dir)"
+        let relative = "\(sub)/\(name)"
+        for bundle in resourceBundles() {
+            if let url = bundle.url(forResource: name, withExtension: nil, subdirectory: sub) {
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+                    return url
+                }
+            }
+            let candidates = [
+                bundle.bundleURL.appendingPathComponent(relative),
+                bundle.bundleURL.appendingPathComponent("\(dir)/\(name)"),
+                bundle.resourceURL?.appendingPathComponent(relative),
+            ].compactMap { $0 }
+            if let hit = candidates.first(where: {
+                var isDir: ObjCBool = false
+                return FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDir) && isDir.boolValue
+            }) {
+                return hit
+            }
         }
-        if let bundleUrl = Bundle.main.url(forResource: "PiperTts", withExtension: "bundle"),
-           let rb = Bundle(url: bundleUrl)
-        {
-            let u1 = rb.bundleURL.appendingPathComponent("\(resourceRoot)/\(dir)/\(name)")
-            let u2 = rb.bundleURL.appendingPathComponent("\(dir)/\(name)")
-            if FileManager.default.fileExists(atPath: u1.path) { return u1 }
-            if FileManager.default.fileExists(atPath: u2.path) { return u2 }
-        }
-        let candidates = [
-            Bundle.main.bundleURL.appendingPathComponent(relative),
-            Bundle.main.resourceURL?.appendingPathComponent(relative),
-        ].compactMap { $0 }
-        return candidates.first {
-            var isDir: ObjCBool = false
-            return FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDir) && isDir.boolValue
-        }
+        return nil
     }
 
     @discardableResult
@@ -235,7 +262,7 @@ public class PiperTtsPlugin: CAPPlugin, CAPBridgedPlugin {
         return true
     }
 
-    private func playFloat32PCM(_ data: NSData, sampleRate: Double, pitch: Float) {
+    private func playFloat32PCM(_ data: Data, sampleRate: Double, pitch: Float) {
         playLock.lock()
         defer { playLock.unlock() }
 
@@ -267,12 +294,12 @@ public class PiperTtsPlugin: CAPPlugin, CAPBridgedPlugin {
         engine.connect(player, to: pitchUnit, format: format)
         engine.connect(pitchUnit, to: engine.mainMixerNode, format: format)
 
-        let frameCount = data.length / MemoryLayout<Float>.size
+        let frameCount = data.count / MemoryLayout<Float>.size
         guard frameCount > 0,
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount))
         else { return }
         buffer.frameLength = AVAudioFrameCount(frameCount)
-        data.getBytes(buffer.floatChannelData![0], length: data.length)
+        data.copyBytes(to: UnsafeMutableBufferPointer(start: buffer.floatChannelData![0], count: frameCount))
 
         do {
             try engine.start()

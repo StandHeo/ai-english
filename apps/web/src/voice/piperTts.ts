@@ -65,8 +65,12 @@ export async function ensurePiperReady(): Promise<boolean> {
         let r = await PiperTts.isReady()
         if (!r.ready) r = await PiperTts.prepareModel()
         readyCache = Boolean(r.ready)
+        if (!readyCache) {
+          console.warn('[tts] Piper isReady/prepare 未就绪', r.detail || r)
+        }
         return readyCache
-      } catch {
+      } catch (err) {
+        console.warn('[tts] Piper 插件调用失败', err)
         readyCache = false
         return false
       } finally {

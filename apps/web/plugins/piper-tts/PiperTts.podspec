@@ -10,8 +10,8 @@ Pod::Spec.new do |s|
   s.homepage = 'https://github.com/StandHeo/ai-english'
   s.author = 'ai-english'
   s.source = { :git => 'https://github.com/StandHeo/ai-english.git', :tag => s.version.to_s }
-  s.source_files = 'ios/Sources/**/*.{swift,h,m,mm,c,cc,cpp}'
-  s.public_header_files = 'ios/Sources/**/*.h'
+  s.source_files = 'ios/Sources/PiperTtsPlugin/**/*.{swift}', 'ios/Sources/PiperSherpaBridge/**/*.{h,m,mm}'
+  s.public_header_files = 'ios/Sources/PiperSherpaBridge/include/*.h'
   s.ios.deployment_target = '15.0'
   s.dependency 'Capacitor'
   s.swift_version = '5.9'
