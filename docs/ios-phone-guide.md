@@ -195,6 +195,43 @@ npx cap open ios
 
 可以，但麦克风/部分语音能力真机更准。儿童试玩请用真机。
 
+### 7. 打开工程提示「future Xcode project file format」？
+
+含义：`ios` 工程是用**更新的 Xcode** 生成的，你现在打开用的 Xcode **偏旧**，读不了新格式。
+
+**推荐做法（最省事）：**
+
+1. 打开 Mac **App Store** → 更新 **Xcode** 到最新，装完重启一次。
+2. 终端确认版本（建议 **15+**，能更新到 16 更好）：
+
+```bash
+xcodebuild -version
+```
+
+3. 再执行：
+
+```bash
+cd ~/repo/ai-english/apps/web   # 按你本机路径改
+npx cap open ios
+```
+
+**若暂时不能升级 Xcode**（磁盘不够 / 系统太旧）：
+
+1. 删掉旧工程重来（会丢掉本机 ios 目录，可再生成）：
+
+```bash
+cd ~/repo/ai-english/apps/web
+rm -rf ios
+npm run build
+npx cap add ios
+npm run build:ios
+```
+
+2. 若仍报同样错误，说明当前 Capacitor 生成的格式仍新于你的 Xcode → **只能升级 Xcode**，或换一台已装新 Xcode 的 Mac。
+3. 也可在本机用「较新 Xcode」打开一次该工程，在 Xcode 菜单 **File → Project Settings…**（或工程 Inspector）把 **Project Format** 改成与你旧版兼容的版本后再用旧 Xcode 打开——但新手更建议直接升级 Xcode。
+
+> 你当前报错路径形如：`.../apps/web/ios/App/App.xcodeproj`，正是本机 `cap add ios` 生成的工程，不是仓库里提交的文件。
+
 ---
 
 ## 相关文档

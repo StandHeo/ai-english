@@ -89,6 +89,7 @@ server: {
 2. **pod install 失败**：翻墙/换 Ruby 源后，在 `apps/web/ios/App` 再执行 `pod install`。
 3. **白屏**：先确认 `npm run build` 成功且 `dist/` 有内容，再 `cap sync ios`。
 4. **ATS / 局域网 HTTP**：开发连家用 API 时，可能需在 Info.plist 放宽本地网络或继续用 `CapacitorHttp`；离线关卡可不管。
+5. **future Xcode project file format**：工程格式比当前 Xcode 新。优先 App Store 升级 Xcode；或见 [`ios-phone-guide.md`](./ios-phone-guide.md) FAQ §7。可用 `xcodebuild -version` 核对本机版本。
 
 ## 云端说明
 
