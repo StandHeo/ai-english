@@ -7,6 +7,11 @@
     "android/src/main/",
     "android/build.gradle",
     "android/libs/",
+    "ios/Sources",
+    "ios/Resources",
+    "ios/Frameworks",
+    "Package.swift",
+    "PiperTts.podspec",
     "index.js",
     "README.md"
   ],
@@ -15,6 +20,9 @@
   "capacitor": {
     "android": {
       "src": "android"
+    },
+    "ios": {
+      "src": "ios"
     }
   },
   "peerDependencies": {

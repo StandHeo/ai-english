@@ -19,7 +19,7 @@
 | API 后端 | 语音匹配等（可选） | 电脑 `http://localhost:8787` |
 
 手机浏览器试玩时：电脑要跑前端；若走 mock/云端 ASR，后端也要跑。  
-打成 **iOS App 离线玩关卡** 时：关卡内容打进包里，朗读用 **iOS 系统 TTS**；日记端侧 Whisper / Piper **目前仅 Android**。
+打成 **iOS App 离线玩关卡** 时：关卡内容打进包里；朗读优先 **Piper**（未拉模型或失败则系统 TTS）；日记可用端侧 **Whisper**（需在 Mac 上跑 `build:ios` 拉模型）。
 
 ---
 
@@ -163,12 +163,12 @@ npm run patch:ios-plist
 | 能力 | iOS（当前） | Android |
 |------|-------------|---------|
 | 关卡 / 地图 / 钓鱼日实拍 | ✅ | ✅ |
-| 系统英文朗读 | ✅（推荐） | ✅（可降级） |
-| Piper 神经音 | ❌（选了也会降级系统音） | ✅ |
-| 日记端侧 Whisper | ❌ | ✅ |
+| 系统英文朗读 | ✅（Piper 失败时降级） | ✅（可降级） |
+| Piper 神经音 | ✅（`build:ios` 拉模型后） | ✅ |
+| 日记端侧 Whisper | ✅（iOS 16.4+；需拉 ggml） | ✅ |
 | 关卡 Vosk 离线识别 | 视 WebView 表现；不行可用点选/手输 | ✅ 已接 |
 
-家长中心里可把朗读引擎选成 **系统 TTS**（iPhone 上更贴切）。
+家长中心里可读引擎选 **Piper** 或 **系统 TTS**；首次侧载请用 `npm run build:ios` 再 Xcode Run。
 
 ---
 
@@ -241,4 +241,5 @@ npm run build:ios
 
 - Capacitor iOS 工程细节：[`ios-capacitor.md`](./ios-capacitor.md)
 - 安卓对照：[`android-phone-guide.md`](./android-phone-guide.md)
-- 朗读：[`piper-tts.md`](./piper-tts.md)（Piper 目前 Android）
+- 朗读：[`piper-tts.md`](./piper-tts.md)
+- 日记 Whisper：[`family-diary-whisper.md`](./family-diary-whisper.md)

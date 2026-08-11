@@ -6,6 +6,11 @@
   "files": [
     "android/src/main/",
     "android/build.gradle",
+    "ios/Sources",
+    "ios/Resources",
+    "ios/Frameworks",
+    "Package.swift",
+    "DiaryWhisper.podspec",
     "index.js",
     "README.md"
   ],
@@ -14,6 +19,9 @@
   "capacitor": {
     "android": {
       "src": "android"
+    },
+    "ios": {
+      "src": "ios"
     }
   },
   "peerDependencies": {

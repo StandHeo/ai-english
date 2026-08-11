@@ -205,10 +205,12 @@ export function ParentPage({ progress, onProgress }: Props) {
             ))}
           </div>
           {!Capacitor.isNativePlatform() && (
-            <p className="muted">浏览器联调始终用系统朗读；此选项在安装 APK 后生效。</p>
+            <p className="muted">浏览器联调始终用系统朗读；此选项在安装 App 后生效。</p>
           )}
           {Capacitor.getPlatform() === 'ios' && (
-            <p className="muted">当前 iOS 包尚未接入 Piper，请选「系统 TTS」（听感通常已不错）。</p>
+            <p className="muted">
+              iOS 需先用 Mac 执行 npm run build:ios（拉 Piper 模型）。未就绪时会自动降级系统 TTS。
+            </p>
           )}
         </div>
         <div className="voice-grid">

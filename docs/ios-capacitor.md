@@ -6,12 +6,12 @@
 
 ## 目标与非目标
 
-- **目标：** Mac + Xcode 真机侧载；不上架 App Store。
-- **非目标（首版）：** Piper iOS 插件、日记 Whisper iOS、TestFlight/上架审核。
+- **目标：** Mac + Xcode 真机侧载；不上架 App Store；关卡 Piper 朗读与日记端侧 Whisper。
+- **非目标：** TestFlight / 上架审核；关卡 Vosk 的完整 iOS 原生移植（仍依赖 WebView 路径）。
 
 ## 前提
 
-- macOS + Xcode（含 Command Line Tools）
+- macOS + Xcode（含 Command Line Tools）；真机建议 **iOS 16.4+**（日记 Whisper 框架要求）
 - Node.js 20+
 - 本机 CocoaPods（`cap sync ios` 时常需要；Xcode 新版多会提示安装）
 
@@ -27,17 +27,22 @@ pod --version
 ```bash
 cd apps/web
 npm install
-npm run build
-npx cap add ios          # 仅第一次
-npx cap sync ios
+npm run build:ios        # 拉 iOS 原生资源 + build + cap sync + 补麦克风 Info.plist
 npx cap open ios
 ```
 
-一键同步脚本：
+若尚无 `ios/` 工程，先：
 
 ```bash
-npm run build:ios        # build + cap sync ios
+npx cap add ios
+npm run build:ios
 ```
+
+`build:ios` 会执行：
+
+1. `fetch-diary-whisper -- --ios-only`（ggml 模型 + `whisper.xcframework`）
+2. `fetch-piper-tts -- --ios-only`（Amy/Danny + sherpa/onnxruntime XCFramework）
+3. `npm run build` → `npx cap sync ios` → `patch-ios-info-plist`
 
 `appId` / 名称见 `capacitor.config.ts`：
 
@@ -86,9 +91,9 @@ server: {
 | 模块 | iOS |
 |------|-----|
 | Web 关卡 / 资源 / 实拍视频 | 同步进 WebView |
-| `@capacitor-community/text-to-speech` | 可用（系统音） |
-| `piper-tts` 本地插件 | 无 iOS 实现 → 自动不可用 |
-| `diary-whisper` | 无 iOS 实现 → 日记 ASR 降级 |
+| `@capacitor-community/text-to-speech` | 可用（系统音；Piper 失败时降级） |
+| `piper-tts` 本地插件 | ✅ Sherpa-ONNX + Piper（需 `fetch-piper-tts -- --ios-only`） |
+| `diary-whisper` | ✅ whisper.xcframework + ggml（需 fetch；**iOS 16.4+**） |
 | Vosk（monosklet） | 依赖 WebView/WASM；不稳时用手输/点选 |
 
 朗读路由见 `apps/web/src/voice/client.ts`：原生优先 Piper，失败或未就绪走系统 TTS。

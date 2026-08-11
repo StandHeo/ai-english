@@ -14,7 +14,7 @@
     "build": "npm run build-icon-pack && npm run sync-content && tsc -b && vite build",
     "test:icons": "tsx --test src/icons/**/*.test.ts",
     "build:android": "npm run fetch-vosk-model && npm run fetch-diary-whisper && npm run fetch-piper-tts && npm run build && npx cap sync android",
-    "build:ios": "npm run build && npx cap sync ios && node scripts/patch-ios-info-plist.mjs",
+    "build:ios": "npm run fetch-diary-whisper -- --ios-only && npm run fetch-piper-tts -- --ios-only && npm run build && npx cap sync ios && node scripts/patch-ios-info-plist.mjs",
     "patch:ios-plist": "node scripts/patch-ios-info-plist.mjs",
     "lint": "oxlint",
     "preview": "vite preview"

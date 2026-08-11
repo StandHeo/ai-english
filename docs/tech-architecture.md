@@ -245,7 +245,7 @@
 | Android 产物 | Android Studio 打 debug/release APK |
 | iOS 产物 | Mac + Xcode 真机侧载（不上架）；见 `docs/ios-phone-guide.md` |
 | 权限 | 安卓见 `docs/android-capacitor.md`；iOS 需 `NSMicrophoneUsageDescription` |
-| 日记模型 / Piper | 目前以 Android 插件为主；iOS 朗读用系统 TTS |
+| 日记模型 / Piper | Android 与 iOS 均有原生插件；iOS 需 `npm run build:ios` 拉 XCFramework 与模型（Whisper 要求 iOS 16.4+） |
 
 零基础真机体验可先走浏览器 HTTPS 联调：安卓 `docs/android-phone-guide.md`；iPhone `docs/ios-phone-guide.md`。
 
@@ -288,8 +288,8 @@ cd apps/web && npm run dev:phone
 ## 14. 当前边界与后续方向
 
 1. **关卡 Vosk**：方案上与日记 Whisper 隔离，但客户端 Vosk 尚未合入 `apps/`；现网关卡依赖浏览器识别 + API mock/openai。
-2. **日记 Whisper**：桥接与插件已具备；tiny 模型与 `whisper-cli` 需自行放入 assets 才能在 APK 转写。
-3. **TTS**：App 优先 Piper（需 `fetch-piper-tts`）；浏览器仍为系统朗读；无云端精品音色管线。
+2. **日记 Whisper**：Android（cli）与 iOS（xcframework）桥接已具备；ggml 模型需 `fetch-diary-whisper`（iOS 加 `--ios-only`）后打包。
+3. **TTS**：App 优先 Piper（Android / iOS 均需对应 fetch）；浏览器仍为系统朗读；无云端精品音色管线。
 4. **存储**：日记音频以 data URL 进 localStorage，存在配额风险；无多设备同步。
 5. **Android 工程**：需本机生成；云端环境通常不直接产出 APK。
 6. **PaddleSpeech 备选调研**：开源 ASR/TTS 官方支持矩阵（仅官方仓库依据）见 [`paddlespeech-support-matrix.md`](./paddlespeech-support-matrix.md)。
