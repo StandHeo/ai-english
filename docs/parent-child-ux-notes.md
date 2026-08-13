@@ -212,8 +212,8 @@
 ### 4.4 难词坡道（已分析，细则待定）
 
 - 甜：apple、dog、fish、pool、ring、bike…
-- 涩：breaststroke、backstroke、mountain bike、tricycle、goggles…
-- `butterfly` 有心智锚，相对可接受。
+- 涩：mountain bike、tricycle…（游泳包已改为 kick / water / fish 等短词）
+- `goggles` 仍略长，识别接受 `glasses` 近似。
 - 方向候选：地图标记「大一点再玩」、难关更短 Beep / 更松 expect——**未选定**。
 
 ### 4.5 贴纸墙（轻量结论）
@@ -305,7 +305,7 @@
 
 - [ ] **T12** 涩关列表是否要产品层「年龄标签」或地图视觉区分
 - [ ] **T13** 难关 expect 是否接受更短近似词（如 swim）；谁来维护词表
-- [ ] **T14** 是否重写部分游泳 / 自行车关目标词，还是只改节奏与 Beep
+- [x] **T14** → 游泳包已去掉泳姿难词：改为 kick / water / fish（自行车难词仍待定）
 
 ### 贴纸墙
 
@@ -344,3 +344,4 @@
 | 2026-08-13 | **T7a 拍板 α**：小 Beep 头像；聊完回仪式 |
 | 2026-08-13 | 收口 T4/T5/T6/T7b/T7c/T8/T22 默认；开 change `level-clear-ceremony` |
 | 2026-08-13 | 试玩修订：通关后自动下一关；成功音效加长 |
+| 2026-08-13 | 游泳包难词换成 kick / water / fish（T14 游泳部分） |

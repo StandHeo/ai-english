@@ -45,7 +45,9 @@
       "npc_say": "What goes on your eyes?",
       "expect": [
         "goggles",
-        "swim goggles"
+        "swim goggles",
+        "glasses",
+        "swim glasses"
       ],
       "hint_say": "Goggles!",
       "success_say": "Yes!",
