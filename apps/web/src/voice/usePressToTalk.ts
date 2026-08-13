@@ -22,17 +22,17 @@ export type TalkCapture = {
   source?: 'vosk' | 'browser-speech' | 'none'
 }
 
-const LISTEN_MS = 3500
+const LISTEN_MS = 5000
 
 export type ListenOptions = {
   /** 关卡期望词，传给 Vosk grammar 提高短词准确率 */
   grammarWords?: string[]
-  /** 自动结束聆听毫秒数；默认 3500 */
+  /** 自动结束聆听毫秒数；默认 5000（4 岁开口更从容） */
   listenMs?: number
 }
 
 /**
- * 手机优先：点一下开始听（约 3.5 秒），再点可提前结束。
+ * 手机优先：点一下开始听（约 5 秒），再点可提前结束。
  * - App（Capacitor）：离线 Vosk
  * - 网页：浏览器 SpeechRecognition + 录音兜底
  */

@@ -55,7 +55,11 @@ export function MapPage({ progress }: Props) {
         </div>
       </header>
 
-      {limited && <div className="limit-banner" aria-hidden />}
+      {limited && (
+        <div className="limit-banner" role="status">
+          <p className="limit-banner__text">今天英语冒险玩够啦，明天再来～</p>
+        </div>
+      )}
 
       <div className="map-nodes">
         {nodes.map(({ level, unlocked, completed }) => (

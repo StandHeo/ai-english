@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { assetUrl, listPackIds, loadPack } from '../content/loader'
 import type { ContentPack } from '../types'
+import { CoplayIntroCard } from './CoplayIntroCard'
 import './home.css'
 
 export function HomePage() {
@@ -19,6 +20,7 @@ export function HomePage() {
 
   return (
     <div className="home-screen">
+      <CoplayIntroCard />
       <img className="home-bunny" src={assetUrl('assets/characters/bunny.png')} alt="" />
       <div className="home-actions">
         <button className="icon-btn" onClick={() => navigate('/stickers')} aria-label="stickers">
