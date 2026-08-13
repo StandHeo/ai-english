@@ -423,7 +423,9 @@ export function LevelPage({ onProgress }: Props) {
     await playFailFeedback()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
-      await requestTts(beat?.hint_say || beat?.npc_say || '')
+      // 首次失败：再示范目标词/句子，不立刻甩点图（T10）
+      const demo = beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || ''
+      if (demo) await requestTts(demo)
       setBusy(false)
       setPhase('listen')
       return
@@ -655,12 +657,21 @@ export function LevelPage({ onProgress }: Props) {
         setBusy(false)
         return
       }
-      await requestTts(beat?.expect?.[0] || beat?.hint_say || '')
+      // 错选仍前进时，先听正确目标词（防纯点图捷径，T11）
+      const teach = beat?.expect?.[0] || beat?.hint_say || ''
+      if (teach) await requestTts(teach)
       setBusy(false)
       await advance()
       return
     }
+    // 点对：成功音效句里已含词；再保险补一遍短词，强化听—指认连接
+    setBusy(true)
+    const word = beat?.expect?.[0]
+    if (word && phase === 'fallback') {
+      await requestTts(word)
+    }
     await playSuccess()
+    setBusy(false)
     await advance()
   }
 
