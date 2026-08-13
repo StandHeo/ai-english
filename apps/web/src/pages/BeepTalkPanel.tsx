@@ -77,7 +77,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       // 对了：设计成功音效 + 短成功句；错了绝不用好玩的鼓励语
       await playSuccessSfx()
       await requestTts(line)
-      await sleep(500)
+      await sleep(700)
       goNext(false)
       return
     }
@@ -181,7 +181,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
     setPhase('celebrate')
     await playSuccessSfx()
     await requestTts(line)
-    await sleep(400)
+    await sleep(600)
     setBusy(false)
     goNext(true)
   }

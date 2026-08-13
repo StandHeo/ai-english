@@ -8,8 +8,8 @@ let lastCelebrateAtMs = 0
 
 /** Min successes between celebrate clips; chance when eligible. */
 const CELEBRATE_MIN_GAP = 2
-const CELEBRATE_CHANCE = 0.34
-const CELEBRATE_COOLDOWN_MS = 10_000
+const CELEBRATE_CHANCE = 0.4
+const CELEBRATE_COOLDOWN_MS = 8_000
 
 function ctx(): AudioContext | null {
   try {
@@ -47,25 +47,31 @@ function tone(
   }
   const peak = opts.gain ?? 0.18
   g.gain.setValueAtTime(0.0001, opts.start)
-  g.gain.exponentialRampToValueAtTime(peak, opts.start + 0.02)
+  g.gain.exponentialRampToValueAtTime(peak, opts.start + 0.025)
   g.gain.exponentialRampToValueAtTime(0.0001, opts.start + opts.dur)
   osc.connect(g)
   g.connect(audio.destination)
   osc.start(opts.start)
-  osc.stop(opts.start + opts.dur + 0.02)
+  osc.stop(opts.start + opts.dur + 0.03)
 }
 
-/** Bright ascending chime — reward for correct answer. */
+/** Longer ascending celebrate phrase — reward for correct answer (~1.4s). */
 export async function playSuccessSfx(): Promise<void> {
   const audio = ctx()
   if (!audio) return
   const t0 = audio.currentTime + 0.02
-  tone(audio, { freq: 523.25, start: t0, dur: 0.12, type: 'triangle', gain: 0.16 })
-  tone(audio, { freq: 659.25, start: t0 + 0.1, dur: 0.14, type: 'triangle', gain: 0.18 })
-  tone(audio, { freq: 783.99, start: t0 + 0.22, dur: 0.28, type: 'sine', gain: 0.2 })
-  // 随机间隔叠一点庆祝短曲（不阻塞 TTS）
+  // Opening chime
+  tone(audio, { freq: 523.25, start: t0, dur: 0.16, type: 'triangle', gain: 0.15 })
+  tone(audio, { freq: 659.25, start: t0 + 0.12, dur: 0.18, type: 'triangle', gain: 0.17 })
+  tone(audio, { freq: 783.99, start: t0 + 0.26, dur: 0.22, type: 'sine', gain: 0.19 })
+  // Hold + sparkle so it doesn’t vanish instantly
+  tone(audio, { freq: 1046.5, start: t0 + 0.48, dur: 0.36, type: 'triangle', gain: 0.17 })
+  tone(audio, { freq: 523.25, start: t0 + 0.48, dur: 0.4, type: 'sine', gain: 0.07 })
+  tone(audio, { freq: 1318.51, start: t0 + 0.78, dur: 0.22, type: 'sine', gain: 0.14 })
+  tone(audio, { freq: 1567.98, start: t0 + 0.98, dur: 0.45, type: 'triangle', gain: 0.16 })
+  tone(audio, { freq: 783.99, start: t0 + 0.98, dur: 0.5, type: 'sine', gain: 0.06 })
   maybeScheduleCelebrateBgm()
-  await wait(450)
+  await wait(1400)
 }
 
 /** Short descending “doo-doo-doo” — neutral fail, not entertaining speech. */
@@ -73,7 +79,6 @@ export async function playFailSfx(): Promise<void> {
   const audio = ctx()
   if (!audio) return
   const t0 = audio.currentTime + 0.02
-  // Three dull thuds going down
   tone(audio, { freq: 220, start: t0, dur: 0.11, type: 'square', gain: 0.07 })
   tone(audio, { freq: 185, start: t0 + 0.14, dur: 0.11, type: 'square', gain: 0.065 })
   tone(audio, { freq: 147, start: t0 + 0.28, dur: 0.16, type: 'square', gain: 0.06, slideTo: 120 })
@@ -81,7 +86,7 @@ export async function playFailSfx(): Promise<void> {
 }
 
 /**
- * 选对时偶尔播一段轻庆祝曲：至少隔 CELEBRATE_MIN_GAP 次成功，
+ * 选对时偶尔叠更长庆祝曲：至少隔 CELEBRATE_MIN_GAP 次成功，
  * 且冷却 CELEBRATE_COOLDOWN_MS，再以 CELEBRATE_CHANCE 概率触发。
  */
 function maybeScheduleCelebrateBgm(): void {
@@ -95,23 +100,24 @@ function maybeScheduleCelebrateBgm(): void {
   void playCelebrateBgm()
 }
 
-/** Soft ~2s fanfare under the success TTS — festive, not loud. */
+/** Soft ~3s fanfare under the success TTS — festive, not loud. */
 export async function playCelebrateBgm(): Promise<void> {
   const audio = ctx()
   if (!audio) return
-  // Start after the chime so “叮” still reads as the primary hit
-  const t0 = audio.currentTime + 0.35
-  const g = 0.09
-  // C major bounce: do-mi-sol-do + little tag
+  const t0 = audio.currentTime + 0.2
+  const g = 0.085
   const notes: Array<{ f: number; at: number; dur: number; gain?: number }> = [
-    { f: 523.25, at: 0, dur: 0.16 },
-    { f: 659.25, at: 0.14, dur: 0.16 },
-    { f: 783.99, at: 0.28, dur: 0.16 },
-    { f: 1046.5, at: 0.42, dur: 0.28, gain: 0.11 },
-    { f: 783.99, at: 0.72, dur: 0.14 },
-    { f: 1046.5, at: 0.88, dur: 0.14 },
-    { f: 1174.66, at: 1.04, dur: 0.18 },
-    { f: 1318.51, at: 1.22, dur: 0.42, gain: 0.1 },
+    { f: 523.25, at: 0, dur: 0.2 },
+    { f: 659.25, at: 0.18, dur: 0.2 },
+    { f: 783.99, at: 0.36, dur: 0.2 },
+    { f: 1046.5, at: 0.54, dur: 0.36, gain: 0.11 },
+    { f: 783.99, at: 0.96, dur: 0.18 },
+    { f: 1046.5, at: 1.14, dur: 0.18 },
+    { f: 1174.66, at: 1.34, dur: 0.22 },
+    { f: 1318.51, at: 1.56, dur: 0.28, gain: 0.1 },
+    { f: 1046.5, at: 1.9, dur: 0.2 },
+    { f: 1567.98, at: 2.12, dur: 0.55, gain: 0.11 },
+    { f: 783.99, at: 2.12, dur: 0.6, gain: 0.05 },
   ]
   for (const n of notes) {
     tone(audio, {
@@ -121,18 +127,17 @@ export async function playCelebrateBgm(): Promise<void> {
       type: 'triangle',
       gain: n.gain ?? g,
     })
-    // Soft fifth pad under longer notes
-    if (n.dur >= 0.25) {
+    if (n.dur >= 0.28) {
       tone(audio, {
         freq: n.f * 0.5,
         start: t0 + n.at,
-        dur: n.dur + 0.08,
+        dur: n.dur + 0.1,
         type: 'sine',
         gain: (n.gain ?? g) * 0.45,
       })
     }
   }
-  await wait(1800)
+  await wait(2900)
 }
 
 function wait(ms: number) {
