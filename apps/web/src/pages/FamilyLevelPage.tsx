@@ -7,6 +7,7 @@ import {
   materializeLevelForPlay,
 } from '../family/store'
 import { addPlaySeconds, loadProgress, saveProgress } from '../progress/store'
+import { markStickerEarnedTonight } from '../progress/stickerTonight'
 import { requestTts, submitSpeech } from '../voice/client'
 import { pickSuccessSpeakLine } from '../voice/cheers'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
@@ -87,6 +88,8 @@ export function FamilyLevelPage({ onProgress }: Props) {
     setPhase('celebrate')
     markDayCompleted(date)
     const p = loadProgress()
+    const stickerId = level?.reward?.sticker
+    if (stickerId) markStickerEarnedTonight(stickerId)
     const next = { ...p, stars: p.stars + (level?.reward.stars || 1) }
     saveProgress(next)
     onProgress(next)
@@ -163,7 +166,8 @@ export function FamilyLevelPage({ onProgress }: Props) {
     await playFailSfx()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
-      await requestTts(beat?.hint_say || beat?.npc_say || '')
+      const demo = beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || ''
+      if (demo) await requestTts(demo)
       setBusy(false)
       setPhase('listen')
       setMicTip('再试一次，或点右下角打字')

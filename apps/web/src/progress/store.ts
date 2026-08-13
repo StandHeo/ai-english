@@ -1,4 +1,5 @@
 import type { PackProgress, ProgressState } from '../types'
+import { markStickerEarnedTonight } from './stickerTonight'
 
 const KEY = 'ai-english-progress-v2'
 const LEGACY_KEY = 'ai-english-progress-v1'
@@ -158,6 +159,9 @@ export function completeLevel(
   const stickers = pack.stickers.includes(stickerId)
     ? pack.stickers
     : [...pack.stickers, stickerId]
+  if (!already && stickerId && !pack.stickers.includes(stickerId)) {
+    markStickerEarnedTonight(stickerId)
+  }
   const next: ProgressState = {
     ...state,
     packs: {
