@@ -22,6 +22,12 @@ import {
   clearCeremonyTtsLine,
   resolveCeremonyStickerSrc,
 } from './clearCeremony'
+import {
+  celebrateTitleFor,
+  pickCelebrateVariant,
+  SuccessCelebrate,
+  type CelebrateVariant,
+} from './SuccessCelebrate'
 import './level.css'
 
 const MAX_RETRIES = 2
@@ -42,6 +48,7 @@ type ResultFlash = {
   kind: 'ok' | 'retry'
   title: string
   line: string
+  variant?: CelebrateVariant
 }
 
 function sleep(ms: number) {
@@ -372,8 +379,14 @@ export function LevelPage({ onProgress }: Props) {
   async function playSuccess() {
     const line =
       beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    const variant = pickCelebrateVariant()
     setPhase('celebrate')
-    setResultFlash({ kind: 'ok', title: '太棒了！', line })
+    setResultFlash({
+      kind: 'ok',
+      title: celebrateTitleFor(variant),
+      line,
+      variant,
+    })
     // 加长成功音 + 短成功句，多停一会儿再进下一拍
     await playSuccessSfx()
     await requestTts(line)
@@ -811,16 +824,22 @@ export function LevelPage({ onProgress }: Props) {
             </div>
           )}
 
-          {phase === 'celebrate' && <div className="burst" />}
+          {resultFlash?.kind === 'ok' && resultFlash.variant && (
+            <SuccessCelebrate
+              variant={resultFlash.variant}
+              title={resultFlash.title}
+              line={resultFlash.line}
+            />
+          )}
 
-          {resultFlash && (
+          {resultFlash?.kind === 'retry' && (
             <div
-              className={`result-flash result-flash--${resultFlash.kind}`}
+              className="result-flash result-flash--retry"
               role="status"
               aria-live="polite"
             >
               <div className="result-flash__mark" aria-hidden>
-                {resultFlash.kind === 'ok' ? '✓' : '✗'}
+                ✗
               </div>
               <div className="result-flash__title">{resultFlash.title}</div>
               <div className="result-flash__line">{resultFlash.line}</div>

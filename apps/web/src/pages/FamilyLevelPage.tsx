@@ -12,6 +12,12 @@ import { playFailSfx, playSuccessSfx } from '../voice/sfx'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { LevelScript, ProgressState } from '../types'
+import {
+  celebrateTitleFor,
+  pickCelebrateVariant,
+  SuccessCelebrate,
+  type CelebrateVariant,
+} from './SuccessCelebrate'
 import './level.css'
 
 const MAX_RETRIES = 2
@@ -34,6 +40,11 @@ export function FamilyLevelPage({ onProgress }: Props) {
   const [showDevType, setShowDevType] = useState(false)
   const [devText, setDevText] = useState('')
   const [micTip, setMicTip] = useState<string | null>(null)
+  const [celeb, setCeleb] = useState<{
+    variant: CelebrateVariant
+    title: string
+    line: string
+  } | null>(null)
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
   const finishingRef = useRef(false)
@@ -126,9 +137,16 @@ export function FamilyLevelPage({ onProgress }: Props) {
 
   async function playSuccess() {
     const line = beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    const variant = pickCelebrateVariant()
     setPhase('celebrate')
+    setCeleb({
+      variant,
+      title: celebrateTitleFor(variant),
+      line,
+    })
     await playSuccessSfx()
     await requestTts(line)
+    setCeleb(null)
   }
 
   async function onOralResult(matched: boolean) {
@@ -271,7 +289,11 @@ export function FamilyLevelPage({ onProgress }: Props) {
           ))}
         </div>
       )}
-      {phase === 'celebrate' && <div className="burst" />}
+      {celeb ? (
+        <SuccessCelebrate variant={celeb.variant} title={celeb.title} line={celeb.line} />
+      ) : phase === 'celebrate' ? (
+        <div className="burst" />
+      ) : null}
       <button className="dev-toggle" type="button" onClick={() => setShowDevType((v) => !v)}>
         ·
       </button>
