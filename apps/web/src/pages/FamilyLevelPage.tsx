@@ -8,6 +8,7 @@ import {
 } from '../family/store'
 import { addPlaySeconds, loadProgress, saveProgress } from '../progress/store'
 import { requestTts, submitSpeech } from '../voice/client'
+import { playFailSfx, playSuccessSfx } from '../voice/sfx'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { LevelScript, ProgressState } from '../types'
@@ -126,6 +127,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
   async function playSuccess() {
     const line = beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
     setPhase('celebrate')
+    await playSuccessSfx()
     await requestTts(line)
   }
 
@@ -136,15 +138,17 @@ export function FamilyLevelPage({ onProgress }: Props) {
       return
     }
     const nextRetry = retries + 1
+    setBusy(true)
+    await playFailSfx()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
-      setBusy(true)
       await requestTts(beat?.hint_say || beat?.npc_say || '')
       setBusy(false)
       setPhase('listen')
       setMicTip('再试一次，或点右下角打字')
       return
     }
+    setBusy(false)
     setPhase('fallback')
     setMicTip(null)
   }
@@ -209,7 +213,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
   async function onPick(correct: boolean) {
     if (!correct) {
       setBusy(true)
-      await requestTts(beat?.hint_say || beat?.expect?.[0] || '')
+      await playFailSfx()
       setBusy(false)
       await advance()
       return
