@@ -1,62 +1,64 @@
 {
-  "id": "swim-05-breaststroke",
+  "id": "swim-05-kick",
   "approved": true,
   "theme": "swimming",
-  "title": "Breaststroke",
+  "title": "Kick",
   "target_words": [
-    "breaststroke"
+    "kick"
   ],
   "scene": {
-    "setting": "Swim lanes for learning strokes",
+    "setting": "Bunny kicks in the shallow pool",
     "image": "assets/scenes/stroke-lanes.png",
     "character": "bunny"
   },
   "beats": [
     {
       "type": "introduce",
-      "show": "assets/items/breaststroke.png",
-      "npc_say": "Frog kick! Push!",
-      "hint_say": "Breaststroke!"
+      "show": "assets/items/kick.png",
+      "npc_say": "Kick, kick! Splash!",
+      "hint_say": "Kick!"
     },
     {
       "type": "find",
-      "npc_say": "Find breaststroke!",
-      "hint_say": "Breaststroke!",
-      "success_say": "Yes!",
+      "npc_say": "Find kick!",
+      "hint_say": "Kick!",
+      "success_say": "Yes! Kick!",
       "options": [
         {
-          "id": "breaststroke",
-          "image": "assets/items/breaststroke.png",
+          "id": "kick",
+          "image": "assets/items/kick.png",
           "correct": true
         },
         {
-          "id": "backstroke",
-          "image": "assets/items/backstroke.png",
+          "id": "ring",
+          "image": "assets/items/swimring.png",
           "correct": false
         }
       ]
     },
     {
       "type": "ask",
-      "show": "assets/items/breaststroke.png",
-      "npc_say": "What stroke is this?",
+      "show": "assets/items/kick.png",
+      "npc_say": "What do your legs do?",
       "expect": [
-        "breaststroke",
-        "breast stroke"
+        "kick",
+        "a kick",
+        "kicking",
+        "kick kick"
       ],
-      "hint_say": "Breaststroke!",
-      "success_say": "Great!",
+      "hint_say": "Kick!",
+      "success_say": "Great kick!",
       "fallback": {
         "type": "picture_choice",
         "options": [
           {
-            "id": "breaststroke",
-            "image": "assets/items/breaststroke.png",
+            "id": "kick",
+            "image": "assets/items/kick.png",
             "correct": true
           },
           {
-            "id": "butterfly",
-            "image": "assets/items/butterfly.png",
+            "id": "cap",
+            "image": "assets/items/swimcap.png",
             "correct": false
           }
         ]
@@ -64,13 +66,13 @@
     },
     {
       "type": "introduce",
-      "show": "assets/items/breaststroke.png",
-      "npc_say": "Breaststroke! Wow!"
+      "show": "assets/items/kick.png",
+      "npc_say": "Kick! Yay!"
     }
   ],
   "reward": {
-    "sticker": "sticker-breaststroke",
-    "stickerImage": "assets/items/breaststroke.png",
+    "sticker": "sticker-kick",
+    "stickerImage": "assets/items/kick.png",
     "stars": 1
   },
   "beep_talk": {
@@ -79,13 +81,14 @@
       "what": {
         "robot_say": "Beep! What is it?",
         "expect": [
-          "breaststroke",
-          "a breaststroke",
-          "the breaststroke"
+          "kick",
+          "a kick",
+          "the kick",
+          "kicking"
         ],
-        "hint_say": "Say breaststroke!",
-        "success_say": "Yes! Breaststroke!",
-        "show": "assets/items/breaststroke.png",
+        "hint_say": "Say kick!",
+        "success_say": "Yes! Kick!",
+        "show": "assets/items/kick.png",
         "next": "again",
         "on_fail_next": "again",
         "fallback": {
@@ -93,27 +96,28 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/breaststroke.png",
+              "image": "assets/items/kick.png",
               "correct": true
             },
             {
               "id": "no",
-              "image": "assets/items/backstroke.png",
+              "image": "assets/items/swimring.png",
               "correct": false
             }
           ]
         }
       },
       "again": {
-        "robot_say": "Can you say breaststroke?",
+        "robot_say": "Can you say kick?",
         "expect": [
-          "breaststroke",
-          "a breaststroke",
-          "the breaststroke"
+          "kick",
+          "a kick",
+          "the kick",
+          "kicking"
         ],
-        "hint_say": "Say breaststroke!",
-        "success_say": "Great breaststroke!",
-        "show": "assets/items/breaststroke.png",
+        "hint_say": "Say kick!",
+        "success_say": "Great kick!",
+        "show": "assets/items/kick.png",
         "next": "bye",
         "on_fail_next": "bye",
         "fallback": {
@@ -121,19 +125,19 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/breaststroke.png",
+              "image": "assets/items/kick.png",
               "correct": true
             },
             {
               "id": "no",
-              "image": "assets/items/butterfly.png",
+              "image": "assets/items/goggles.png",
               "correct": false
             }
           ]
         }
       },
       "bye": {
-        "robot_say": "Bye-bye, breaststroke friend!",
+        "robot_say": "Bye-bye, kick friend!",
         "expect": [
           "bye",
           "bye bye",
@@ -142,7 +146,7 @@
         ],
         "hint_say": "Say bye!",
         "success_say": "Beep! Bye-bye!",
-        "show": "assets/items/breaststroke.png",
+        "show": "assets/items/kick.png",
         "next": null,
         "on_fail_next": null,
         "fallback": {
@@ -150,7 +154,7 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/breaststroke.png",
+              "image": "assets/items/kick.png",
               "correct": true
             },
             {

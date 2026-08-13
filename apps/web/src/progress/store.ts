@@ -78,17 +78,48 @@ function migrateLegacy(raw: Record<string, unknown>): ProgressState {
   return base
 }
 
+function remapList(ids: string[], map: Record<string, string>): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const id of ids) {
+    const next = map[id] || id
+    if (seen.has(next)) continue
+    seen.add(next)
+    out.push(next)
+  }
+  return out
+}
+
+/** 游泳包去掉泳姿难词后的关卡 id 迁移 */
+const SWIM_LEVEL_REMAP: Record<string, string> = {
+  'swim-05-breaststroke': 'swim-05-kick',
+  'swim-06-backstroke': 'swim-06-water',
+  'swim-07-butterfly': 'swim-07-fish',
+}
+
+function migrateSwimPack(pack: PackProgress): PackProgress {
+  return {
+    ...pack,
+    completed: remapList(pack.completed, SWIM_LEVEL_REMAP),
+    unlocked: remapList(pack.unlocked, SWIM_LEVEL_REMAP),
+  }
+}
+
 export function loadProgress(): ProgressState {
   try {
     const v2 = localStorage.getItem(KEY)
     if (v2) {
       const parsed = JSON.parse(v2) as ProgressState
       const base = defaultState()
+      const packs = { ...base.packs, ...(parsed.packs || {}) }
+      if (packs[SWIM]) {
+        packs[SWIM] = migrateSwimPack(packs[SWIM])
+      }
       return {
         ...base,
         ...parsed,
         version: 2,
-        packs: { ...base.packs, ...(parsed.packs || {}) },
+        packs,
       }
     }
     const legacy = localStorage.getItem(LEGACY_KEY)

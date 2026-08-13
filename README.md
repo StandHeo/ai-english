@@ -57,8 +57,9 @@ pup → dog → truck → badge → hat → bone → help → 复习
 
 ### 游泳日
 
-游泳池（pool）→ 泳镜（goggles）→ 泳帽（cap）→ 游泳圈（ring）→ 蛙泳（breaststroke）→ 仰泳（backstroke）→ 蝶泳（butterfly）→ 泳池派对复习
+游泳池（pool）→ 泳镜（goggles）→ 泳帽（cap）→ 游泳圈（ring）→ 踢腿（kick）→ 水（water）→ 鱼（fish）→ 泳池派对复习
 
+> 难词泳姿（蛙泳 / 仰泳 / 蝶泳）已换成 4 岁可说的短词。  
 > 英雄与小狗均为原创卡通风格，不使用官方商标角色名。进度按主题包分桶；若解锁异常可清除本站 `localStorage` 后重玩。
 
 ## 本地运行

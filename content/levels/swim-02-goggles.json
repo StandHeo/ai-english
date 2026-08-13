@@ -42,7 +42,9 @@
       "npc_say": "What do we wear on our eyes?",
       "expect": [
         "goggles",
-        "swim goggles"
+        "swim goggles",
+        "glasses",
+        "swim glasses"
       ],
       "hint_say": "Goggles!",
       "success_say": "Cool goggles!",
@@ -79,10 +81,12 @@
       "what": {
         "robot_say": "Beep! What is it?",
         "expect": [
-          "goggles",
-          "a goggles",
-          "the goggles"
-        ],
+        "goggles",
+        "a goggles",
+        "the goggles",
+        "glasses",
+        "swim glasses"
+      ],
         "hint_say": "Say goggles!",
         "success_say": "Yes! Goggles!",
         "show": "assets/items/goggles.png",
@@ -109,7 +113,9 @@
         "expect": [
           "goggles",
           "a goggles",
-          "the goggles"
+          "the goggles",
+          "glasses",
+          "swim glasses"
         ],
         "hint_say": "Say goggles!",
         "success_say": "Great goggles!",
