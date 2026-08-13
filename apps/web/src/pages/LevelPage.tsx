@@ -14,6 +14,7 @@ import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import { ensurePiperReady } from '../voice/piperTts'
 import { loadVoicePrefs } from '../voice/prefs'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
+import { pickSuccessSpeakLine } from '../voice/cheers'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import { BeepTalkPanel } from './BeepTalkPanel'
@@ -22,12 +23,19 @@ import {
   clearCeremonyTtsLine,
   resolveCeremonyStickerSrc,
 } from './clearCeremony'
+import {
+  celebrateTitleFor,
+  pickCelebrateVariant,
+  SuccessCelebrate,
+  type CelebrateVariant,
+} from './SuccessCelebrate'
 import './level.css'
 
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
-const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
 const CLEAR_PULSE_MS = 25_000
+/** 通关语音播完后再停留一会儿，自动进下一关（仍可用 ▶ 提前跳） */
+const CLEAR_AUTO_AFTER_TTS_MS = 2_400
 
 type MicTip = 'insecure' | 'denied' | 'empty' | 'listening' | null
 
@@ -40,6 +48,7 @@ type ResultFlash = {
   kind: 'ok' | 'retry'
   title: string
   line: string
+  variant?: CelebrateVariant
 }
 
 function sleep(ms: number) {
@@ -98,6 +107,8 @@ export function LevelPage({ onProgress }: Props) {
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
   const settledRef = useRef(false)
+  const clearAutoTimerRef = useRef<number | null>(null)
+  const nextLevelIdRef = useRef<string | undefined>(undefined)
   const cheerIndexRef = useRef(0)
   const { recording, toggleListen, cancelAutoStop, nativeVosk } = usePressToTalk()
 
@@ -231,6 +242,10 @@ export function LevelPage({ onProgress }: Props) {
 
   const leaveAfterClear = useCallback(
     (nextId: string | undefined) => {
+      if (clearAutoTimerRef.current != null) {
+        window.clearTimeout(clearAutoTimerRef.current)
+        clearAutoTimerRef.current = null
+      }
       if (!packId) {
         goMap()
         return
@@ -243,6 +258,20 @@ export function LevelPage({ onProgress }: Props) {
       }
     },
     [goMap, navigate, packId],
+  )
+
+  const scheduleClearAutoLeave = useCallback(
+    (nextId: string | undefined, delayMs = CLEAR_AUTO_AFTER_TTS_MS) => {
+      if (clearAutoTimerRef.current != null) {
+        window.clearTimeout(clearAutoTimerRef.current)
+        clearAutoTimerRef.current = null
+      }
+      clearAutoTimerRef.current = window.setTimeout(() => {
+        clearAutoTimerRef.current = null
+        leaveAfterClear(nextId)
+      }, delayMs)
+    },
+    [leaveAfterClear],
   )
 
   const enterClearCeremony = useCallback(
@@ -259,6 +288,7 @@ export function LevelPage({ onProgress }: Props) {
       const idx = all.findIndex((l) => l.id === current.id)
       const nextId = all[idx + 1]?.id
       setNextLevelId(nextId)
+      nextLevelIdRef.current = nextId
 
       if (!settledRef.current) {
         settledRef.current = true
@@ -276,8 +306,10 @@ export function LevelPage({ onProgress }: Props) {
 
       const line = clearCeremonyTtsLine(current, cheerIndexRef.current++)
       await requestTts(line)
+      // 语音播完后短停留，自动下一关；点 Beep 会取消；▶ 可提前跳
+      scheduleClearAutoLeave(nextId)
     },
-    [onProgress, packId, persistPlayTime],
+    [onProgress, packId, persistPlayTime, scheduleClearAutoLeave],
   )
 
   const advance = useCallback(async () => {
@@ -335,15 +367,32 @@ export function LevelPage({ onProgress }: Props) {
     return () => window.clearTimeout(t)
   }, [phase])
 
+  useEffect(() => {
+    return () => {
+      if (clearAutoTimerRef.current != null) {
+        window.clearTimeout(clearAutoTimerRef.current)
+        clearAutoTimerRef.current = null
+      }
+    }
+  }, [])
+
   async function playSuccess() {
-    const line =
-      beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    const line = pickSuccessSpeakLine({
+      successSay: beat?.success_say,
+      expect: beat?.expect,
+    })
+    const variant = pickCelebrateVariant()
     setPhase('celebrate')
-    setResultFlash({ kind: 'ok', title: '太棒了！', line })
-    // 先设计成功音效，再短读成功句（奖励在「叮」不在长鼓励）
+    setResultFlash({
+      kind: 'ok',
+      title: celebrateTitleFor(variant),
+      line,
+      variant,
+    })
+    // 加长成功音 + 短成功句，多停一会儿再进下一拍
     await playSuccessSfx()
     await requestTts(line)
-    await sleep(400)
+    await sleep(700)
     setResultFlash(null)
   }
 
@@ -675,6 +724,8 @@ export function LevelPage({ onProgress }: Props) {
           onComplete={() => {
             setPhase('clearCeremony')
             setPulseContinue(false)
+            // 聊完回仪式，再自动下一关（给一点时间点 ▶ / 再看贴纸）
+            scheduleClearAutoLeave(nextLevelIdRef.current, CLEAR_AUTO_AFTER_TTS_MS)
           }}
         />
       )}
@@ -686,6 +737,10 @@ export function LevelPage({ onProgress }: Props) {
           pulseContinue={pulseContinue}
           onContinue={() => leaveAfterClear(nextLevelId)}
           onBeep={() => {
+            if (clearAutoTimerRef.current != null) {
+              window.clearTimeout(clearAutoTimerRef.current)
+              clearAutoTimerRef.current = null
+            }
             setPulseContinue(false)
             setPhase('beepTalk')
           }}
@@ -771,16 +826,22 @@ export function LevelPage({ onProgress }: Props) {
             </div>
           )}
 
-          {phase === 'celebrate' && <div className="burst" />}
+          {resultFlash?.kind === 'ok' && resultFlash.variant && (
+            <SuccessCelebrate
+              variant={resultFlash.variant}
+              title={resultFlash.title}
+              line={resultFlash.line}
+            />
+          )}
 
-          {resultFlash && (
+          {resultFlash?.kind === 'retry' && (
             <div
-              className={`result-flash result-flash--${resultFlash.kind}`}
+              className="result-flash result-flash--retry"
               role="status"
               aria-live="polite"
             >
               <div className="result-flash__mark" aria-hidden>
-                {resultFlash.kind === 'ok' ? '✓' : '✗'}
+                ✗
               </div>
               <div className="result-flash__title">{resultFlash.title}</div>
               <div className="result-flash__line">{resultFlash.line}</div>

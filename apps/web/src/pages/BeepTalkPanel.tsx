@@ -3,8 +3,15 @@ import { Capacitor } from '@capacitor/core'
 import { assetUrl } from '../content/loader'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
+import { pickBeepSuccessLine } from '../voice/cheers'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { BeepTalk, TalkNode } from '../types'
+import {
+  celebrateTitleFor,
+  pickCelebrateVariant,
+  SuccessCelebrate,
+  type CelebrateVariant,
+} from './SuccessCelebrate'
 
 const MAX_RETRIES = 2
 const BEEP_LISTEN_MS = 5000
@@ -28,6 +35,11 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
   const [showDevType, setShowDevType] = useState(false)
   const [devText, setDevText] = useState('')
   const [statusLines, setStatusLines] = useState<string[]>([])
+  const [celeb, setCeleb] = useState<{
+    variant: CelebrateVariant
+    title: string
+    line: string
+  } | null>(null)
   const finishingRef = useRef(false)
   const { recording, toggleListen, cancelAutoStop, nativeVosk } = usePressToTalk()
 
@@ -71,13 +83,20 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
   async function onOralResult(matched: boolean) {
     if (!node) return
     if (matched) {
-      const line = node.success_say || 'Beep! Yes!'
+      const line = pickBeepSuccessLine(node.success_say)
+      const variant = pickCelebrateVariant()
       setPhase('celebrate')
       setStatusLines([line])
+      setCeleb({
+        variant,
+        title: celebrateTitleFor(variant),
+        line,
+      })
       // 对了：设计成功音效 + 短成功句；错了绝不用好玩的鼓励语
       await playSuccessSfx()
       await requestTts(line)
-      await sleep(500)
+      await sleep(700)
+      setCeleb(null)
       goNext(false)
       return
     }
@@ -177,11 +196,18 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       setBusy(false)
       return
     }
-    const line = node?.success_say || 'Beep! Yes!'
+    const line = pickBeepSuccessLine(node?.success_say)
+    const variant = pickCelebrateVariant()
     setPhase('celebrate')
+    setCeleb({
+      variant,
+      title: celebrateTitleFor(variant),
+      line,
+    })
     await playSuccessSfx()
     await requestTts(line)
-    await sleep(400)
+    await sleep(600)
+    setCeleb(null)
     setBusy(false)
     goNext(true)
   }
@@ -257,7 +283,11 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
         </div>
       )}
 
-      {phase === 'celebrate' && <div className="burst" />}
+      {celeb ? (
+        <SuccessCelebrate variant={celeb.variant} title={celeb.title} line={celeb.line} />
+      ) : phase === 'celebrate' ? (
+        <div className="burst" />
+      ) : null}
 
       <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
         ·
