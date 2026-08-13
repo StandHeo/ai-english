@@ -14,7 +14,7 @@
   "beats": [
     {
       "type": "introduce",
-      "show": "assets/items/kick.png",
+      "show": "assets/items/swim-kick.png",
       "npc_say": "Kick, kick! Splash!",
       "hint_say": "Kick!"
     },
@@ -26,7 +26,7 @@
       "options": [
         {
           "id": "kick",
-          "image": "assets/items/kick.png",
+          "image": "assets/items/swim-kick.png",
           "correct": true
         },
         {
@@ -38,7 +38,7 @@
     },
     {
       "type": "ask",
-      "show": "assets/items/kick.png",
+      "show": "assets/items/swim-kick.png",
       "npc_say": "What do your legs do?",
       "expect": [
         "kick",
@@ -53,7 +53,7 @@
         "options": [
           {
             "id": "kick",
-            "image": "assets/items/kick.png",
+            "image": "assets/items/swim-kick.png",
             "correct": true
           },
           {
@@ -66,13 +66,13 @@
     },
     {
       "type": "introduce",
-      "show": "assets/items/kick.png",
+      "show": "assets/items/swim-kick.png",
       "npc_say": "Kick! Yay!"
     }
   ],
   "reward": {
     "sticker": "sticker-kick",
-    "stickerImage": "assets/items/kick.png",
+    "stickerImage": "assets/items/swim-kick.png",
     "stars": 1
   },
   "beep_talk": {
@@ -88,7 +88,7 @@
         ],
         "hint_say": "Say kick!",
         "success_say": "Yes! Kick!",
-        "show": "assets/items/kick.png",
+        "show": "assets/items/swim-kick.png",
         "next": "again",
         "on_fail_next": "again",
         "fallback": {
@@ -96,7 +96,7 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/kick.png",
+              "image": "assets/items/swim-kick.png",
               "correct": true
             },
             {
@@ -117,7 +117,7 @@
         ],
         "hint_say": "Say kick!",
         "success_say": "Great kick!",
-        "show": "assets/items/kick.png",
+        "show": "assets/items/swim-kick.png",
         "next": "bye",
         "on_fail_next": "bye",
         "fallback": {
@@ -125,7 +125,7 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/kick.png",
+              "image": "assets/items/swim-kick.png",
               "correct": true
             },
             {
@@ -146,7 +146,7 @@
         ],
         "hint_say": "Say bye!",
         "success_say": "Beep! Bye-bye!",
-        "show": "assets/items/kick.png",
+        "show": "assets/items/swim-kick.png",
         "next": null,
         "on_fail_next": null,
         "fallback": {
@@ -154,7 +154,7 @@
           "options": [
             {
               "id": "yes",
-              "image": "assets/items/kick.png",
+              "image": "assets/items/swim-kick.png",
               "correct": true
             },
             {
