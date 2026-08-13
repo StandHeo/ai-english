@@ -32,6 +32,7 @@ import {
 } from '../voice/diaryWhisperModel'
 import {
   DIARY_MAX_RECORD_MS,
+  formatClock,
   useDiaryRecorder,
   type DiaryRecordCapture,
 } from '../voice/useDiaryRecorder'
@@ -73,15 +74,17 @@ export function FamilyStudioPage() {
       setStatus('没有录到声音，请再试或改用打字')
       return
     }
-    if (result.error === 'too_long') {
-      setStatus(`已到 ${Math.round(DIARY_MAX_RECORD_MS / 1000)} 秒上限，正在保存…`)
+    if (result.error === 'too_long' || result.hitLimit) {
+      setStatus(
+        `已录满 ${formatClock(DIARY_MAX_RECORD_MS)}，已自动结束并保存，正在转写…`,
+      )
     }
 
     savingVoiceRef.current = true
     const modelId = getDiaryWhisperModelId()
     setBusy(true)
     setTranscribing(true)
-    if (result.error !== 'too_long') {
+    if (result.error !== 'too_long' && !result.hitLimit) {
       setStatus(`正在转写（${diaryWhisperModelLabel(modelId)}）…`)
     }
     await new Promise<void>((r) => requestAnimationFrame(() => r()))
@@ -115,7 +118,7 @@ export function FamilyStudioPage() {
     }
   }
 
-  const { recording, toggle, maxMs } = useDiaryRecorder({
+  const { recording, toggle, maxMs, elapsedMs, remainingMs, nearLimit } = useDiaryRecorder({
     onAutoStop: (cap) => {
       void persistVoiceCapture(cap)
     },
@@ -165,7 +168,7 @@ export function FamilyStudioPage() {
     if (busy || transcribing || savingVoiceRef.current) return
     const result = await toggle()
     if (result === 'started') {
-      setStatus(`正在录音… 最长约 ${Math.round(maxMs / 1000)} 秒，再点「结束录音」`)
+      setStatus(`正在录音… 最长 ${formatClock(maxMs)}，说完点「结束录音」`)
       return
     }
     await persistVoiceCapture(result)
@@ -607,11 +610,22 @@ export function FamilyStudioPage() {
 
       <div className="chat-shell">
         {recording && (
-          <div className="recording-banner" role="status" aria-live="polite">
+          <div
+            className={`recording-banner ${nearLimit ? 'near-limit' : ''}`}
+            role="status"
+            aria-live="polite"
+          >
             <span className="recording-dot" aria-hidden />
             <div className="recording-copy">
-              <strong>正在录音</strong>
-              <span>说完后点下方「结束录音」（最长约 {Math.round(maxMs / 1000)} 秒）</span>
+              <strong>
+                正在录音 {formatClock(elapsedMs)}
+                <span className="recording-max"> / {formatClock(maxMs)}</span>
+              </strong>
+              <span>
+                {nearLimit
+                  ? `还剩 ${formatClock(remainingMs)}，将自动结束并保存`
+                  : '说完后点下方「结束录音」'}
+              </span>
             </div>
           </div>
         )}

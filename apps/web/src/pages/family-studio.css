@@ -215,6 +215,25 @@
   border-bottom: 1px solid rgba(196, 59, 42, 0.15);
 }
 
+.recording-banner.near-limit {
+  background: linear-gradient(90deg, #ffd0c0, #ffe8c8);
+  border-bottom-color: rgba(180, 80, 20, 0.28);
+}
+
+.recording-banner.near-limit .recording-copy strong {
+  color: #9a3a18;
+}
+
+.recording-max {
+  font-weight: 600;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.recording-banner .recording-copy strong {
+  font-variant-numeric: tabular-nums;
+}
+
 .transcribe-banner {
   display: flex;
   align-items: center;

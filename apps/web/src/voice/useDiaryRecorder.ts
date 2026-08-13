@@ -1,13 +1,17 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isMicAllowedByBrowser } from './secureContext'
 
 export type DiaryRecordCapture = {
   blob?: Blob
   error?: 'insecure' | 'denied' | 'unsupported' | 'empty' | 'unknown' | 'too_long'
+  /** True when stopped by the max-duration timer (or at/over the cap). */
+  hitLimit?: boolean
 }
 
-/** Allow longer diary stories; audio is stored in IndexedDB, not localStorage. */
-export const DIARY_MAX_RECORD_MS = 180_000
+/** Diary clips live in IndexedDB; several minutes is fine for quota. */
+export const DIARY_MAX_RECORD_MS = 300_000
+/** Soft warning window before auto-stop. */
+export const DIARY_WARN_REMAINING_MS = 20_000
 
 type Options = {
   /** Fired when the max-duration timer ends the take (so UI can still save). */
@@ -19,12 +23,14 @@ type Options = {
  */
 export function useDiaryRecorder(opts: Options = {}) {
   const [recording, setRecording] = useState(false)
+  const [elapsedMs, setElapsedMs] = useState(0)
   const mediaRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const activeRef = useRef(false)
   const startedAtRef = useRef(0)
   const timerRef = useRef<number | null>(null)
+  const tickRef = useRef<number | null>(null)
   const onAutoStopRef = useRef(opts.onAutoStop)
   onAutoStopRef.current = opts.onAutoStop
 
@@ -40,15 +46,25 @@ export function useDiaryRecorder(opts: Options = {}) {
     }
   }
 
+  const clearTick = () => {
+    if (tickRef.current != null) {
+      window.clearInterval(tickRef.current)
+      tickRef.current = null
+    }
+  }
+
   const stop = useCallback(async (): Promise<DiaryRecordCapture> => {
     clearTimer()
+    clearTick()
     if (!activeRef.current && !mediaRef.current) {
       setRecording(false)
+      setElapsedMs(0)
       return { error: 'empty' }
     }
     activeRef.current = false
     const recorder = mediaRef.current
     mediaRef.current = null
+    const elapsed = Date.now() - startedAtRef.current
     let blob: Blob | undefined
     if (recorder && recorder.state !== 'inactive') {
       blob =
@@ -68,8 +84,13 @@ export function useDiaryRecorder(opts: Options = {}) {
     }
     release()
     setRecording(false)
+    setElapsedMs(0)
     if (!blob) return { error: 'empty' }
-    return { blob }
+    const hitLimit = elapsed >= DIARY_MAX_RECORD_MS - 50
+    return {
+      blob,
+      ...(hitLimit ? { hitLimit: true, error: 'too_long' as const } : {}),
+    }
   }, [])
 
   const start = useCallback(async (): Promise<DiaryRecordCapture | null> => {
@@ -78,6 +99,7 @@ export function useDiaryRecorder(opts: Options = {}) {
 
     activeRef.current = true
     setRecording(true)
+    setElapsedMs(0)
     chunksRef.current = []
 
     try {
@@ -102,18 +124,20 @@ export function useDiaryRecorder(opts: Options = {}) {
       startedAtRef.current = Date.now()
       recorder.start(250)
       clearTimer()
+      clearTick()
+      tickRef.current = window.setInterval(() => {
+        setElapsedMs(Math.min(DIARY_MAX_RECORD_MS, Date.now() - startedAtRef.current))
+      }, 200)
       timerRef.current = window.setTimeout(() => {
         void stop().then((cap) => {
-          const withFlag: DiaryRecordCapture = cap.blob
-            ? { ...cap, error: 'too_long' }
-            : cap
-          onAutoStopRef.current?.(withFlag)
+          onAutoStopRef.current?.(cap.blob ? { ...cap, hitLimit: true, error: 'too_long' } : cap)
         })
       }, DIARY_MAX_RECORD_MS)
       return null
     } catch (err) {
       activeRef.current = false
       setRecording(false)
+      setElapsedMs(0)
       release()
       const name = err instanceof DOMException ? err.name : ''
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
@@ -124,19 +148,22 @@ export function useDiaryRecorder(opts: Options = {}) {
     }
   }, [stop])
 
+  useEffect(() => () => {
+    clearTimer()
+    clearTick()
+  }, [])
+
   const toggle = useCallback(async (): Promise<'started' | DiaryRecordCapture> => {
     if (recording || activeRef.current) {
-      const elapsed = Date.now() - startedAtRef.current
-      const cap = await stop()
-      if (elapsed >= DIARY_MAX_RECORD_MS && cap.blob) {
-        return { ...cap, error: 'too_long' }
-      }
-      return cap
+      return stop()
     }
     const early = await start()
     if (early?.error) return early
     return 'started'
   }, [recording, start, stop])
+
+  const remainingMs = Math.max(0, DIARY_MAX_RECORD_MS - elapsedMs)
+  const nearLimit = recording && remainingMs <= DIARY_WARN_REMAINING_MS
 
   return {
     recording,
@@ -144,5 +171,15 @@ export function useDiaryRecorder(opts: Options = {}) {
     stop,
     toggle,
     maxMs: DIARY_MAX_RECORD_MS,
+    elapsedMs,
+    remainingMs,
+    nearLimit,
   }
+}
+
+export function formatClock(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
 }

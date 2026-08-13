@@ -180,7 +180,7 @@
 | 场景 | 录音 | 识别 | 说明 |
 |------|------|------|------|
 | **官方/家庭关卡口语** | `usePressToTalk`（约 3.5s） | 浏览器 SpeechRecognition（en-US）为主，录音可交 `/api/asr` | 文档规划关卡侧可接 **Vosk**；**当前仓库 apps 内尚无 Vosk 实现** |
-| **家庭日记气泡** | `useDiaryRecorder`（最长约 180s） | Capacitor **端侧 Whisper**（`diaryAsr` → `DiaryWhisper`） | **不**把日记默认送到云端 OpenAI；浏览器仅可录音 + 手改字 |
+| **家庭日记气泡** | `useDiaryRecorder`（最长约 5 分钟，临近上限倒计时提醒） | Capacitor **端侧 Whisper**（`diaryAsr` → `DiaryWhisper`） | **不**把日记默认送到云端 OpenAI；浏览器仅可录音 + 手改字 |
 
 ### 7.1 TTS
 
@@ -230,7 +230,7 @@
 |-----------------|------|
 | `ai-english-progress-v2` | 主题进度、星星、每日时长 |
 | `ai-english-progress-v1` | 遗留，加载时迁移 |
-| `ai-english-family-v1` | 家庭日记消息/音频 data URL、生成关、DeepSeek Key |
+| `ai-english-family-v1` | 家庭日记消息元数据、生成关、DeepSeek Key（音频在 IndexedDB） |
 | `ai-english-voice-prefs-v1` | TTS 人设、微调与引擎（piper/system） |
 
 关卡与美术为静态资源；API 无状态（不落用户库）。
