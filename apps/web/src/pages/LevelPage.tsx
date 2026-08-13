@@ -16,6 +16,11 @@ import { loadVoicePrefs } from '../voice/prefs'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import { BeepTalkPanel } from './BeepTalkPanel'
+import { ClearCeremonyOverlay } from './ClearCeremonyOverlay'
+import {
+  clearCeremonyTtsLine,
+  resolveCeremonyStickerSrc,
+} from './clearCeremony'
 import './level.css'
 
 const MAX_RETRIES = 2
@@ -27,6 +32,7 @@ const ENCOURAGE = [
   'Good effort! Say it once more!',
   'No worries! One more time!',
 ]
+const CLEAR_PULSE_MS = 25_000
 
 type MicTip = 'insecure' | 'denied' | 'empty' | 'listening' | null
 
@@ -79,7 +85,7 @@ export function LevelPage({ onProgress }: Props) {
   const [packId, setPackId] = useState(search.get('pack') || '')
   const [beatIndex, setBeatIndex] = useState(0)
   const [phase, setPhase] = useState<
-    'speak' | 'listen' | 'find' | 'fallback' | 'celebrate' | 'beepTalk'
+    'speak' | 'listen' | 'find' | 'fallback' | 'celebrate' | 'beepTalk' | 'clearCeremony'
   >('speak')
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -90,9 +96,14 @@ export function LevelPage({ onProgress }: Props) {
   const [resultFlash, setResultFlash] = useState<ResultFlash | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
+  const [exitConfirm, setExitConfirm] = useState(false)
+  const [pulseContinue, setPulseContinue] = useState(false)
+  const [nextLevelId, setNextLevelId] = useState<string | undefined>()
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const startedAt = useRef(Date.now())
   const beatIndexRef = useRef(0)
+  const settledRef = useRef(false)
+  const cheerIndexRef = useRef(0)
   const { recording, toggleListen, cancelAutoStop, nativeVosk } = usePressToTalk()
 
   const goMap = useCallback(() => {
@@ -151,6 +162,10 @@ export function LevelPage({ onProgress }: Props) {
     setPhase('speak')
     setSceneReady(false)
     setVideoPlaying(false)
+    setExitConfirm(false)
+    setPulseContinue(false)
+    setNextLevelId(undefined)
+    settledRef.current = false
     startedAt.current = Date.now()
     const hinted = search.get('pack')
     Promise.all([
@@ -210,61 +225,84 @@ export function LevelPage({ onProgress }: Props) {
     startedAt.current = Date.now()
   }, [onProgress])
 
-  const finishLevel = useCallback(
+  const requestExit = useCallback(() => {
+    persistPlayTime()
+    if (settledRef.current) {
+      setExitConfirm(true)
+      return
+    }
+    goMap()
+  }, [goMap, persistPlayTime])
+
+  const leaveAfterClear = useCallback(
+    (nextId: string | undefined) => {
+      if (!packId) {
+        goMap()
+        return
+      }
+      const limited = isDailyLimitReached(loadProgress())
+      if (nextId && !limited) {
+        navigate(`/level/${nextId}?pack=${packId}`, { replace: true })
+      } else {
+        navigate(`/map/${packId}`)
+      }
+    },
+    [goMap, navigate, packId],
+  )
+
+  const enterClearCeremony = useCallback(
     async (current: LevelScript) => {
       if (!packId) return
-      setPhase('celebrate')
+      setVoiceStatus(null)
+      setResultFlash(null)
+      setRetries(0)
+      setExitConfirm(false)
+      setPulseContinue(false)
+      setPhase('clearCeremony')
+
       const all = await loadApprovedLevels(packId)
       const idx = all.findIndex((l) => l.id === current.id)
       const nextId = all[idx + 1]?.id
-      const next = completeLevel(
-        loadProgress(),
-        packId,
-        current.id,
-        nextId,
-        current.reward.sticker,
-        current.reward.stars,
-      )
-      onProgress(next)
-      persistPlayTime()
-      await requestTts('Yay!')
-      const limited = isDailyLimitReached(loadProgress())
-      window.setTimeout(() => {
-        if (nextId && !limited) {
-          navigate(`/level/${nextId}?pack=${packId}`, { replace: true })
-        } else {
-          navigate(`/map/${packId}`)
-        }
-      }, 1200)
+      setNextLevelId(nextId)
+
+      if (!settledRef.current) {
+        settledRef.current = true
+        const next = completeLevel(
+          loadProgress(),
+          packId,
+          current.id,
+          nextId,
+          current.reward.sticker,
+          current.reward.stars,
+        )
+        onProgress(next)
+        persistPlayTime()
+      }
+
+      const line = clearCeremonyTtsLine(current, cheerIndexRef.current++)
+      await requestTts(line)
     },
-    [navigate, onProgress, packId, persistPlayTime],
+    [onProgress, packId, persistPlayTime],
   )
 
   const advance = useCallback(async () => {
     if (!level) return
     if (beatIndexRef.current >= level.beats.length - 1) {
-      if (level.beep_talk?.start && level.beep_talk.nodes?.[level.beep_talk.start]) {
-        setRetries(0)
-        setVoiceStatus(null)
-        setResultFlash(null)
-        setPhase('beepTalk')
-        return
-      }
-      await finishLevel(level)
+      await enterClearCeremony(level)
       return
     }
     setRetries(0)
     setVoiceStatus(null)
     setResultFlash(null)
     setBeatIndex((i) => i + 1)
-  }, [finishLevel, level])
+  }, [enterClearCeremony, level])
 
   const beat = level?.beats[beatIndex]
 
   useEffect(() => {
     if (!beat || !level || !sceneReady) return
-    // Beep 尾声由 BeepTalkPanel 自己播报，勿再跑 Bunny 拍逻辑
-    if (phase === 'beepTalk') return
+    // Beep / 通关仪式不跑 Bunny 拍逻辑
+    if (phase === 'beepTalk' || phase === 'clearCeremony') return
     let cancelled = false
     let timer: number | undefined
     ;(async () => {
@@ -289,9 +327,18 @@ export function LevelPage({ onProgress }: Props) {
       if (timer) window.clearTimeout(timer)
       void cancelSpeak()
     }
-    // phase 有意不进依赖：仅在拍切换时播报；beepTalk 时提前 return
+    // phase 有意不进依赖：仅在拍切换时播报；beepTalk/clearCeremony 时提前 return
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [advance, beat, level, sceneReady])
+
+  useEffect(() => {
+    if (phase !== 'clearCeremony') {
+      setPulseContinue(false)
+      return
+    }
+    const t = window.setTimeout(() => setPulseContinue(true), CLEAR_PULSE_MS)
+    return () => window.clearTimeout(t)
+  }, [phase])
 
   async function playSuccess() {
     const line =
@@ -567,6 +614,10 @@ export function LevelPage({ onProgress }: Props) {
   if (sceneReady && !beat) return <div className="screen loading-dot" />
 
   const hasVideo = Boolean(level.scene.video)
+  const hasBeepTalk = Boolean(
+    level.beep_talk?.start && level.beep_talk.nodes?.[level.beep_talk.start],
+  )
+  const inClearFlow = phase === 'clearCeremony' || phase === 'beepTalk'
   const tipText =
     micTip === 'insecure'
       ? Capacitor.isNativePlatform()
@@ -608,10 +659,7 @@ export function LevelPage({ onProgress }: Props) {
 
       <button
         className="exit-btn"
-        onClick={() => {
-          persistPlayTime()
-          goMap()
-        }}
+        onClick={requestExit}
         aria-label="exit"
       />
 
@@ -625,10 +673,55 @@ export function LevelPage({ onProgress }: Props) {
       )}
 
       {sceneReady && phase === 'beepTalk' && level.beep_talk && (
-        <BeepTalkPanel talk={level.beep_talk} onComplete={() => void finishLevel(level)} />
+        <BeepTalkPanel
+          talk={level.beep_talk}
+          onComplete={() => {
+            setPhase('clearCeremony')
+            setPulseContinue(false)
+          }}
+        />
       )}
 
-      {sceneReady && phase !== 'beepTalk' && (
+      {sceneReady && phase === 'clearCeremony' && (
+        <ClearCeremonyOverlay
+          stickerSrc={resolveCeremonyStickerSrc(level)}
+          showBeepEntry={hasBeepTalk}
+          pulseContinue={pulseContinue}
+          onContinue={() => leaveAfterClear(nextLevelId)}
+          onBeep={() => {
+            setPulseContinue(false)
+            setPhase('beepTalk')
+          }}
+        />
+      )}
+
+      {exitConfirm && (
+        <div className="clear-exit-confirm" role="dialog" aria-label="confirm exit">
+          <div className="clear-exit-confirm__row">
+            <button
+              type="button"
+              className="clear-exit-confirm__btn clear-exit-confirm__btn--yes"
+              aria-label="confirm"
+              onClick={() => {
+                setExitConfirm(false)
+                goMap()
+              }}
+            >
+              ✓
+            </button>
+            <button
+              type="button"
+              className="clear-exit-confirm__btn clear-exit-confirm__btn--no"
+              aria-label="cancel"
+              onClick={() => setExitConfirm(false)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sceneReady && !inClearFlow && (
         <>
           <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
           {beat?.show && phase !== 'find' && (
