@@ -32,9 +32,9 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
   const [phase, setPhase] = useState<'speak' | 'listen' | 'fallback' | 'celebrate'>('speak')
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [showDevType, setShowDevType] = useState(false)
+  const [showDevPanel, setShowDevPanel] = useState(false)
   const [devText, setDevText] = useState('')
-  const [statusLines, setStatusLines] = useState<string[]>([])
+  const [debugLines, setDebugLines] = useState<string[]>([])
   const [celeb, setCeleb] = useState<{
     variant: CelebrateVariant
     title: string
@@ -52,7 +52,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       setBusy(true)
       setPhase('speak')
       setRetries(0)
-      setStatusLines([`Beep: ${node.robot_say}`])
+      setDebugLines([`Beep: ${node.robot_say}`])
       await requestTts(node.robot_say)
       if (cancelled) return
       setPhase('listen')
@@ -86,7 +86,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       const line = pickBeepSuccessLine(node.success_say)
       const variant = pickCelebrateVariant()
       setPhase('celebrate')
-      setStatusLines([line])
+      setDebugLines([line])
       setCeleb({
         variant,
         title: celebrateTitleFor(variant),
@@ -125,13 +125,13 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
     setBusy(true)
     try {
       if (capture.error || (!capture.transcript && !capture.blob)) {
-        setStatusLines(['没有听到，请再试或点图'])
+        setDebugLines(['没有听到，请再试或点图'])
         if (node.fallback?.options?.length) setPhase('fallback')
         else await onOralResult(false)
         return
       }
       if (Capacitor.isNativePlatform() && !capture.transcript?.trim()) {
-        setStatusLines(['没听清，请再说一次'])
+        setDebugLines(['没听清，请再说一次'])
         await onOralResult(false)
         return
       }
@@ -141,14 +141,14 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
         expect: node.expect,
       })
       const heard = (result.transcript || capture.transcript || '').trim()
-      setStatusLines(
+      setDebugLines(
         heard
           ? [`听到了：「${heard}」`, result.matched ? '匹配成功' : '再试试']
           : ['没有识别到文字'],
       )
       await onOralResult(Boolean(heard && result.matched))
     } catch (err) {
-      setStatusLines([err instanceof Error ? err.message : String(err)])
+      setDebugLines([err instanceof Error ? err.message : String(err)])
       if (node.fallback?.options?.length) setPhase('fallback')
     } finally {
       setBusy(false)
@@ -165,8 +165,8 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       { grammarWords: node.expect, listenMs: BEEP_LISTEN_MS },
     )
     if (result === 'started') {
-      setShowDevType(false)
-      setStatusLines([
+      setShowDevPanel(false)
+      setDebugLines([
         nativeVosk ? 'Beep 在听（离线）…' : 'Beep 在听…',
         `可以说：${node.expect.join(' / ')}`,
       ])
@@ -241,14 +241,6 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
         />
       )}
 
-      {statusLines.length > 0 && (
-        <div className="voice-status voice-status--info" role="status">
-          {statusLines.map((line) => (
-            <div key={line}>{line}</div>
-          ))}
-        </div>
-      )}
-
       {phase === 'listen' && !recording && (
         <div className="mic-tip" role="status">
           点麦克风和 Beep 说英语～
@@ -289,20 +281,39 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
         <div className="burst" />
       ) : null}
 
-      <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
+      <button
+        className={`dev-toggle ${showDevPanel ? 'on' : ''}`}
+        onClick={() => setShowDevPanel((v) => !v)}
+        type="button"
+        aria-label="parent debug"
+        aria-expanded={showDevPanel}
+      >
         ·
       </button>
-      {showDevType && phase === 'listen' && (
-        <div className="dev-type">
-          <input
-            value={devText}
-            onChange={(e) => setDevText(e.target.value)}
-            placeholder={node.expect[0] || 'word'}
-            aria-label="type word"
-          />
-          <button type="button" onClick={() => void handleDevSubmit()}>
-            OK
-          </button>
+      {showDevPanel && (
+        <div className="voice-debug-panel" role="region" aria-label="voice debug">
+          {debugLines.length > 0 ? (
+            <div className="voice-status voice-status--info">
+              {debugLines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          ) : (
+            <div className="voice-debug-panel__empty">暂无识别调试信息</div>
+          )}
+          {phase === 'listen' && (
+            <div className="dev-type dev-type--in-panel">
+              <input
+                value={devText}
+                onChange={(e) => setDevText(e.target.value)}
+                placeholder={node.expect[0] || 'word'}
+                aria-label="type word"
+              />
+              <button type="button" onClick={() => void handleDevSubmit()}>
+                OK
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
