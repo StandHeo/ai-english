@@ -1,0 +1,80 @@
+.coplay-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(28, 22, 16, 0.42);
+  box-sizing: border-box;
+}
+
+.coplay-intro__card {
+  width: min(92vw, 360px);
+  padding: 28px 22px 22px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 210, 120, 0.55), transparent 42%),
+    linear-gradient(165deg, #fffaf0 0%, #eef8ff 100%);
+  box-shadow: 0 18px 40px rgba(40, 28, 12, 0.28);
+  text-align: center;
+  animation: coplay-pop 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.coplay-intro__brand {
+  margin: 0 0 14px;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #2a4a3a;
+}
+
+.coplay-intro__steps {
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  color: #3d4a40;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.coplay-intro__steps li {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.coplay-intro__emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+  width: 1.6em;
+  text-align: center;
+}
+
+.coplay-intro__go {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 28px;
+  min-width: 160px;
+  background: #2f9e55;
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(30, 120, 60, 0.28);
+}
+
+@keyframes coplay-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

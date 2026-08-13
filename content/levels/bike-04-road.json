@@ -25,7 +25,10 @@
       "expect": [
         "road bike",
         "a road bike",
-        "road"
+        "road",
+        "bike",
+        "a bike",
+        "the bike"
       ],
       "hint_say": "Road bike!",
       "success_say": "Cool!",
@@ -52,7 +55,10 @@
       "expect": [
         "road bike",
         "a road bike",
-        "road"
+        "road",
+        "bike",
+        "a bike",
+        "the bike"
       ],
       "hint_say": "Road bike!",
       "success_say": "Yes!",
@@ -92,7 +98,9 @@
           "road bike",
           "road",
           "bike",
-          "a road bike"
+          "a road bike",
+          "a bike",
+          "the bike"
         ],
         "hint_say": "Say road bike!",
         "success_say": "Yes! Road bike!",
@@ -121,7 +129,9 @@
           "road bike",
           "road",
           "bike",
-          "a road bike"
+          "a road bike",
+          "a bike",
+          "the bike"
         ],
         "hint_say": "Say road bike!",
         "success_say": "Great road bike!",

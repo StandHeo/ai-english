@@ -25,7 +25,10 @@
       "expect": [
         "mountain bike",
         "a mountain bike",
-        "mountain"
+        "mountain",
+        "bike",
+        "a bike",
+        "the bike"
       ],
       "hint_say": "Mountain bike!",
       "success_say": "Wow!",
@@ -52,7 +55,10 @@
       "expect": [
         "mountain",
         "mountain bike",
-        "a mountain bike"
+        "a mountain bike",
+        "bike",
+        "a bike",
+        "the bike"
       ],
       "hint_say": "Mountain!",
       "success_say": "Great!",
@@ -92,7 +98,9 @@
           "mountain bike",
           "mountain",
           "bike",
-          "a mountain bike"
+          "a mountain bike",
+          "a bike",
+          "the bike"
         ],
         "hint_say": "Say mountain bike!",
         "success_say": "Yes! Mountain bike!",
@@ -121,7 +129,9 @@
           "mountain bike",
           "mountain",
           "bike",
-          "a mountain bike"
+          "a mountain bike",
+          "a bike",
+          "the bike"
         ],
         "hint_say": "Say mountain bike!",
         "success_say": "Great mountain bike!",
