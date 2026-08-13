@@ -13,6 +13,7 @@ import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import { ensurePiperReady } from '../voice/piperTts'
 import { loadVoicePrefs } from '../voice/prefs'
+import { playFailSfx, playSuccessSfx } from '../voice/sfx'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import { BeepTalkPanel } from './BeepTalkPanel'
@@ -26,12 +27,6 @@ import './level.css'
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
 const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
-const ENCOURAGE = [
-  'Nice try! You can do it!',
-  'Almost! Try again!',
-  'Good effort! Say it once more!',
-  'No worries! One more time!',
-]
 const CLEAR_PULSE_MS = 25_000
 
 type MicTip = 'insecure' | 'denied' | 'empty' | 'listening' | null
@@ -345,16 +340,18 @@ export function LevelPage({ onProgress }: Props) {
       beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
     setPhase('celebrate')
     setResultFlash({ kind: 'ok', title: '太棒了！', line })
+    // 先设计成功音效，再短读成功句（奖励在「叮」不在长鼓励）
+    await playSuccessSfx()
     await requestTts(line)
-    await sleep(700)
+    await sleep(400)
     setResultFlash(null)
   }
 
-  async function playRetryEncourage() {
-    const line = ENCOURAGE[retries % ENCOURAGE.length] || 'Nice try! Try again!'
-    setResultFlash({ kind: 'retry', title: '再试一次～', line })
-    await requestTts(line)
-    await sleep(500)
+  /** 失败只播「嘟嘟嘟」，不再用有趣的鼓励 TTS（避免孩子故意选错刷音效） */
+  async function playFailFeedback() {
+    setResultFlash({ kind: 'retry', title: '再试一次～', line: '' })
+    await playFailSfx()
+    await sleep(200)
     setResultFlash(null)
   }
 
@@ -366,7 +363,7 @@ export function LevelPage({ onProgress }: Props) {
     }
     const nextRetry = retries + 1
     setBusy(true)
-    await playRetryEncourage()
+    await playFailFeedback()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
       await requestTts(beat?.hint_say || beat?.npc_say || '')
@@ -592,7 +589,7 @@ export function LevelPage({ onProgress }: Props) {
     if (!correct) {
       const nextRetry = retries + 1
       setBusy(true)
-      await playRetryEncourage()
+      await playFailFeedback()
       if (phase === 'find' && nextRetry < MAX_RETRIES) {
         setRetries(nextRetry)
         await requestTts(beat?.hint_say || beat?.expect?.[0] || beat?.npc_say || '')

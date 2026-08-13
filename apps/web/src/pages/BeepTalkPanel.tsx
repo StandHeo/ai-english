@@ -2,16 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { assetUrl } from '../content/loader'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
+import { playFailSfx, playSuccessSfx } from '../voice/sfx'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { BeepTalk, TalkNode } from '../types'
 
 const MAX_RETRIES = 2
 const BEEP_LISTEN_MS = 5000
-const ENCOURAGE = [
-  'Nice try! You can do it!',
-  'Almost! Try again!',
-  'Good effort! Say it once more!',
-]
 
 type Props = {
   talk: BeepTalk
@@ -78,6 +74,8 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       const line = node.success_say || 'Beep! Yes!'
       setPhase('celebrate')
       setStatusLines([line])
+      // 对了：设计成功音效 + 短成功句；错了绝不用好玩的鼓励语
+      await playSuccessSfx()
       await requestTts(line)
       await sleep(500)
       goNext(false)
@@ -85,8 +83,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
     }
     const nextRetry = retries + 1
     setBusy(true)
-    const encourage = ENCOURAGE[retries % ENCOURAGE.length] || 'Nice try!'
-    await requestTts(encourage)
+    await playFailSfx()
     if (nextRetry < MAX_RETRIES) {
       setRetries(nextRetry)
       await requestTts(node.hint_say || node.robot_say)
@@ -176,12 +173,13 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
   async function onPick(correct: boolean) {
     setBusy(true)
     if (!correct) {
-      await requestTts(node?.hint_say || node?.expect?.[0] || 'Try again!')
+      await playFailSfx()
       setBusy(false)
       return
     }
     const line = node?.success_say || 'Beep! Yes!'
     setPhase('celebrate')
+    await playSuccessSfx()
     await requestTts(line)
     await sleep(400)
     setBusy(false)
