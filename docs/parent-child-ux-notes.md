@@ -17,9 +17,9 @@
 ```text
 理想共玩闭环
 
-选关 → 听 / 找 / 说 → （可选 Beep）→ 看见贴纸仪式 → 点一下再继续
-         ↑                                    ↑
-    成功率要高                           奖赏要被看见
+选关 → 听 / 找 / 说 → 通关贴纸仪式（结算）→ （可选 Beep）→ 点 ▶ 再继续
+         ↑                      ↑
+    成功率要高              奖赏要被看见
 ```
 
 ---
@@ -248,7 +248,7 @@
 6. 首次共玩引导与限额文案（可与 C 合并）  
 7. 家长生成链路减负（B）
 
-真正开做前：用 OpenSpec `/opsx-propose` 立 change。建议「中等仪式 + T2 布局 + T7=D」同一 change 或紧挨着的两个 change；**不要**做自动连玩开关，**不要**仪式内双主按钮。
+真正开做：OpenSpec change **`level-clear-ceremony`**（`openspec/changes/level-clear-ceremony/`）。实现请用 `/opsx-apply`。
 
 ---
 
