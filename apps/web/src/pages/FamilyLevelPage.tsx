@@ -8,6 +8,7 @@ import {
 } from '../family/store'
 import { addPlaySeconds, loadProgress, saveProgress } from '../progress/store'
 import { requestTts, submitSpeech } from '../voice/client'
+import { pickSuccessSpeakLine } from '../voice/cheers'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
@@ -21,7 +22,6 @@ import {
 import './level.css'
 
 const MAX_RETRIES = 2
-const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
 
 type Props = {
   onProgress: (p: ProgressState) => void
@@ -136,7 +136,10 @@ export function FamilyLevelPage({ onProgress }: Props) {
   }, [advance, beat, level])
 
   async function playSuccess() {
-    const line = beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    const line = pickSuccessSpeakLine({
+      successSay: beat?.success_say,
+      expect: beat?.expect,
+    })
     const variant = pickCelebrateVariant()
     setPhase('celebrate')
     setCeleb({

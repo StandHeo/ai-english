@@ -14,6 +14,7 @@ import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import { ensurePiperReady } from '../voice/piperTts'
 import { loadVoicePrefs } from '../voice/prefs'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
+import { pickSuccessSpeakLine } from '../voice/cheers'
 import { ensureVoskModel, isNativeVoskAvailable } from '../voice/voskNative'
 import type { LevelScript, ProgressState } from '../types'
 import { BeepTalkPanel } from './BeepTalkPanel'
@@ -32,7 +33,6 @@ import './level.css'
 
 const MAX_RETRIES = 2
 const DEFAULT_VIDEO_SECONDS = 5
-const CHEERS = ['Yay!', 'Wow!', 'Great!', 'Yum!', 'Super!']
 const CLEAR_PULSE_MS = 25_000
 /** 通关语音播完后再停留一会儿，自动进下一关（仍可用 ▶ 提前跳） */
 const CLEAR_AUTO_AFTER_TTS_MS = 2_400
@@ -377,8 +377,10 @@ export function LevelPage({ onProgress }: Props) {
   }, [])
 
   async function playSuccess() {
-    const line =
-      beat?.success_say || CHEERS[beatIndex % CHEERS.length] || 'Yay!'
+    const line = pickSuccessSpeakLine({
+      successSay: beat?.success_say,
+      expect: beat?.expect,
+    })
     const variant = pickCelebrateVariant()
     setPhase('celebrate')
     setResultFlash({

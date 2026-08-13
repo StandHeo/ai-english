@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { assetUrl } from '../content/loader'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { playFailSfx, playSuccessSfx } from '../voice/sfx'
+import { pickBeepSuccessLine } from '../voice/cheers'
 import { usePressToTalk, type TalkCapture } from '../voice/usePressToTalk'
 import type { BeepTalk, TalkNode } from '../types'
 import {
@@ -82,7 +83,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
   async function onOralResult(matched: boolean) {
     if (!node) return
     if (matched) {
-      const line = node.success_say || 'Beep! Yes!'
+      const line = pickBeepSuccessLine(node.success_say)
       const variant = pickCelebrateVariant()
       setPhase('celebrate')
       setStatusLines([line])
@@ -195,7 +196,7 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       setBusy(false)
       return
     }
-    const line = node?.success_say || 'Beep! Yes!'
+    const line = pickBeepSuccessLine(node?.success_say)
     const variant = pickCelebrateVariant()
     setPhase('celebrate')
     setCeleb({

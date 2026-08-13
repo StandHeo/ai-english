@@ -1,6 +1,5 @@
 import type { LevelScript } from '../types'
-
-const CHEERS = ['Yay', 'Wow', 'Great', 'Super'] as const
+import { pickCeremonyCheer } from '../voice/cheers'
 
 const STAR_PLACEHOLDER =
   "data:image/svg+xml," +
@@ -25,7 +24,7 @@ export function primaryWord(level: LevelScript): string | null {
 }
 
 export function clearCeremonyTtsLine(level: LevelScript, cheerIndex: number): string {
-  const cheer = CHEERS[Math.abs(cheerIndex) % CHEERS.length] || 'Yay'
+  const cheer = pickCeremonyCheer(cheerIndex)
   const word = primaryWord(level)
   if (!word) return `${cheer}!`
   const pretty = word
