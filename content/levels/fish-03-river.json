@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "By the River",
-  "target_words": ["river"],
+  "target_words": [
+    "river"
+  ],
   "scene": {
     "setting": "Our river bank with grass and blue sky",
     "image": "assets/scenes/diaoyu1.jpeg",
@@ -22,22 +24,42 @@
       "hint_say": "River!",
       "success_say": "Yes! River!",
       "options": [
-        { "id": "river", "image": "assets/items/river.png", "correct": true },
-        { "id": "sky", "image": "assets/items/sky.png", "correct": false }
+        {
+          "id": "river",
+          "image": "assets/items/river.png",
+          "correct": true
+        },
+        {
+          "id": "sky",
+          "image": "assets/items/sky.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/river.png",
       "npc_say": "Where do fish swim?",
-      "expect": ["river", "a river", "the river"],
+      "expect": [
+        "river",
+        "a river",
+        "the river"
+      ],
       "hint_say": "River!",
       "success_say": "Yes! River!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "river", "image": "assets/items/river.png", "correct": true },
-          { "id": "grass", "image": "assets/items/grass.png", "correct": false }
+          {
+            "id": "river",
+            "image": "assets/items/river.png",
+            "correct": true
+          },
+          {
+            "id": "grass",
+            "image": "assets/items/grass.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +73,95 @@
     "sticker": "sticker-river",
     "stickerImage": "assets/items/river.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "river",
+          "a river",
+          "the river"
+        ],
+        "hint_say": "Say river!",
+        "success_say": "Yes! River!",
+        "show": "assets/items/river.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/river.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/sky.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say river?",
+        "expect": [
+          "river",
+          "a river",
+          "the river"
+        ],
+        "hint_say": "Say river!",
+        "success_say": "Great river!",
+        "show": "assets/items/river.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/river.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/grass.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, river friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/river.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/river.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

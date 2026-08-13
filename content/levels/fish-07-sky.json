@@ -3,7 +3,10 @@
   "approved": true,
   "theme": "fishing",
   "title": "Sky and Clouds",
-  "target_words": ["sky", "cloud"],
+  "target_words": [
+    "sky",
+    "cloud"
+  ],
   "scene": {
     "setting": "A blue sky over the river meadow",
     "image": "assets/scenes/sky-meadow.png",
@@ -22,22 +25,42 @@
       "hint_say": "Sky!",
       "success_say": "Yes! Sky!",
       "options": [
-        { "id": "sky", "image": "assets/items/sky.png", "correct": true },
-        { "id": "grass", "image": "assets/items/grass.png", "correct": false }
+        {
+          "id": "sky",
+          "image": "assets/items/sky.png",
+          "correct": true
+        },
+        {
+          "id": "grass",
+          "image": "assets/items/grass.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/cloud.png",
       "npc_say": "What is fluffy white?",
-      "expect": ["cloud", "a cloud", "clouds"],
+      "expect": [
+        "cloud",
+        "a cloud",
+        "clouds"
+      ],
       "hint_say": "Cloud!",
       "success_say": "Soft cloud!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "cloud", "image": "assets/items/cloud.png", "correct": true },
-          { "id": "river", "image": "assets/items/river.png", "correct": false }
+          {
+            "id": "cloud",
+            "image": "assets/items/cloud.png",
+            "correct": true
+          },
+          {
+            "id": "river",
+            "image": "assets/items/river.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -45,14 +68,25 @@
       "type": "ask",
       "show": "assets/items/sky.png",
       "npc_say": "What is blue up high?",
-      "expect": ["sky", "the sky"],
+      "expect": [
+        "sky",
+        "the sky"
+      ],
       "hint_say": "Sky!",
       "success_say": "Blue sky!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "sky", "image": "assets/items/sky.png", "correct": true },
-          { "id": "soup", "image": "assets/items/soup.png", "correct": false }
+          {
+            "id": "sky",
+            "image": "assets/items/sky.png",
+            "correct": true
+          },
+          {
+            "id": "soup",
+            "image": "assets/items/soup.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -66,5 +100,95 @@
     "sticker": "sticker-sky",
     "stickerImage": "assets/items/sky.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "sky",
+          "a sky",
+          "the sky"
+        ],
+        "hint_say": "Say sky!",
+        "success_say": "Yes! Sky!",
+        "show": "assets/items/sky.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/sky.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/grass.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "cloud",
+          "a cloud",
+          "the cloud"
+        ],
+        "hint_say": "Say cloud!",
+        "success_say": "Yes! Cloud!",
+        "show": "assets/items/cloud.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/cloud.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/sky.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, sky friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/sky.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/sky.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/cloud.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

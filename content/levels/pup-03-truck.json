@@ -72,5 +72,95 @@
     "sticker": "sticker-truck",
     "stickerImage": "assets/items/truck.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "truck",
+          "a truck",
+          "the truck"
+        ],
+        "hint_say": "Say truck!",
+        "success_say": "Yes! Truck!",
+        "show": "assets/items/truck.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/truck.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/badge.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say truck?",
+        "expect": [
+          "truck",
+          "a truck",
+          "the truck"
+        ],
+        "hint_say": "Say truck!",
+        "success_say": "Great truck!",
+        "show": "assets/items/truck.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/truck.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bone.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, truck friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/truck.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/truck.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fruits",
   "title": "Watermelon Patch",
-  "target_words": ["watermelon"],
+  "target_words": [
+    "watermelon"
+  ],
   "scene": {
     "setting": "A green watermelon patch",
     "image": "assets/scenes/watermelon-patch.svg",
@@ -20,13 +22,24 @@
       "type": "ask",
       "show": "assets/items/watermelon.svg",
       "npc_say": "What's this?",
-      "expect": ["watermelon", "a watermelon"],
+      "expect": [
+        "watermelon",
+        "a watermelon"
+      ],
       "hint_say": "Watermelon. Can you say watermelon?",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "watermelon", "image": "assets/items/watermelon.svg", "correct": true },
-          { "id": "orange", "image": "assets/items/orange.png", "correct": false }
+          {
+            "id": "watermelon",
+            "image": "assets/items/watermelon.svg",
+            "correct": true
+          },
+          {
+            "id": "orange",
+            "image": "assets/items/orange.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -34,13 +47,24 @@
       "type": "ask",
       "show": "assets/items/watermelon.svg",
       "npc_say": "Say watermelon!",
-      "expect": ["watermelon", "a watermelon"],
+      "expect": [
+        "watermelon",
+        "a watermelon"
+      ],
       "hint_say": "Watermelon!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "watermelon", "image": "assets/items/watermelon.svg", "correct": true },
-          { "id": "banana", "image": "assets/items/banana.png", "correct": false }
+          {
+            "id": "watermelon",
+            "image": "assets/items/watermelon.svg",
+            "correct": true
+          },
+          {
+            "id": "banana",
+            "image": "assets/items/banana.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -54,5 +78,95 @@
     "sticker": "sticker-watermelon",
     "stickerImage": "assets/items/watermelon.svg",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "watermelon",
+          "a watermelon",
+          "the watermelon"
+        ],
+        "hint_say": "Say watermelon!",
+        "success_say": "Yes! Watermelon!",
+        "show": "assets/items/watermelon.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/watermelon.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/orange.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say watermelon?",
+        "expect": [
+          "watermelon",
+          "a watermelon",
+          "the watermelon"
+        ],
+        "hint_say": "Say watermelon!",
+        "success_say": "Great watermelon!",
+        "show": "assets/items/watermelon.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/watermelon.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/banana.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, watermelon friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/watermelon.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/watermelon.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fruits",
   "title": "Strawberry Field",
-  "target_words": ["strawberry"],
+  "target_words": [
+    "strawberry"
+  ],
   "scene": {
     "setting": "A sunny strawberry field",
     "image": "assets/scenes/strawberry-field.svg",
@@ -20,13 +22,24 @@
       "type": "ask",
       "show": "assets/items/strawberry.svg",
       "npc_say": "What's this?",
-      "expect": ["strawberry", "a strawberry"],
+      "expect": [
+        "strawberry",
+        "a strawberry"
+      ],
       "hint_say": "Strawberry. Can you say strawberry?",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "strawberry", "image": "assets/items/strawberry.svg", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "strawberry",
+            "image": "assets/items/strawberry.svg",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -34,13 +47,24 @@
       "type": "ask",
       "show": "assets/items/strawberry.svg",
       "npc_say": "Say strawberry!",
-      "expect": ["strawberry", "a strawberry"],
+      "expect": [
+        "strawberry",
+        "a strawberry"
+      ],
       "hint_say": "Strawberry!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "strawberry", "image": "assets/items/strawberry.svg", "correct": true },
-          { "id": "grape", "image": "assets/items/grape.png", "correct": false }
+          {
+            "id": "strawberry",
+            "image": "assets/items/strawberry.svg",
+            "correct": true
+          },
+          {
+            "id": "grape",
+            "image": "assets/items/grape.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -54,5 +78,95 @@
     "sticker": "sticker-strawberry",
     "stickerImage": "assets/items/strawberry.svg",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "strawberry",
+          "a strawberry",
+          "the strawberry"
+        ],
+        "hint_say": "Say strawberry!",
+        "success_say": "Yes! Strawberry!",
+        "show": "assets/items/strawberry.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/strawberry.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say strawberry?",
+        "expect": [
+          "strawberry",
+          "a strawberry",
+          "the strawberry"
+        ],
+        "hint_say": "Say strawberry!",
+        "success_say": "Great strawberry!",
+        "show": "assets/items/strawberry.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/strawberry.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/grape.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, strawberry friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/strawberry.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/strawberry.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

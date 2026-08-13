@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "swimming",
   "title": "Breaststroke",
-  "target_words": ["breaststroke"],
+  "target_words": [
+    "breaststroke"
+  ],
   "scene": {
     "setting": "Swim lanes for learning strokes",
     "image": "assets/scenes/stroke-lanes.png",
@@ -22,22 +24,41 @@
       "hint_say": "Breaststroke!",
       "success_say": "Yes!",
       "options": [
-        { "id": "breaststroke", "image": "assets/items/breaststroke.png", "correct": true },
-        { "id": "backstroke", "image": "assets/items/backstroke.png", "correct": false }
+        {
+          "id": "breaststroke",
+          "image": "assets/items/breaststroke.png",
+          "correct": true
+        },
+        {
+          "id": "backstroke",
+          "image": "assets/items/backstroke.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/breaststroke.png",
       "npc_say": "What stroke is this?",
-      "expect": ["breaststroke", "breast stroke"],
+      "expect": [
+        "breaststroke",
+        "breast stroke"
+      ],
       "hint_say": "Breaststroke!",
       "success_say": "Great!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "breaststroke", "image": "assets/items/breaststroke.png", "correct": true },
-          { "id": "butterfly", "image": "assets/items/butterfly.png", "correct": false }
+          {
+            "id": "breaststroke",
+            "image": "assets/items/breaststroke.png",
+            "correct": true
+          },
+          {
+            "id": "butterfly",
+            "image": "assets/items/butterfly.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +72,95 @@
     "sticker": "sticker-breaststroke",
     "stickerImage": "assets/items/breaststroke.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "breaststroke",
+          "a breaststroke",
+          "the breaststroke"
+        ],
+        "hint_say": "Say breaststroke!",
+        "success_say": "Yes! Breaststroke!",
+        "show": "assets/items/breaststroke.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/breaststroke.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/backstroke.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say breaststroke?",
+        "expect": [
+          "breaststroke",
+          "a breaststroke",
+          "the breaststroke"
+        ],
+        "hint_say": "Say breaststroke!",
+        "success_say": "Great breaststroke!",
+        "show": "assets/items/breaststroke.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/breaststroke.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/butterfly.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, breaststroke friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/breaststroke.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/breaststroke.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

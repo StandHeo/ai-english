@@ -82,5 +82,97 @@
     "sticker": "sticker-mountain-bike",
     "stickerImage": "assets/items/mountain-bike.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "mountain bike",
+          "mountain",
+          "bike",
+          "a mountain bike"
+        ],
+        "hint_say": "Say mountain bike!",
+        "success_say": "Yes! Mountain bike!",
+        "show": "assets/items/mountain-bike.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/mountain-bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/road-bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say mountain bike?",
+        "expect": [
+          "mountain bike",
+          "mountain",
+          "bike",
+          "a mountain bike"
+        ],
+        "hint_say": "Say mountain bike!",
+        "success_say": "Great mountain bike!",
+        "show": "assets/items/mountain-bike.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/mountain-bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, mountain bike friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/mountain-bike.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/mountain-bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

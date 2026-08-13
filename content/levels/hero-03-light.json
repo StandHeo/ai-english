@@ -72,5 +72,95 @@
     "sticker": "sticker-light",
     "stickerImage": "assets/items/light.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "light",
+          "a light",
+          "the light"
+        ],
+        "hint_say": "Say light!",
+        "success_say": "Yes! Light!",
+        "show": "assets/items/light.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/light.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/shield.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say light?",
+        "expect": [
+          "light",
+          "a light",
+          "the light"
+        ],
+        "hint_say": "Say light!",
+        "success_say": "Great light!",
+        "show": "assets/items/light.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/light.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/kick.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, light friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/light.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/light.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

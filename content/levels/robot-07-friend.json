@@ -72,5 +72,95 @@
     "sticker": "sticker-robot-friend",
     "stickerImage": "assets/items/robot-friend.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "friend",
+          "a friend",
+          "the friend"
+        ],
+        "hint_say": "Say friend!",
+        "success_say": "Yes! Friend!",
+        "show": "assets/items/robot-friend.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/robot-friend.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say friend?",
+        "expect": [
+          "friend",
+          "a friend",
+          "the friend"
+        ],
+        "hint_say": "Say friend!",
+        "success_say": "Great friend!",
+        "show": "assets/items/robot-friend.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/robot-friend.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/wheel.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, friend friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/robot-friend.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/robot-friend.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

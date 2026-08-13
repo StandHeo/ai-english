@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import { apiJson, isNativeApp, missingNativeApiBase } from '../api/base'
+import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import {
   appendTextMessage,
   appendVoiceMessage,
@@ -29,8 +30,12 @@ import {
   diaryWhisperModelLabel,
   getDiaryWhisperModelId,
 } from '../voice/diaryWhisperModel'
-import { useDiaryRecorder } from '../voice/useDiaryRecorder'
-import { blobToDataUrl, blobToWav16kBase64 } from '../voice/wavEncode'
+import {
+  DIARY_MAX_RECORD_MS,
+  useDiaryRecorder,
+  type DiaryRecordCapture,
+} from '../voice/useDiaryRecorder'
+import { blobToWav16kBase64 } from '../voice/wavEncode'
 import './family-studio.css'
 
 export function FamilyStudioPage() {
@@ -52,7 +57,69 @@ export function FamilyStudioPage() {
   const [editText, setEditText] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const { recording, toggle } = useDiaryRecorder()
+  const savingVoiceRef = useRef(false)
+
+  async function persistVoiceCapture(result: DiaryRecordCapture) {
+    if (savingVoiceRef.current) return
+    if (result.error === 'insecure') {
+      setStatus('需要 https 才能录音，请用打字，或 npm run dev:phone')
+      return
+    }
+    if (result.error === 'denied') {
+      setStatus('请允许麦克风权限')
+      return
+    }
+    if (result.error === 'empty' || !result.blob) {
+      setStatus('没有录到声音，请再试或改用打字')
+      return
+    }
+    if (result.error === 'too_long') {
+      setStatus(`已到 ${Math.round(DIARY_MAX_RECORD_MS / 1000)} 秒上限，正在保存…`)
+    }
+
+    savingVoiceRef.current = true
+    const modelId = getDiaryWhisperModelId()
+    setBusy(true)
+    setTranscribing(true)
+    if (result.error !== 'too_long') {
+      setStatus(`正在转写（${diaryWhisperModelLabel(modelId)}）…`)
+    }
+    await new Promise<void>((r) => requestAnimationFrame(() => r()))
+
+    try {
+      let text = ''
+      try {
+        const wavBase64 = await blobToWav16kBase64(result.blob)
+        const asr = await transcribeDiaryAudio(wavBase64, 'zh', modelId)
+        if (asr.ok) {
+          text = asr.text
+          setAsrReady(true)
+          setAsrHint('')
+          setStatus(
+            `语音已转写（${diaryWhisperModelLabel(asr.modelId)}），可点「改字」微调`,
+          )
+        } else {
+          setStatus(`${asr.message}（已保留录音，请点气泡改字）`)
+        }
+      } catch {
+        setStatus('转写准备失败，已保留录音，请手改文字')
+      }
+      const day = await appendVoiceMessage(date, { text, blob: result.blob })
+      setMessages(day.messages)
+    } catch {
+      setStatus('保存语音失败（存储空间可能不足，可删旧图或旧语音后重试）')
+    } finally {
+      setTranscribing(false)
+      setBusy(false)
+      savingVoiceRef.current = false
+    }
+  }
+
+  const { recording, toggle, maxMs } = useDiaryRecorder({
+    onAutoStop: (cap) => {
+      void persistVoiceCapture(cap)
+    },
+  })
 
   function reloadDay() {
     const day = ensureMessagesMigrated(date)
@@ -95,61 +162,13 @@ export function FamilyStudioPage() {
   }
 
   async function onVoiceToggle() {
-    if (busy || transcribing) return
+    if (busy || transcribing || savingVoiceRef.current) return
     const result = await toggle()
     if (result === 'started') {
-      setStatus('正在录音… 再点「结束录音」')
+      setStatus(`正在录音… 最长约 ${Math.round(maxMs / 1000)} 秒，再点「结束录音」`)
       return
     }
-    if (result.error === 'insecure') {
-      setStatus('需要 https 才能录音，请用打字，或 npm run dev:phone')
-      return
-    }
-    if (result.error === 'denied') {
-      setStatus('请允许麦克风权限')
-      return
-    }
-    if (result.error === 'empty' || !result.blob) {
-      setStatus('没有录到声音，请再试或改用打字')
-      return
-    }
-    if (result.error === 'too_long') {
-      setStatus('录音偏长，已截断保存；建议说短一点')
-    }
-
-    const modelId = getDiaryWhisperModelId()
-    setBusy(true)
-    setTranscribing(true)
-    setStatus(`正在转写（${diaryWhisperModelLabel(modelId)}）…`)
-    await new Promise<void>((r) => requestAnimationFrame(() => r()))
-
-    try {
-      const audioDataUrl = await blobToDataUrl(result.blob)
-      let text = ''
-      try {
-        const wavBase64 = await blobToWav16kBase64(result.blob)
-        const asr = await transcribeDiaryAudio(wavBase64, 'zh', modelId)
-        if (asr.ok) {
-          text = asr.text
-          setAsrReady(true)
-          setAsrHint('')
-          setStatus(
-            `语音已转写（${diaryWhisperModelLabel(asr.modelId)}），可点「改字」微调`,
-          )
-        } else {
-          setStatus(`${asr.message}（已保留录音，请点气泡改字）`)
-        }
-      } catch {
-        setStatus('转写准备失败，已保留录音，请手改文字')
-      }
-      const day = appendVoiceMessage(date, { text, audioDataUrl })
-      setMessages(day.messages)
-    } catch {
-      setStatus('保存语音失败')
-    } finally {
-      setTranscribing(false)
-      setBusy(false)
-    }
+    await persistVoiceCapture(result)
   }
 
   function startEdit(m: FamilyDiaryMessage) {
@@ -167,7 +186,7 @@ export function FamilyStudioPage() {
   }
 
   function removeMessage(m: FamilyDiaryMessage) {
-    const label = m.audioDataUrl ? '这条语音日记' : '这条文字'
+    const label = m.audioId || m.audioDataUrl ? '这条语音日记' : '这条文字'
     if (!window.confirm(`删除${label}？`)) return
     const day = deleteMessage(date, m.id)
     if (day) {
@@ -592,7 +611,7 @@ export function FamilyStudioPage() {
             <span className="recording-dot" aria-hidden />
             <div className="recording-copy">
               <strong>正在录音</strong>
-              <span>说完后点下方「结束录音」</span>
+              <span>说完后点下方「结束录音」（最长约 {Math.round(maxMs / 1000)} 秒）</span>
             </div>
           </div>
         )}
@@ -613,9 +632,16 @@ export function FamilyStudioPage() {
             <p className="chat-empty muted">今天还没有消息。打字或点语音说说孩子今天做了什么。</p>
           )}
           {messages.map((m) => (
-            <article key={m.id} className={`bubble ${m.audioDataUrl ? 'voice' : 'text'}`}>
-              {m.audioDataUrl && (
-                <audio controls preload="metadata" src={m.audioDataUrl} className="bubble-audio" />
+            <article
+              key={m.id}
+              className={`bubble ${m.audioId || m.audioDataUrl ? 'voice' : 'text'}`}
+            >
+              {(m.audioId || m.audioDataUrl) && (
+                <DiaryVoicePlayer
+                  audioId={m.audioId}
+                  audioDataUrl={m.audioDataUrl}
+                  className="bubble-audio"
+                />
               )}
               {editingId === m.id ? (
                 <div className="edit-box">
@@ -631,7 +657,7 @@ export function FamilyStudioPage() {
                 </div>
               ) : (
                 <>
-                  <p className="bubble-text">{m.text || (m.audioDataUrl ? '（待填写文字）' : '')}</p>
+                  <p className="bubble-text">{m.text || (m.audioId || m.audioDataUrl ? '（待填写文字）' : '')}</p>
                   <div className="bubble-actions">
                     <button type="button" className="bubble-edit" onClick={() => startEdit(m)}>
                       改字

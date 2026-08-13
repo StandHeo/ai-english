@@ -12,6 +12,63 @@ const store = new Map<string, string>()
   length: 0,
 }
 
+const idb = new Map<string, Blob>()
+
+class FakeReq<T> {
+  result: T
+  error: Error | null = null
+  onsuccess: ((ev: Event) => void) | null = null
+  onerror: ((ev: Event) => void) | null = null
+  constructor(result: T) {
+    this.result = result
+    queueMicrotask(() => this.onsuccess?.(new Event('success')))
+  }
+}
+
+class FakeTx {
+  oncomplete: (() => void) | null = null
+  onerror: (() => void) | null = null
+  error: Error | null = null
+  constructor(private mode: string) {}
+  objectStore() {
+    return {
+      put: (blob: Blob, id: string) => {
+        idb.set(id, blob)
+        queueMicrotask(() => this.oncomplete?.())
+        return new FakeReq(undefined)
+      },
+      get: (id: string) => new FakeReq(idb.get(id) ?? null),
+      delete: (id: string) => {
+        idb.delete(id)
+        queueMicrotask(() => this.oncomplete?.())
+        return new FakeReq(undefined)
+      },
+    }
+  }
+}
+
+class FakeDb {
+  objectStoreNames = { contains: () => true }
+  transaction(_store: string, mode: string) {
+    return new FakeTx(mode)
+  }
+  close() {}
+}
+
+;(globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = {
+  open: () => {
+    const req = {
+      result: new FakeDb() as unknown as IDBDatabase,
+      error: null as Error | null,
+      onsuccess: null as ((ev: Event) => void) | null,
+      onerror: null as ((ev: Event) => void) | null,
+      onupgradeneeded: null as ((ev: IDBVersionChangeEvent) => void) | null,
+    }
+    queueMicrotask(() => req.onsuccess?.(new Event('success')))
+    return req as unknown as IDBOpenDBRequest
+  },
+} as IDBFactory
+
 async function main() {
   const m = await import('../src/family/store.ts')
   const date = m.todayKey()
@@ -22,6 +79,7 @@ async function main() {
   if (!day.story.includes('公园') || !day.story.includes('滑梯')) throw new Error('merge')
 
   store.clear()
+  idb.clear()
   const raw = {
     version: 1,
     days: {
@@ -43,10 +101,18 @@ async function main() {
     throw new Error('migrate')
   }
 
-  m.appendVoiceMessage(date, { text: '语音一句', audioDataUrl: 'data:audio/webm;base64,AAA' })
+  await m.appendVoiceMessage(date, {
+    text: '语音一句',
+    blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'audio/webm' }),
+  })
   const voiceDays = m.listDaysWithVoice()
   if (!voiceDays.includes(date)) throw new Error('voice list')
-  console.log('SMOKE_OK', { msgs: day.messages.length, voiceDays })
+  const saved = m.getDay(date)!
+  const voice = saved.messages.find((x) => x.audioId)
+  if (!voice?.audioId) throw new Error('audioId missing')
+  if (voice.audioDataUrl) throw new Error('should not embed data url')
+  if (!idb.has(voice.audioId)) throw new Error('clip missing in idb')
+  console.log('SMOKE_OK', { msgs: day.messages.length, voiceDays, audioId: voice.audioId })
 }
 
 main().catch((e) => {

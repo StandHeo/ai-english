@@ -80,5 +80,95 @@
     "sticker": "sticker-pear",
     "stickerImage": "assets/items/pear.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "pear",
+          "a pear",
+          "the pear"
+        ],
+        "hint_say": "Say pear!",
+        "success_say": "Yes! Pear!",
+        "show": "assets/items/pear.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pear.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say pear?",
+        "expect": [
+          "pear",
+          "a pear",
+          "the pear"
+        ],
+        "hint_say": "Say pear!",
+        "success_say": "Great pear!",
+        "show": "assets/items/pear.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pear.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/strawberry.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, pear friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/pear.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pear.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

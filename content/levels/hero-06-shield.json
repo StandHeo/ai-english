@@ -72,5 +72,95 @@
     "sticker": "sticker-shield",
     "stickerImage": "assets/items/shield.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "shield",
+          "a shield",
+          "the shield"
+        ],
+        "hint_say": "Say shield!",
+        "success_say": "Yes! Shield!",
+        "show": "assets/items/shield.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/shield.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/light.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say shield?",
+        "expect": [
+          "shield",
+          "a shield",
+          "the shield"
+        ],
+        "hint_say": "Say shield!",
+        "success_say": "Great shield!",
+        "show": "assets/items/shield.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/shield.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/monster.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, shield friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/shield.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/shield.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

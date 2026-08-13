@@ -6,12 +6,18 @@ export type DiaryRecordCapture = {
   error?: 'insecure' | 'denied' | 'unsupported' | 'empty' | 'unknown' | 'too_long'
 }
 
-const MAX_MS = 45000
+/** Allow longer diary stories; audio is stored in IndexedDB, not localStorage. */
+export const DIARY_MAX_RECORD_MS = 180_000
+
+type Options = {
+  /** Fired when the max-duration timer ends the take (so UI can still save). */
+  onAutoStop?: (capture: DiaryRecordCapture) => void
+}
 
 /**
  * Diary-only recorder (MediaRecorder). Does not use level ASR / browser SpeechRecognition.
  */
-export function useDiaryRecorder() {
+export function useDiaryRecorder(opts: Options = {}) {
   const [recording, setRecording] = useState(false)
   const mediaRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -19,6 +25,8 @@ export function useDiaryRecorder() {
   const activeRef = useRef(false)
   const startedAtRef = useRef(0)
   const timerRef = useRef<number | null>(null)
+  const onAutoStopRef = useRef(opts.onAutoStop)
+  onAutoStopRef.current = opts.onAutoStop
 
   const release = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -92,11 +100,16 @@ export function useDiaryRecorder() {
       }
       mediaRef.current = recorder
       startedAtRef.current = Date.now()
-      recorder.start(100)
+      recorder.start(250)
       clearTimer()
       timerRef.current = window.setTimeout(() => {
-        void stop()
-      }, MAX_MS)
+        void stop().then((cap) => {
+          const withFlag: DiaryRecordCapture = cap.blob
+            ? { ...cap, error: 'too_long' }
+            : cap
+          onAutoStopRef.current?.(withFlag)
+        })
+      }, DIARY_MAX_RECORD_MS)
       return null
     } catch (err) {
       activeRef.current = false
@@ -114,16 +127,22 @@ export function useDiaryRecorder() {
   const toggle = useCallback(async (): Promise<'started' | DiaryRecordCapture> => {
     if (recording || activeRef.current) {
       const elapsed = Date.now() - startedAtRef.current
-      if (elapsed > MAX_MS) {
-        const cap = await stop()
-        return { ...cap, error: cap.blob ? 'too_long' : cap.error }
+      const cap = await stop()
+      if (elapsed >= DIARY_MAX_RECORD_MS && cap.blob) {
+        return { ...cap, error: 'too_long' }
       }
-      return stop()
+      return cap
     }
     const early = await start()
     if (early?.error) return early
     return 'started'
   }, [recording, start, stop])
 
-  return { recording, start, stop, toggle, maxMs: MAX_MS }
+  return {
+    recording,
+    start,
+    stop,
+    toggle,
+    maxMs: DIARY_MAX_RECORD_MS,
+  }
 }

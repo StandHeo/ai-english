@@ -72,5 +72,95 @@
     "sticker": "sticker-helmet",
     "stickerImage": "assets/items/helmet.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "helmet",
+          "a helmet",
+          "the helmet"
+        ],
+        "hint_say": "Say helmet!",
+        "success_say": "Yes! Helmet!",
+        "show": "assets/items/helmet.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/helmet.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bell.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say helmet?",
+        "expect": [
+          "helmet",
+          "a helmet",
+          "the helmet"
+        ],
+        "hint_say": "Say helmet!",
+        "success_say": "Great helmet!",
+        "show": "assets/items/helmet.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/helmet.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, helmet friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/helmet.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/helmet.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

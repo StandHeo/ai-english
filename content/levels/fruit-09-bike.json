@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fruits",
   "title": "Bike Path",
-  "target_words": ["bike"],
+  "target_words": [
+    "bike"
+  ],
   "scene": {
     "setting": "A sunny bike path beside the fruit forest",
     "image": "assets/scenes/bike-path.png",
@@ -22,13 +24,24 @@
       "type": "ask",
       "show": "assets/items/bike.png",
       "npc_say": "What's this?",
-      "expect": ["bike", "a bike"],
+      "expect": [
+        "bike",
+        "a bike"
+      ],
       "hint_say": "Bike. Can you say bike?",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "bike", "image": "assets/items/bike.png", "correct": true },
-          { "id": "apple", "image": "assets/items/apple.png", "correct": false }
+          {
+            "id": "bike",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "apple",
+            "image": "assets/items/apple.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -36,13 +49,24 @@
       "type": "ask",
       "show": "assets/items/bike.png",
       "npc_say": "Say bike!",
-      "expect": ["bike", "a bike"],
+      "expect": [
+        "bike",
+        "a bike"
+      ],
       "hint_say": "Bike!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "bike", "image": "assets/items/bike.png", "correct": true },
-          { "id": "pear", "image": "assets/items/pear.png", "correct": false }
+          {
+            "id": "bike",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "pear",
+            "image": "assets/items/pear.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -56,5 +80,95 @@
     "sticker": "sticker-rider-kid",
     "stickerImage": "assets/items/rider-kid.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "bike",
+          "a bike",
+          "the bike"
+        ],
+        "hint_say": "Say bike!",
+        "success_say": "Yes! Bike!",
+        "show": "assets/items/bike.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/rider-kid.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say bike?",
+        "expect": [
+          "bike",
+          "a bike",
+          "the bike"
+        ],
+        "hint_say": "Say bike!",
+        "success_say": "Great bike!",
+        "show": "assets/items/bike.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, bike friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/bike.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/pear.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

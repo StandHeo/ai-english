@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "Sun Hat",
-  "target_words": ["hat"],
+  "target_words": [
+    "hat"
+  ],
   "scene": {
     "setting": "A sun hat ready for fishing day",
     "image": "assets/scenes/diaoyu1.jpeg",
@@ -22,22 +24,43 @@
       "hint_say": "Hat!",
       "success_say": "Yes! Hat!",
       "options": [
-        { "id": "hat", "image": "assets/items/sunhat.png", "correct": true },
-        { "id": "soup", "image": "assets/items/soup.png", "correct": false }
+        {
+          "id": "hat",
+          "image": "assets/items/sunhat.png",
+          "correct": true
+        },
+        {
+          "id": "soup",
+          "image": "assets/items/soup.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/sunhat.png",
       "npc_say": "What do we wear?",
-      "expect": ["hat", "a hat", "sun hat", "a sun hat"],
+      "expect": [
+        "hat",
+        "a hat",
+        "sun hat",
+        "a sun hat"
+      ],
       "hint_say": "Hat!",
       "success_say": "Cool hat!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "hat", "image": "assets/items/sunhat.png", "correct": true },
-          { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": false }
+          {
+            "id": "hat",
+            "image": "assets/items/sunhat.png",
+            "correct": true
+          },
+          {
+            "id": "umbrella",
+            "image": "assets/items/umbrella.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +74,95 @@
     "sticker": "sticker-sunhat",
     "stickerImage": "assets/items/sunhat.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "hat",
+          "a hat",
+          "the hat"
+        ],
+        "hint_say": "Say hat!",
+        "success_say": "Yes! Hat!",
+        "show": "assets/items/hat.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/sunhat.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say hat?",
+        "expect": [
+          "hat",
+          "a hat",
+          "the hat"
+        ],
+        "hint_say": "Say hat!",
+        "success_say": "Great hat!",
+        "show": "assets/items/hat.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/soup.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, hat friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/hat.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/umbrella.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

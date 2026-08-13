@@ -34,7 +34,7 @@ export function FamilyCalendarPage() {
     const key = dateOf(day)
     const rec = getDay(key)
     if (!rec?.level) {
-      const voiceNote = rec?.messages?.some((m) => m.audioDataUrl)
+      const voiceNote = rec?.messages?.some((m) => m.audioId || m.audioDataUrl)
         ? '\n（这一天有日记语音，可让家长在制作台回听。）'
         : ''
       window.alert(`这一天还没有家庭关卡。请让家长在「家庭日记」里生成。${voiceNote}`)

@@ -72,5 +72,95 @@
     "sticker": "sticker-monster",
     "stickerImage": "assets/items/monster.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "monster",
+          "a monster",
+          "the monster"
+        ],
+        "hint_say": "Say monster!",
+        "success_say": "Yes! Monster!",
+        "show": "assets/items/monster.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/monster.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/hero.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say monster?",
+        "expect": [
+          "monster",
+          "a monster",
+          "the monster"
+        ],
+        "hint_say": "Say monster!",
+        "success_say": "Great monster!",
+        "show": "assets/items/monster.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/monster.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/light.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, monster friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/monster.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/monster.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

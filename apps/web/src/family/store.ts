@@ -1,10 +1,13 @@
 import type { LevelScript } from '../types'
+import { deleteAudioClip, putAudioClip } from './audioDb'
 
 export type FamilyDiaryMessage = {
   id: string
   createdAt: number
   text: string
-  /** data URL for short diary clips; optional for text-only */
+  /** IndexedDB clip id (preferred; keeps localStorage small) */
+  audioId?: string
+  /** Legacy data URL; migrated off when possible */
   audioDataUrl?: string
 }
 
@@ -108,12 +111,17 @@ function normalizeMessages(raw: unknown): FamilyDiaryMessage[] {
       id: m.id,
       createdAt: m.createdAt,
       text: typeof m.text === 'string' ? m.text : '',
+      ...(typeof m.audioId === 'string' && m.audioId ? { audioId: m.audioId } : {}),
       ...(typeof m.audioDataUrl === 'string' && m.audioDataUrl
         ? { audioDataUrl: m.audioDataUrl }
         : {}),
     })
   }
   return out
+}
+
+function messageHasVoice(m: FamilyDiaryMessage): boolean {
+  return Boolean(m.audioId || m.audioDataUrl)
 }
 
 function normalizeIconColors(raw: unknown): FamilyIconColor[] {
@@ -174,8 +182,34 @@ export function loadFamilyStore(): FamilyStore {
   }
 }
 
+/** Drop bulky legacy data-URL audio so metadata still fits in localStorage. */
+function stripLegacyAudioDataUrls(store: FamilyStore): FamilyStore {
+  const days: Record<string, FamilyDayRecord> = {}
+  for (const [date, day] of Object.entries(store.days)) {
+    days[date] = {
+      ...day,
+      messages: day.messages.map((m) => {
+        if (!m.audioDataUrl) return m
+        const { audioDataUrl: _drop, ...rest } = m
+        return rest.audioId ? rest : { ...rest, audioId: rest.id }
+      }),
+    }
+  }
+  return { ...store, days }
+}
+
 export function saveFamilyStore(store: FamilyStore): void {
-  localStorage.setItem(KEY, JSON.stringify(store))
+  const raw = JSON.stringify(store)
+  try {
+    localStorage.setItem(KEY, raw)
+  } catch (err) {
+    const name = err instanceof DOMException ? err.name : ''
+    if (name !== 'QuotaExceededError' && name !== 'NS_ERROR_DOM_QUOTA_REACHED') {
+      throw err
+    }
+    // Retry without embedded audio payloads (clips live in IndexedDB).
+    localStorage.setItem(KEY, JSON.stringify(stripLegacyAudioDataUrls(store)))
+  }
 }
 
 export function getDay(date: string): FamilyDayRecord | null {
@@ -190,7 +224,7 @@ export function listDaysWithLevels(): FamilyDayRecord[] {
 
 export function listDaysWithVoice(): string[] {
   return Object.values(loadFamilyStore().days)
-    .filter((d) => d.messages.some((m) => Boolean(m.audioDataUrl)))
+    .filter((d) => d.messages.some(messageHasVoice))
     .map((d) => d.date)
 }
 
@@ -290,22 +324,29 @@ export function appendTextMessage(date: string, text: string): FamilyDayRecord {
   return persistDay(date, { messages })
 }
 
-export function appendVoiceMessage(
+export async function appendVoiceMessage(
   date: string,
-  opts: { text: string; audioDataUrl: string },
-): FamilyDayRecord {
+  opts: { text: string; blob: Blob },
+): Promise<FamilyDayRecord> {
   ensureMessagesMigrated(date)
   const prev = getDay(date)!
+  const id = newMessageId()
+  await putAudioClip(id, opts.blob)
   const messages = [
     ...prev.messages,
     {
-      id: newMessageId(),
+      id,
       createdAt: Date.now(),
       text: opts.text.trim(),
-      audioDataUrl: opts.audioDataUrl,
+      audioId: id,
     },
   ]
-  return persistDay(date, { messages })
+  try {
+    return persistDay(date, { messages })
+  } catch (err) {
+    await deleteAudioClip(id).catch(() => undefined)
+    throw err
+  }
 }
 
 export function updateMessageText(
@@ -330,9 +371,13 @@ export function deleteMessage(
   ensureMessagesMigrated(date)
   const prev = getDay(date)
   if (!prev) return null
-  if (!prev.messages.some((m) => m.id === messageId)) return null
+  const target = prev.messages.find((m) => m.id === messageId)
+  if (!target) return null
   const messages = prev.messages.filter((m) => m.id !== messageId)
-  return persistDay(date, { messages })
+  const day = persistDay(date, { messages })
+  const clipId = target.audioId || (target.audioDataUrl ? target.id : null)
+  if (clipId) void deleteAudioClip(clipId).catch(() => undefined)
+  return day
 }
 
 export function getMessages(date: string): FamilyDiaryMessage[] {

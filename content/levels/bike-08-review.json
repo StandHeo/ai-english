@@ -100,5 +100,94 @@
     "sticker": "sticker-bike-party",
     "stickerImage": "assets/scenes/bike-review.png",
     "stars": 2
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "bike",
+          "a bike",
+          "the bike"
+        ],
+        "hint_say": "Say bike!",
+        "success_say": "Yes! Bike!",
+        "show": "assets/items/bike.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bike.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/scenes/bike-review.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "helmet",
+          "a helmet",
+          "the helmet"
+        ],
+        "hint_say": "Say helmet!",
+        "success_say": "Yes! Helmet!",
+        "show": "assets/items/helmet.png",
+        "next": "w3",
+        "on_fail_next": "w3",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/helmet.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/characters/bunny.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w3": {
+        "robot_say": "Last one! What is it?",
+        "expect": [
+          "bell",
+          "a bell",
+          "the bell"
+        ],
+        "hint_say": "Say bell!",
+        "success_say": "Yes! Bell!",
+        "show": "assets/items/bell.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bell.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bike.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

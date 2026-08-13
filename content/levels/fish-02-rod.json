@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "Fishing Rod",
-  "target_words": ["rod"],
+  "target_words": [
+    "rod"
+  ],
   "scene": {
     "setting": "A grassy bank with a fishing rod",
     "image": "assets/scenes/rod-bank.png",
@@ -22,22 +24,43 @@
       "hint_say": "Rod!",
       "success_say": "Yes! Rod!",
       "options": [
-        { "id": "rod", "image": "assets/items/rod.png", "correct": true },
-        { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": false }
+        {
+          "id": "rod",
+          "image": "assets/items/rod.png",
+          "correct": true
+        },
+        {
+          "id": "umbrella",
+          "image": "assets/items/umbrella.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/rod.png",
       "npc_say": "What do we hold?",
-      "expect": ["rod", "a rod", "fishing rod", "a fishing rod"],
+      "expect": [
+        "rod",
+        "a rod",
+        "fishing rod",
+        "a fishing rod"
+      ],
       "hint_say": "Rod!",
       "success_say": "Cool rod!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "rod", "image": "assets/items/rod.png", "correct": true },
-          { "id": "fish", "image": "assets/items/fish.png", "correct": false }
+          {
+            "id": "rod",
+            "image": "assets/items/rod.png",
+            "correct": true
+          },
+          {
+            "id": "fish",
+            "image": "assets/items/fish.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +74,95 @@
     "sticker": "sticker-rod",
     "stickerImage": "assets/items/rod.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "rod",
+          "a rod",
+          "the rod"
+        ],
+        "hint_say": "Say rod!",
+        "success_say": "Yes! Rod!",
+        "show": "assets/items/rod.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rod.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/umbrella.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say rod?",
+        "expect": [
+          "rod",
+          "a rod",
+          "the rod"
+        ],
+        "hint_say": "Say rod!",
+        "success_say": "Great rod!",
+        "show": "assets/items/rod.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rod.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/fish.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, rod friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/rod.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rod.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "swimming",
   "title": "Swim Cap",
-  "target_words": ["cap"],
+  "target_words": [
+    "cap"
+  ],
   "scene": {
     "setting": "Colorful swim caps by the pool",
     "image": "assets/scenes/cap-deck.png",
@@ -22,22 +24,43 @@
       "hint_say": "Cap!",
       "success_say": "Yes! Cap!",
       "options": [
-        { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
-        { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+        {
+          "id": "cap",
+          "image": "assets/items/swimcap.png",
+          "correct": true
+        },
+        {
+          "id": "goggles",
+          "image": "assets/items/goggles.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/swimcap.png",
       "npc_say": "What is on your head?",
-      "expect": ["cap", "a cap", "swim cap", "a swim cap"],
+      "expect": [
+        "cap",
+        "a cap",
+        "swim cap",
+        "a swim cap"
+      ],
       "hint_say": "Cap!",
       "success_say": "Nice cap!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
-          { "id": "pool", "image": "assets/items/pool.png", "correct": false }
+          {
+            "id": "cap",
+            "image": "assets/items/swimcap.png",
+            "correct": true
+          },
+          {
+            "id": "pool",
+            "image": "assets/items/pool.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +74,95 @@
     "sticker": "sticker-swimcap",
     "stickerImage": "assets/items/swimcap.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "cap",
+          "a cap",
+          "the cap"
+        ],
+        "hint_say": "Say cap!",
+        "success_say": "Yes! Cap!",
+        "show": "assets/items/swimcap.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimcap.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/goggles.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say cap?",
+        "expect": [
+          "cap",
+          "a cap",
+          "the cap"
+        ],
+        "hint_say": "Say cap!",
+        "success_say": "Great cap!",
+        "show": "assets/items/swimcap.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimcap.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/pool.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, cap friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/swimcap.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimcap.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

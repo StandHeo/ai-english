@@ -9,7 +9,7 @@
 3. **浏览器没有端侧 Whisper**：会提示降级；录音仍可保存，请点气泡「改字」补转写
 4. DeepSeek Key / 生成关卡 / 选图在折叠的 **生成与设置** 里
 
-数据仍在本机 `localStorage`（`ai-english-family-v1`），按日 `messages[]`（text + 可选 audio）。
+数据：元数据在本机 `localStorage`（`ai-english-family-v1`），按日 `messages[]`（text + 可选 `audioId`）；录音本体在 **IndexedDB**，避免稍长一点的语音撑爆配额。最长约 **180 秒**，到时限会自动截断并保存。
 
 ## App 端侧 Whisper（Android / iOS）
 

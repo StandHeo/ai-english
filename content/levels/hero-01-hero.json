@@ -72,5 +72,95 @@
     "sticker": "sticker-hero",
     "stickerImage": "assets/items/hero.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "hero",
+          "a hero",
+          "the hero"
+        ],
+        "hint_say": "Say hero!",
+        "success_say": "Yes! Hero!",
+        "show": "assets/items/hero.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hero.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/monster.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say hero?",
+        "expect": [
+          "hero",
+          "a hero",
+          "the hero"
+        ],
+        "hint_say": "Say hero!",
+        "success_say": "Great hero!",
+        "show": "assets/items/hero.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hero.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/shield.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, hero friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/hero.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hero.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

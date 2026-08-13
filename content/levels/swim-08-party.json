@@ -3,7 +3,12 @@
   "approved": true,
   "theme": "swimming",
   "title": "Pool Party",
-  "target_words": ["pool", "goggles", "ring", "cap"],
+  "target_words": [
+    "pool",
+    "goggles",
+    "ring",
+    "cap"
+  ],
   "scene": {
     "setting": "A sunny pool party",
     "image": "assets/scenes/swim-party.png",
@@ -22,22 +27,41 @@
       "hint_say": "Pool!",
       "success_say": "Yes!",
       "options": [
-        { "id": "pool", "image": "assets/items/pool.png", "correct": true },
-        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+        {
+          "id": "pool",
+          "image": "assets/items/pool.png",
+          "correct": true
+        },
+        {
+          "id": "cap",
+          "image": "assets/items/swimcap.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/goggles.png",
       "npc_say": "What goes on your eyes?",
-      "expect": ["goggles", "swim goggles"],
+      "expect": [
+        "goggles",
+        "swim goggles"
+      ],
       "hint_say": "Goggles!",
       "success_say": "Yes!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
-          { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+          {
+            "id": "goggles",
+            "image": "assets/items/goggles.png",
+            "correct": true
+          },
+          {
+            "id": "ring",
+            "image": "assets/items/swimring.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -45,14 +69,26 @@
       "type": "ask",
       "show": "assets/items/swimring.png",
       "npc_say": "What helps us float?",
-      "expect": ["ring", "swim ring", "float"],
+      "expect": [
+        "ring",
+        "swim ring",
+        "float"
+      ],
       "hint_say": "Ring!",
       "success_say": "Yes!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
-          { "id": "pool", "image": "assets/items/pool.png", "correct": false }
+          {
+            "id": "ring",
+            "image": "assets/items/swimring.png",
+            "correct": true
+          },
+          {
+            "id": "pool",
+            "image": "assets/items/pool.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -60,14 +96,26 @@
       "type": "ask",
       "show": "assets/items/swimcap.png",
       "npc_say": "Last one! What is on your head?",
-      "expect": ["cap", "swim cap", "a cap"],
+      "expect": [
+        "cap",
+        "swim cap",
+        "a cap"
+      ],
       "hint_say": "Cap!",
       "success_say": "Party!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "cap", "image": "assets/items/swimcap.png", "correct": true },
-          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+          {
+            "id": "cap",
+            "image": "assets/items/swimcap.png",
+            "correct": true
+          },
+          {
+            "id": "goggles",
+            "image": "assets/items/goggles.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -81,5 +129,94 @@
     "sticker": "sticker-swim-party",
     "stickerImage": "assets/scenes/swim-party.png",
     "stars": 2
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "pool",
+          "a pool",
+          "the pool"
+        ],
+        "hint_say": "Say pool!",
+        "success_say": "Yes! Pool!",
+        "show": "assets/items/pool.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pool.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/scenes/swim-party.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "goggles",
+          "a goggles",
+          "the goggles"
+        ],
+        "hint_say": "Say goggles!",
+        "success_say": "Yes! Goggles!",
+        "show": "assets/items/goggles.png",
+        "next": "w3",
+        "on_fail_next": "w3",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/goggles.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/characters/bunny.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w3": {
+        "robot_say": "Last one! What is it?",
+        "expect": [
+          "ring",
+          "a ring",
+          "the ring"
+        ],
+        "hint_say": "Say ring!",
+        "success_say": "Yes! Ring!",
+        "show": "assets/items/swimring.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimring.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/pool.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

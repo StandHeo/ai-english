@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "Fish Soup",
-  "target_words": ["soup"],
+  "target_words": [
+    "soup"
+  ],
   "scene": {
     "setting": "Warm fish soup by the riverside",
     "image": "assets/scenes/soup-bank.png",
@@ -22,22 +24,42 @@
       "hint_say": "Soup!",
       "success_say": "Yes! Soup!",
       "options": [
-        { "id": "soup", "image": "assets/items/soup.png", "correct": true },
-        { "id": "fish", "image": "assets/items/fish.png", "correct": false }
+        {
+          "id": "soup",
+          "image": "assets/items/soup.png",
+          "correct": true
+        },
+        {
+          "id": "fish",
+          "image": "assets/items/fish.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/soup.png",
       "npc_say": "What can we eat?",
-      "expect": ["soup", "a soup", "fish soup"],
+      "expect": [
+        "soup",
+        "a soup",
+        "fish soup"
+      ],
       "hint_say": "Soup!",
       "success_say": "Yum soup!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "soup", "image": "assets/items/soup.png", "correct": true },
-          { "id": "cloud", "image": "assets/items/cloud.png", "correct": false }
+          {
+            "id": "soup",
+            "image": "assets/items/soup.png",
+            "correct": true
+          },
+          {
+            "id": "cloud",
+            "image": "assets/items/cloud.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +73,95 @@
     "sticker": "sticker-soup",
     "stickerImage": "assets/items/soup.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "soup",
+          "a soup",
+          "the soup"
+        ],
+        "hint_say": "Say soup!",
+        "success_say": "Yes! Soup!",
+        "show": "assets/items/soup.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/soup.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/fish.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say soup?",
+        "expect": [
+          "soup",
+          "a soup",
+          "the soup"
+        ],
+        "hint_say": "Say soup!",
+        "success_say": "Great soup!",
+        "show": "assets/items/soup.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/soup.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/cloud.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, soup friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/soup.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/soup.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

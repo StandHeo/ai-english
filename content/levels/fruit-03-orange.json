@@ -80,5 +80,95 @@
     "sticker": "sticker-orange",
     "stickerImage": "assets/items/orange.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "orange",
+          "an orange",
+          "the orange"
+        ],
+        "hint_say": "Say orange!",
+        "success_say": "Yes! Orange!",
+        "show": "assets/items/orange.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/orange.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say orange?",
+        "expect": [
+          "orange",
+          "an orange",
+          "the orange"
+        ],
+        "hint_say": "Say orange!",
+        "success_say": "Great orange!",
+        "show": "assets/items/orange.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/orange.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/grape.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, orange friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/orange.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/orange.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

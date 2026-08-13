@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "Sunny Umbrella",
-  "target_words": ["umbrella"],
+  "target_words": [
+    "umbrella"
+  ],
   "scene": {
     "setting": "A flower umbrella shading the fishing chair",
     "image": "assets/scenes/diaoyu1.jpeg",
@@ -22,22 +24,42 @@
       "hint_say": "Umbrella!",
       "success_say": "Yes! Umbrella!",
       "options": [
-        { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": true },
-        { "id": "sunhat", "image": "assets/items/sunhat.png", "correct": false }
+        {
+          "id": "umbrella",
+          "image": "assets/items/umbrella.png",
+          "correct": true
+        },
+        {
+          "id": "sunhat",
+          "image": "assets/items/sunhat.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/umbrella.png",
       "npc_say": "What keeps us cool?",
-      "expect": ["umbrella", "an umbrella", "the umbrella"],
+      "expect": [
+        "umbrella",
+        "an umbrella",
+        "the umbrella"
+      ],
       "hint_say": "Umbrella!",
       "success_say": "Nice umbrella!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "umbrella", "image": "assets/items/umbrella.png", "correct": true },
-          { "id": "rod", "image": "assets/items/rod.png", "correct": false }
+          {
+            "id": "umbrella",
+            "image": "assets/items/umbrella.png",
+            "correct": true
+          },
+          {
+            "id": "rod",
+            "image": "assets/items/rod.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +73,95 @@
     "sticker": "sticker-umbrella",
     "stickerImage": "assets/items/umbrella.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "umbrella",
+          "an umbrella",
+          "the umbrella"
+        ],
+        "hint_say": "Say umbrella!",
+        "success_say": "Yes! Umbrella!",
+        "show": "assets/items/umbrella.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/umbrella.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/sunhat.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say umbrella?",
+        "expect": [
+          "umbrella",
+          "an umbrella",
+          "the umbrella"
+        ],
+        "hint_say": "Say umbrella!",
+        "success_say": "Great umbrella!",
+        "show": "assets/items/umbrella.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/umbrella.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/rod.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, umbrella friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/umbrella.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/umbrella.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

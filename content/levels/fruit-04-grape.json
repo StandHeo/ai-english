@@ -74,5 +74,95 @@
     "sticker": "sticker-grape",
     "stickerImage": "assets/items/grape.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "grape",
+          "a grape",
+          "the grape"
+        ],
+        "hint_say": "Say grape!",
+        "success_say": "Yes! Grape!",
+        "show": "assets/items/grape.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/grape.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/orange.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "grapes",
+          "a grapes",
+          "the grapes"
+        ],
+        "hint_say": "Say grapes!",
+        "success_say": "Yes! Grapes!",
+        "show": "assets/items/grape.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/grape.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/banana.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, grape friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/grape.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/grape.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

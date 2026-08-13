@@ -80,5 +80,95 @@
     "sticker": "sticker-banana",
     "stickerImage": "assets/items/banana.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "banana",
+          "a banana",
+          "the banana"
+        ],
+        "hint_say": "Say banana!",
+        "success_say": "Yes! Banana!",
+        "show": "assets/items/banana.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/banana.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say banana?",
+        "expect": [
+          "banana",
+          "a banana",
+          "the banana"
+        ],
+        "hint_say": "Say banana!",
+        "success_say": "Great banana!",
+        "show": "assets/items/banana.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/banana.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/grape.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, banana friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/banana.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/banana.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

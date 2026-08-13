@@ -74,5 +74,95 @@
     "sticker": "sticker-tricycle",
     "stickerImage": "assets/items/tricycle.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "tricycle",
+          "a tricycle",
+          "the tricycle"
+        ],
+        "hint_say": "Say tricycle!",
+        "success_say": "Yes! Tricycle!",
+        "show": "assets/items/tricycle.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/tricycle.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say tricycle?",
+        "expect": [
+          "tricycle",
+          "a tricycle",
+          "the tricycle"
+        ],
+        "hint_say": "Say tricycle!",
+        "success_say": "Great tricycle!",
+        "show": "assets/items/tricycle.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/tricycle.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/road-bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, tricycle friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/tricycle.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/tricycle.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

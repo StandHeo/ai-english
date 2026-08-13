@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "swimming",
   "title": "Swim Ring",
-  "target_words": ["ring"],
+  "target_words": [
+    "ring"
+  ],
   "scene": {
     "setting": "Orange swim rings on the blue pool",
     "image": "assets/scenes/ring-pool.png",
@@ -22,22 +24,44 @@
       "hint_say": "Ring!",
       "success_say": "Yes! Ring!",
       "options": [
-        { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
-        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+        {
+          "id": "ring",
+          "image": "assets/items/swimring.png",
+          "correct": true
+        },
+        {
+          "id": "cap",
+          "image": "assets/items/swimcap.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/swimring.png",
       "npc_say": "What helps us float?",
-      "expect": ["ring", "a ring", "swim ring", "float", "a float"],
+      "expect": [
+        "ring",
+        "a ring",
+        "swim ring",
+        "float",
+        "a float"
+      ],
       "hint_say": "Ring!",
       "success_say": "Fun ring!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "ring", "image": "assets/items/swimring.png", "correct": true },
-          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+          {
+            "id": "ring",
+            "image": "assets/items/swimring.png",
+            "correct": true
+          },
+          {
+            "id": "goggles",
+            "image": "assets/items/goggles.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +75,95 @@
     "sticker": "sticker-swimring",
     "stickerImage": "assets/items/swimring.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "ring",
+          "a ring",
+          "the ring"
+        ],
+        "hint_say": "Say ring!",
+        "success_say": "Yes! Ring!",
+        "show": "assets/items/swimring.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimring.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/swimcap.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say ring?",
+        "expect": [
+          "ring",
+          "a ring",
+          "the ring"
+        ],
+        "hint_say": "Say ring!",
+        "success_say": "Great ring!",
+        "show": "assets/items/swimring.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimring.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/goggles.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, ring friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/swimring.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/swimring.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

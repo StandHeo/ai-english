@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "swimming",
   "title": "Swimming Pool",
-  "target_words": ["pool"],
+  "target_words": [
+    "pool"
+  ],
   "scene": {
     "setting": "A sunny outdoor swimming pool",
     "image": "assets/scenes/swim-pool.png",
@@ -22,22 +24,43 @@
       "hint_say": "Pool!",
       "success_say": "Yes! Pool!",
       "options": [
-        { "id": "pool", "image": "assets/items/pool.png", "correct": true },
-        { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+        {
+          "id": "pool",
+          "image": "assets/items/pool.png",
+          "correct": true
+        },
+        {
+          "id": "ring",
+          "image": "assets/items/swimring.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/pool.png",
       "npc_say": "Where do we swim?",
-      "expect": ["pool", "a pool", "the pool", "swimming pool"],
+      "expect": [
+        "pool",
+        "a pool",
+        "the pool",
+        "swimming pool"
+      ],
       "hint_say": "Pool!",
       "success_say": "Yay! Pool!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "pool", "image": "assets/items/pool.png", "correct": true },
-          { "id": "goggles", "image": "assets/items/goggles.png", "correct": false }
+          {
+            "id": "pool",
+            "image": "assets/items/pool.png",
+            "correct": true
+          },
+          {
+            "id": "goggles",
+            "image": "assets/items/goggles.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +74,95 @@
     "sticker": "sticker-pool",
     "stickerImage": "assets/items/pool.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "pool",
+          "a pool",
+          "the pool"
+        ],
+        "hint_say": "Say pool!",
+        "success_say": "Yes! Pool!",
+        "show": "assets/items/pool.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pool.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/swimring.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say pool?",
+        "expect": [
+          "pool",
+          "a pool",
+          "the pool"
+        ],
+        "hint_say": "Say pool!",
+        "success_say": "Great pool!",
+        "show": "assets/items/pool.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pool.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/goggles.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, pool friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/pool.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pool.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

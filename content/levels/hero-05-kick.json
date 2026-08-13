@@ -72,5 +72,95 @@
     "sticker": "sticker-kick",
     "stickerImage": "assets/items/kick.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "kick",
+          "a kick",
+          "the kick"
+        ],
+        "hint_say": "Say kick!",
+        "success_say": "Yes! Kick!",
+        "show": "assets/items/kick.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/kick.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/fly.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say kick?",
+        "expect": [
+          "kick",
+          "a kick",
+          "the kick"
+        ],
+        "hint_say": "Say kick!",
+        "success_say": "Great kick!",
+        "show": "assets/items/kick.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/kick.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/shield.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, kick friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/kick.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/kick.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

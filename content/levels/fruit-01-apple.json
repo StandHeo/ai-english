@@ -72,5 +72,95 @@
     "sticker": "sticker-apple",
     "stickerImage": "assets/items/apple.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "apple",
+          "an apple",
+          "the apple"
+        ],
+        "hint_say": "Say apple!",
+        "success_say": "Yes! Apple!",
+        "show": "assets/items/apple.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/apple.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/banana.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say apple?",
+        "expect": [
+          "apple",
+          "an apple",
+          "the apple"
+        ],
+        "hint_say": "Say apple!",
+        "success_say": "Great apple!",
+        "show": "assets/items/apple.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/apple.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/orange.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, apple friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/apple.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/apple.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/arm.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

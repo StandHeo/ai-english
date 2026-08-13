@@ -99,5 +99,94 @@
     "sticker": "sticker-pup-party",
     "stickerImage": "assets/scenes/pup-review.png",
     "stars": 2
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "pup",
+          "a pup",
+          "the pup"
+        ],
+        "hint_say": "Say pup!",
+        "success_say": "Yes! Pup!",
+        "show": "assets/items/pup.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/pup.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/scenes/pup-review.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "truck",
+          "a truck",
+          "the truck"
+        ],
+        "hint_say": "Say truck!",
+        "success_say": "Yes! Truck!",
+        "show": "assets/items/truck.png",
+        "next": "w3",
+        "on_fail_next": "w3",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/truck.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/characters/bunny.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w3": {
+        "robot_say": "Last one! What is it?",
+        "expect": [
+          "help",
+          "a help",
+          "the help"
+        ],
+        "hint_say": "Say help!",
+        "success_say": "Yes! Help!",
+        "show": "assets/items/help.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/help.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/pup.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

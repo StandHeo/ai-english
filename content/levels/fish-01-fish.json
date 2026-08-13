@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "fishing",
   "title": "Catch a Fish",
-  "target_words": ["fish"],
+  "target_words": [
+    "fish"
+  ],
   "scene": {
     "setting": "Our fishing day by the sunny river",
     "image": "assets/scenes/diaoyu1.jpeg",
@@ -24,22 +26,41 @@
       "hint_say": "Fish!",
       "success_say": "Yes! Fish!",
       "options": [
-        { "id": "fish", "image": "assets/items/fish.png", "correct": true },
-        { "id": "rod", "image": "assets/items/rod.png", "correct": false }
+        {
+          "id": "fish",
+          "image": "assets/items/fish.png",
+          "correct": true
+        },
+        {
+          "id": "rod",
+          "image": "assets/items/rod.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/fish.png",
       "npc_say": "What is swimming?",
-      "expect": ["fish", "a fish"],
+      "expect": [
+        "fish",
+        "a fish"
+      ],
       "hint_say": "Fish. Can you say fish?",
       "success_say": "Yay! Fish!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "fish", "image": "assets/items/fish.png", "correct": true },
-          { "id": "cloud", "image": "assets/items/cloud.png", "correct": false }
+          {
+            "id": "fish",
+            "image": "assets/items/fish.png",
+            "correct": true
+          },
+          {
+            "id": "cloud",
+            "image": "assets/items/cloud.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -53,5 +74,95 @@
     "sticker": "sticker-fish",
     "stickerImage": "assets/items/fish.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "fish",
+          "a fish",
+          "the fish"
+        ],
+        "hint_say": "Say fish!",
+        "success_say": "Yes! Fish!",
+        "show": "assets/items/fish.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/fish.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/rod.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say fish?",
+        "expect": [
+          "fish",
+          "a fish",
+          "the fish"
+        ],
+        "hint_say": "Say fish!",
+        "success_say": "Great fish!",
+        "show": "assets/items/fish.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/fish.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/cloud.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, fish friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/fish.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/fish.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

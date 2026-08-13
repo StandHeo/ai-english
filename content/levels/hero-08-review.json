@@ -100,5 +100,94 @@
     "sticker": "sticker-hero-party",
     "stickerImage": "assets/scenes/hero-review.png",
     "stars": 2
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "hero",
+          "a hero",
+          "the hero"
+        ],
+        "hint_say": "Say hero!",
+        "success_say": "Yes! Hero!",
+        "show": "assets/items/hero.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hero.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/scenes/hero-review.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "light",
+          "a light",
+          "the light"
+        ],
+        "hint_say": "Say light!",
+        "success_say": "Yes! Light!",
+        "show": "assets/items/light.png",
+        "next": "w3",
+        "on_fail_next": "w3",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/light.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/characters/bunny.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w3": {
+        "robot_say": "Last one! What is it?",
+        "expect": [
+          "kick",
+          "a kick",
+          "the kick"
+        ],
+        "hint_say": "Say kick!",
+        "success_say": "Yes! Kick!",
+        "show": "assets/items/kick.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/kick.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/hero.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

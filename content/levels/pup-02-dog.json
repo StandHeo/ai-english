@@ -72,5 +72,95 @@
     "sticker": "sticker-dog",
     "stickerImage": "assets/items/dog.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "dog",
+          "a dog",
+          "the dog"
+        ],
+        "hint_say": "Say dog!",
+        "success_say": "Yes! Dog!",
+        "show": "assets/items/dog.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/dog.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/hat.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say dog?",
+        "expect": [
+          "dog",
+          "a dog",
+          "the dog"
+        ],
+        "hint_say": "Say dog!",
+        "success_say": "Great dog!",
+        "show": "assets/items/dog.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/dog.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/pup.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, dog friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/dog.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/dog.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

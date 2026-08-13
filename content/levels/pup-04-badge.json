@@ -72,5 +72,95 @@
     "sticker": "sticker-badge",
     "stickerImage": "assets/items/badge.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "badge",
+          "a badge",
+          "the badge"
+        ],
+        "hint_say": "Say badge!",
+        "success_say": "Yes! Badge!",
+        "show": "assets/items/badge.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/badge.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/hat.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say badge?",
+        "expect": [
+          "badge",
+          "a badge",
+          "the badge"
+        ],
+        "hint_say": "Say badge!",
+        "success_say": "Great badge!",
+        "show": "assets/items/badge.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/badge.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/help.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, badge friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/badge.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/badge.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

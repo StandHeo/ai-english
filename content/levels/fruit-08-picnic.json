@@ -127,5 +127,94 @@
     "sticker": "sticker-picnic",
     "stickerImage": "assets/scenes/picnic.png",
     "stars": 2
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "apple",
+          "an apple",
+          "the apple"
+        ],
+        "hint_say": "Say apple!",
+        "success_say": "Yes! Apple!",
+        "show": "assets/items/apple.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/apple.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/scenes/picnic.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "strawberry",
+          "a strawberry",
+          "the strawberry"
+        ],
+        "hint_say": "Say strawberry!",
+        "success_say": "Yes! Strawberry!",
+        "show": "assets/items/strawberry.png",
+        "next": "w3",
+        "on_fail_next": "w3",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/strawberry.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/characters/bunny.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w3": {
+        "robot_say": "Last one! What is it?",
+        "expect": [
+          "watermelon",
+          "a watermelon",
+          "the watermelon"
+        ],
+        "hint_say": "Say watermelon!",
+        "success_say": "Yes! Watermelon!",
+        "show": "assets/items/watermelon.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/watermelon.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

@@ -3,7 +3,9 @@
   "approved": true,
   "theme": "swimming",
   "title": "Swim Goggles",
-  "target_words": ["goggles"],
+  "target_words": [
+    "goggles"
+  ],
   "scene": {
     "setting": "Goggles waiting by the pool",
     "image": "assets/scenes/goggles-deck.png",
@@ -22,22 +24,41 @@
       "hint_say": "Goggles!",
       "success_say": "Yes! Goggles!",
       "options": [
-        { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
-        { "id": "cap", "image": "assets/items/swimcap.png", "correct": false }
+        {
+          "id": "goggles",
+          "image": "assets/items/goggles.png",
+          "correct": true
+        },
+        {
+          "id": "cap",
+          "image": "assets/items/swimcap.png",
+          "correct": false
+        }
       ]
     },
     {
       "type": "ask",
       "show": "assets/items/goggles.png",
       "npc_say": "What do we wear on our eyes?",
-      "expect": ["goggles", "swim goggles"],
+      "expect": [
+        "goggles",
+        "swim goggles"
+      ],
       "hint_say": "Goggles!",
       "success_say": "Cool goggles!",
       "fallback": {
         "type": "picture_choice",
         "options": [
-          { "id": "goggles", "image": "assets/items/goggles.png", "correct": true },
-          { "id": "ring", "image": "assets/items/swimring.png", "correct": false }
+          {
+            "id": "goggles",
+            "image": "assets/items/goggles.png",
+            "correct": true
+          },
+          {
+            "id": "ring",
+            "image": "assets/items/swimring.png",
+            "correct": false
+          }
         ]
       }
     },
@@ -51,5 +72,95 @@
     "sticker": "sticker-goggles",
     "stickerImage": "assets/items/goggles.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "goggles",
+          "a goggles",
+          "the goggles"
+        ],
+        "hint_say": "Say goggles!",
+        "success_say": "Yes! Goggles!",
+        "show": "assets/items/goggles.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/goggles.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/swimcap.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say goggles?",
+        "expect": [
+          "goggles",
+          "a goggles",
+          "the goggles"
+        ],
+        "hint_say": "Say goggles!",
+        "success_say": "Great goggles!",
+        "show": "assets/items/goggles.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/goggles.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/swimring.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, goggles friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/goggles.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/goggles.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

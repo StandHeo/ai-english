@@ -72,5 +72,95 @@
     "sticker": "sticker-bone",
     "stickerImage": "assets/items/bone.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "bone",
+          "a bone",
+          "the bone"
+        ],
+        "hint_say": "Say bone!",
+        "success_say": "Yes! Bone!",
+        "show": "assets/items/bone.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bone.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/badge.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say bone?",
+        "expect": [
+          "bone",
+          "a bone",
+          "the bone"
+        ],
+        "hint_say": "Say bone!",
+        "success_say": "Great bone!",
+        "show": "assets/items/bone.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bone.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/dog.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, bone friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/bone.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/bone.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

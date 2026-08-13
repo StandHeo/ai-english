@@ -72,5 +72,95 @@
     "sticker": "sticker-hat",
     "stickerImage": "assets/items/hat.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "what",
+    "nodes": {
+      "what": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "hat",
+          "a hat",
+          "the hat"
+        ],
+        "hint_say": "Say hat!",
+        "success_say": "Yes! Hat!",
+        "show": "assets/items/hat.png",
+        "next": "again",
+        "on_fail_next": "again",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bone.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "again": {
+        "robot_say": "Can you say hat?",
+        "expect": [
+          "hat",
+          "a hat",
+          "the hat"
+        ],
+        "hint_say": "Say hat!",
+        "success_say": "Great hat!",
+        "show": "assets/items/hat.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/truck.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, hat friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/hat.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/hat.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

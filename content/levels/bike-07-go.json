@@ -83,5 +83,95 @@
     "sticker": "sticker-rider-kid",
     "stickerImage": "assets/items/rider-kid.png",
     "stars": 1
+  },
+  "beep_talk": {
+    "start": "w1",
+    "nodes": {
+      "w1": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "go",
+          "a go",
+          "the go"
+        ],
+        "hint_say": "Say go!",
+        "success_say": "Yes! Go!",
+        "show": "assets/items/rider-kid.png",
+        "next": "w2",
+        "on_fail_next": "w2",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rider-kid.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bike.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "w2": {
+        "robot_say": "Beep! What is it?",
+        "expect": [
+          "ride",
+          "a ride",
+          "the ride"
+        ],
+        "hint_say": "Say ride!",
+        "success_say": "Yes! Ride!",
+        "show": "assets/items/rider-kid.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rider-kid.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/helmet.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, go friend!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/rider-kid.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rider-kid.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bell.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
   }
 }

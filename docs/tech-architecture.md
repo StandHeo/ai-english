@@ -26,7 +26,8 @@
 │  儿童 / 家长客户端（apps/web）                               │
 │  React 19 + Vite 8 + React Router 7                          │
 │  ├─ 关卡状态机（LevelPage）                                  │
-│  ├─ 进度 / TTS 偏好 / 家庭日记（localStorage）               │
+│  ├─ 进度 / TTS 偏好 / 家庭日记元数据（localStorage）         │
+│  ├─ 日记语音 clips（IndexedDB）                               │
 │  ├─ 关卡口语：浏览器 SpeechRecognition + MediaRecorder       │
 │  ├─ 日记语音：MediaRecorder → Capacitor DiaryWhisper         │
 │  └─ TTS：App Piper / 降级系统 TTS；Web speechSynthesis       │
@@ -179,7 +180,7 @@
 | 场景 | 录音 | 识别 | 说明 |
 |------|------|------|------|
 | **官方/家庭关卡口语** | `usePressToTalk`（约 3.5s） | 浏览器 SpeechRecognition（en-US）为主，录音可交 `/api/asr` | 文档规划关卡侧可接 **Vosk**；**当前仓库 apps 内尚无 Vosk 实现** |
-| **家庭日记气泡** | `useDiaryRecorder`（最长约 45s） | Capacitor **端侧 Whisper**（`diaryAsr` → `DiaryWhisper`） | **不**把日记默认送到云端 OpenAI；浏览器仅可录音 + 手改字 |
+| **家庭日记气泡** | `useDiaryRecorder`（最长约 180s） | Capacitor **端侧 Whisper**（`diaryAsr` → `DiaryWhisper`） | **不**把日记默认送到云端 OpenAI；浏览器仅可录音 + 手改字 |
 
 ### 7.1 TTS
 
@@ -291,7 +292,7 @@ cd apps/web && npm run dev:phone
 1. **关卡 Vosk**：方案上与日记 Whisper 隔离，但客户端 Vosk 尚未合入 `apps/`；现网关卡依赖浏览器识别 + API mock/openai。
 2. **日记 Whisper**：Android（cli）与 iOS（xcframework）桥接已具备；ggml 模型需 `fetch-diary-whisper`（iOS 加 `--ios-only`）后打包。
 3. **TTS**：App 优先 Piper（Android / iOS 均需对应 fetch）；浏览器仍为系统朗读；无云端精品音色管线。
-4. **存储**：日记音频以 data URL 进 localStorage，存在配额风险；无多设备同步。
+4. **存储**：日记音频在 IndexedDB；元数据在 localStorage。无多设备同步。
 5. **Android 工程**：需本机生成；云端环境通常不直接产出 APK。
 6. **PaddleSpeech 备选调研**：开源 ASR/TTS 官方支持矩阵（仅官方仓库依据）见 [`paddlespeech-support-matrix.md`](./paddlespeech-support-matrix.md)。
 
