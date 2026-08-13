@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { assetUrl } from '../content/loader'
 import { isDataUrl } from './clearCeremony'
+import { SparkleStars } from './SparkleStars'
 
 type Props = {
   stickerSrc: string
   showBeepEntry: boolean
   pulseContinue: boolean
+  /** 通关奖励星星数；展示时至少 3 颗更有存在感 */
+  starCount?: number
+  layoutKey?: string
   onContinue: () => void
   onBeep: () => void
 }
@@ -14,6 +18,8 @@ export function ClearCeremonyOverlay({
   stickerSrc,
   showBeepEntry,
   pulseContinue,
+  starCount = 1,
+  layoutKey = 'clear',
   onContinue,
   onBeep,
 }: Props) {
@@ -29,10 +35,13 @@ export function ClearCeremonyOverlay({
     setImgSrc(assetUrl(stickerSrc))
   }, [stickerSrc])
 
+  const sparkleCount = Math.max(3, Math.min(starCount + 2, 5))
+
   return (
     <div className="clear-ceremony" role="dialog" aria-label="level clear">
       <div className="clear-ceremony__dim" aria-hidden />
       <div className="clear-ceremony__burst" aria-hidden />
+      <SparkleStars count={sparkleCount} layoutKey={layoutKey} />
       <img
         className="clear-ceremony__sticker"
         src={imgSrc}
@@ -46,9 +55,6 @@ export function ClearCeremonyOverlay({
           )
         }}
       />
-      <div className="clear-ceremony__star" aria-hidden>
-        ★
-      </div>
       <button
         type="button"
         className={`clear-ceremony__continue ${pulseContinue ? 'pulse' : ''}`}
