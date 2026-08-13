@@ -107,10 +107,36 @@
   z-index: 2;
   flex-shrink: 1;
   pointer-events: none;
+  padding: 0;
+  display: block;
+}
+
+button.focus-item {
+  cursor: default;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+button.focus-item.focus-item--tap {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+button.focus-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 22px;
+  display: block;
+  pointer-events: none;
 }
 
 .focus-item.bounce {
   animation: focus-bounce 1.1s ease-in-out infinite;
+}
+
+.focus-item.focus-item--tap.bounce {
+  animation: focus-bounce 1.1s ease-in-out infinite, focus-glow 1.6s ease-in-out infinite;
 }
 
 @keyframes focus-bounce {
@@ -120,6 +146,16 @@
   }
   50% {
     transform: translateY(-10px) scale(1.04);
+  }
+}
+
+@keyframes focus-glow {
+  0%,
+  100% {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(47, 158, 85, 0.35);
+  }
+  50% {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), 0 0 0 10px rgba(47, 158, 85, 0.18);
   }
 }
 
@@ -138,10 +174,38 @@
   position: relative;
 }
 
+.mic-btn.nudge {
+  animation: mic-nudge 1.4s ease-in-out infinite;
+}
+
 .mic-btn.hot {
   transform: scale(1.08);
   background-color: #c43b2a;
   animation: mic-pulse 0.9s ease-in-out infinite;
+}
+
+.mic-btn.listening-ring::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: #ffe08a;
+  border-right-color: #ffe08a;
+  animation: listen-spin var(--listen-ms, 5s) linear forwards;
+  pointer-events: none;
+}
+
+@keyframes mic-nudge {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(180, 40, 30, 0.35), 0 0 0 0 rgba(228, 93, 74, 0.35);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 10px 24px rgba(180, 40, 30, 0.35), 0 0 0 16px rgba(228, 93, 74, 0.16);
+  }
 }
 
 @keyframes mic-pulse {
@@ -151,6 +215,17 @@
   }
   50% {
     box-shadow: 0 0 0 14px rgba(228, 93, 74, 0.28), 0 10px 24px rgba(180, 40, 30, 0.35);
+  }
+}
+
+@keyframes listen-spin {
+  from {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(360deg);
+    opacity: 0.55;
   }
 }
 

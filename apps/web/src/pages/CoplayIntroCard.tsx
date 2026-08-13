@@ -36,9 +36,24 @@ export function CoplayIntroCard({ onDone }: Props) {
       <div className="coplay-intro__card">
         <p className="coplay-intro__brand">今晚一起玩</p>
         <ol className="coplay-intro__steps">
-          <li>选一个主题，先玩第 1 关</li>
-          <li>听不懂看图；说不出可以点图</li>
-          <li>通关看贴纸，星星会闪哦</li>
+          <li>
+            <span className="coplay-intro__emoji" aria-hidden>
+              👂
+            </span>
+            先听大图说英语
+          </li>
+          <li>
+            <span className="coplay-intro__emoji" aria-hidden>
+              🎤
+            </span>
+            点红麦跟着说；说不出可点图
+          </li>
+          <li>
+            <span className="coplay-intro__emoji" aria-hidden>
+              ⭐
+            </span>
+            通关拿贴纸，星星会闪哦
+          </li>
         </ol>
         <button type="button" className="coplay-intro__go" onClick={dismiss}>
           开始吧

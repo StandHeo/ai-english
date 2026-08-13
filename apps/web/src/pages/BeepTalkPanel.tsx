@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { assetUrl } from '../content/loader'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
@@ -249,7 +249,8 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
 
       {phase === 'listen' && (
         <button
-          className={`mic-btn ${recording ? 'hot' : ''}`}
+          className={`mic-btn ${recording ? 'hot listening-ring' : 'nudge'}`}
+          style={recording ? ({ ['--listen-ms']: '5000ms' } as CSSProperties) : undefined}
           disabled={busy && !recording}
           type="button"
           aria-label={recording ? 'stop listening' : 'start listening'}

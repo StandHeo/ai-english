@@ -44,7 +44,9 @@
         "tricycle",
         "a tricycle",
         "trike",
-        "a trike"
+        "a trike",
+        "bike",
+        "a bike"
       ],
       "hint_say": "Tricycle!",
       "success_say": "Super!",
@@ -83,7 +85,10 @@
         "expect": [
           "tricycle",
           "a tricycle",
-          "the tricycle"
+          "the tricycle",
+          "bike",
+          "a bike",
+          "trike"
         ],
         "hint_say": "Say tricycle!",
         "success_say": "Yes! Tricycle!",
@@ -111,7 +116,10 @@
         "expect": [
           "tricycle",
           "a tricycle",
-          "the tricycle"
+          "the tricycle",
+          "bike",
+          "a bike",
+          "trike"
         ],
         "hint_say": "Say tricycle!",
         "success_say": "Great tricycle!",

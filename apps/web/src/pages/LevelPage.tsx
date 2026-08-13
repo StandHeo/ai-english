@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import {
@@ -455,12 +455,17 @@ export function LevelPage({ onProgress }: Props) {
           lines.push('浏览器语音识别未启用')
         }
         setVoiceDebug({ tone: 'error', lines })
-        if (capture.error === 'insecure') openTypeFallback('insecure')
-        else if (capture.error === 'denied') openTypeFallback('denied')
-        else {
-          openTypeFallback('empty')
-          setPhase('fallback')
+        if (capture.error === 'insecure') {
+          openTypeFallback('insecure')
+          return
         }
+        if (capture.error === 'denied') {
+          openTypeFallback('denied')
+          return
+        }
+        // 没听清 / 识别失败：走口语重试，不要立刻甩点图（4 岁友好）
+        setMicTip('empty')
+        await onOralResult(false)
         return
       }
 
@@ -468,8 +473,8 @@ export function LevelPage({ onProgress }: Props) {
         const lines = ['没有听到声音，也没有录到音频']
         if (capture.detail) lines.push(capture.detail)
         setVoiceDebug({ tone: 'error', lines })
-        openTypeFallback('empty')
-        setPhase('fallback')
+        setMicTip('empty')
+        await onOralResult(false)
         return
       }
 
@@ -691,11 +696,11 @@ export function LevelPage({ onProgress }: Props) {
       : micTip === 'denied'
         ? '请允许麦克风，或点右下角 · 打字'
         : micTip === 'listening'
-          ? '正在听… 大声说英语～'
+          ? '正在听… 大声说英语～（约 5 秒）'
           : micTip === 'empty'
-            ? '没听清，再试一次或点图～'
+            ? '没听清，再试一次或点大图听一听～'
             : phase === 'listen' && !recording
-              ? '点一下红色麦克风，然后大声说英语～'
+              ? '点红色麦克风说英语；也可点大图再听一遍～'
               : null
 
   return (
@@ -796,11 +801,21 @@ export function LevelPage({ onProgress }: Props) {
         <>
           <img className="npc" src={assetUrl('assets/characters/bunny.png')} alt="" />
           {beat?.show && phase !== 'find' && (
-            <img
-              className={`focus-item ${phase === 'listen' ? 'bounce' : ''}`}
-              src={assetUrl(beat.show)}
-              alt=""
-            />
+            <button
+              type="button"
+              className={`focus-item ${phase === 'listen' ? 'bounce' : ''} ${
+                phase === 'listen' ? 'focus-item--tap' : ''
+              }`}
+              disabled={busy || phase !== 'listen'}
+              aria-label="hear the word again"
+              onClick={() => {
+                if (phase !== 'listen' || busy) return
+                const line = beat.expect?.[0] || beat.hint_say || beat.npc_say
+                if (line) void requestTts(line)
+              }}
+            >
+              <img src={assetUrl(beat.show)} alt="" />
+            </button>
           )}
 
           {/* 儿童主画面不展示识别结果/来源；家长点右下角 · 查看 */}
@@ -812,7 +827,12 @@ export function LevelPage({ onProgress }: Props) {
 
           {phase === 'listen' && (
             <button
-              className={`mic-btn ${recording ? 'hot' : ''}`}
+              className={`mic-btn ${recording ? 'hot' : 'nudge'} ${recording ? 'listening-ring' : ''}`}
+              style={
+                recording
+                  ? ({ ['--listen-ms']: '5000ms' } as CSSProperties)
+                  : undefined
+              }
               disabled={busy && !recording}
               type="button"
               aria-label={recording ? 'stop listening' : 'start listening'}
