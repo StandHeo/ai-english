@@ -48,6 +48,7 @@
 .theme-card {
   width: 100%;
   aspect-ratio: 1;
+  max-height: min(42vh, 220px);
   border: 0;
   border-radius: 24px;
   padding: 10px;
@@ -122,5 +123,37 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .home-screen {
+    padding: 12px 16px 20px;
+  }
+
+  .home-bunny {
+    width: 64px;
+    height: 64px;
+  }
+
+  .theme-grid {
+    margin-top: 2vh;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(96vw, 720px);
+    gap: 10px;
+  }
+
+  .theme-card {
+    max-height: min(26vh, 140px);
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .theme-card img {
+    border-radius: 12px;
+  }
+
+  .family-card-title {
+    font-size: 1.2rem;
   }
 }
