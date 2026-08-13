@@ -735,6 +735,8 @@ export function LevelPage({ onProgress }: Props) {
           stickerSrc={resolveCeremonyStickerSrc(level)}
           showBeepEntry={hasBeepTalk}
           pulseContinue={pulseContinue}
+          starCount={level.reward?.stars ?? 1}
+          layoutKey={level.id}
           onContinue={() => leaveAfterClear(nextLevelId)}
           onBeep={() => {
             if (clearAutoTimerRef.current != null) {

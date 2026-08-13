@@ -1,3 +1,5 @@
+import { SparkleStars } from './SparkleStars'
+
 /** 选对时的成就感动画：多种变体轮换，纯 CSS/SVG，无需联网或 GIF。 */
 
 export type CelebrateVariant = 'check' | 'stars' | 'confetti' | 'trophy' | 'hearts' | 'rings'
@@ -103,6 +105,7 @@ export function SuccessCelebrate({ variant, title, line }: Props) {
   return (
     <>
       <div className={`burst burst--${variant}`} aria-hidden />
+      <SparkleStars count={3} layoutKey={`ok-${variant}-${title}`} className="sparkle-stars--success" />
       <div
         className={`result-flash result-flash--ok result-flash--${variant}`}
         role="status"

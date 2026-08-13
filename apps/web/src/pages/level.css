@@ -873,6 +873,81 @@
   }
 }
 
+/* —— 闪闪发光跳动星星（得分 / 通关） —— */
+.sparkle-stars {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.sparkle-stars--success {
+  z-index: 5;
+}
+
+.sparkle-star {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--star-spin, 0deg));
+  color: #ffd24a;
+  line-height: 1;
+  font-weight: 700;
+  text-shadow:
+    0 0 8px rgba(255, 220, 80, 0.95),
+    0 0 18px rgba(255, 180, 40, 0.75),
+    0 4px 0 rgba(180, 100, 0, 0.25);
+  animation-name: star-bounce-sparkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform, filter, opacity;
+}
+
+.sparkle-star__glow {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 230, 120, 0.55), transparent 68%);
+  z-index: -1;
+  animation: star-glow-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes star-bounce-sparkle {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--star-spin, 0deg)) scale(0.92);
+    filter: brightness(1);
+    opacity: 0.92;
+  }
+  25% {
+    transform: translate(-50%, calc(-50% - 14px)) rotate(calc(var(--star-spin, 0deg) + 8deg))
+      scale(1.12);
+    filter: brightness(1.25);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(var(--star-spin, 0deg)) scale(1);
+    filter: brightness(1.05);
+  }
+  75% {
+    transform: translate(-50%, calc(-50% - 8px)) rotate(calc(var(--star-spin, 0deg) - 6deg))
+      scale(1.08);
+    filter: brightness(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes star-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
 /* —— 通关仪式（level-clear-ceremony） —— */
 .clear-ceremony {
   position: absolute;
@@ -913,18 +988,8 @@
   border: 6px solid #fff;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
   background: #fff8ee;
-  margin-bottom: 12px;
-  animation: mark-bounce 0.55s ease;
-}
-
-.clear-ceremony__star {
-  position: relative;
-  z-index: 1;
-  font-size: 1.6rem;
-  color: #f0b429;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
   margin-bottom: 18px;
-  animation: mark-bounce 0.7s ease 0.1s both;
+  animation: mark-bounce 0.55s ease;
 }
 
 .clear-ceremony__continue {
@@ -1034,9 +1099,8 @@
     border-radius: 18px;
   }
 
-  .clear-ceremony__star {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+  .sparkle-star {
+    font-size: clamp(1.6rem, 5vh, 2.6rem) !important;
   }
 
   .clear-ceremony__continue {
