@@ -93,10 +93,10 @@ export function LevelPage({ onProgress }: Props) {
   >('speak')
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [showDevType, setShowDevType] = useState(false)
+  const [showDevPanel, setShowDevPanel] = useState(false)
   const [devText, setDevText] = useState('')
   const [micTip, setMicTip] = useState<MicTip>(null)
-  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null)
+  const [voiceDebug, setVoiceDebug] = useState<VoiceStatus | null>(null)
   const [resultFlash, setResultFlash] = useState<ResultFlash | null>(null)
   const [sceneReady, setSceneReady] = useState(false)
   const [videoPlaying, setVideoPlaying] = useState(false)
@@ -125,25 +125,32 @@ export function LevelPage({ onProgress }: Props) {
     if (Capacitor.isNativePlatform()) return
     if (!isMicAllowedByBrowser() || pageProtocolHint() === 'http') {
       setMicTip('insecure')
-      setShowDevType(true)
+      setShowDevPanel(true)
+      setVoiceDebug({
+        tone: 'warn',
+        lines: [
+          `当前是 ${pageProtocolHint() === 'http' ? 'http' : '非安全'} 页面，手机不能开麦克风。`,
+          '请用 https://电脑IP:5173（证书点继续访问），或在本面板打字。',
+        ],
+      })
     }
   }, [])
 
   useEffect(() => {
     if (!isNativeVoskAvailable()) return
-    setVoiceStatus({
+    setVoiceDebug({
       tone: 'info',
       lines: ['正在加载离线语音模型（Vosk）…'],
     })
     void ensureVoskModel()
       .then(() => {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'ok',
           lines: ['离线语音已就绪（App Vosk）', '点麦克风说英语单词即可'],
         })
       })
       .catch((err) => {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'error',
           lines: [
             '离线语音模型加载失败',
@@ -151,6 +158,7 @@ export function LevelPage({ onProgress }: Props) {
             '请确认 APK 已包含 public/models/en-us-small.tar',
           ],
         })
+        setShowDevPanel(true)
       })
   }, [])
 
@@ -277,7 +285,7 @@ export function LevelPage({ onProgress }: Props) {
   const enterClearCeremony = useCallback(
     async (current: LevelScript) => {
       if (!packId) return
-      setVoiceStatus(null)
+      setVoiceDebug(null)
       setResultFlash(null)
       setRetries(0)
       setExitConfirm(false)
@@ -319,7 +327,7 @@ export function LevelPage({ onProgress }: Props) {
       return
     }
     setRetries(0)
-    setVoiceStatus(null)
+    setVoiceDebug(null)
     setResultFlash(null)
     setBeatIndex((i) => i + 1)
   }, [enterClearCeremony, level])
@@ -426,7 +434,8 @@ export function LevelPage({ onProgress }: Props) {
 
   function openTypeFallback(tip: MicTip = 'empty') {
     setMicTip(tip)
-    setShowDevType(true)
+    // 需要打字兜底时打开家长面板；识别明细仍只在面板内
+    setShowDevPanel(true)
   }
 
   const finishingRef = useRef(false)
@@ -443,7 +452,7 @@ export function LevelPage({ onProgress }: Props) {
         if (capture.recognitionUsed === false) {
           lines.push('浏览器语音识别未启用')
         }
-        setVoiceStatus({ tone: 'error', lines })
+        setVoiceDebug({ tone: 'error', lines })
         if (capture.error === 'insecure') openTypeFallback('insecure')
         else if (capture.error === 'denied') openTypeFallback('denied')
         else {
@@ -456,7 +465,7 @@ export function LevelPage({ onProgress }: Props) {
       if (!capture.transcript && !capture.blob) {
         const lines = ['没有听到声音，也没有录到音频']
         if (capture.detail) lines.push(capture.detail)
-        setVoiceStatus({ tone: 'error', lines })
+        setVoiceDebug({ tone: 'error', lines })
         openTypeFallback('empty')
         setPhase('fallback')
         return
@@ -464,12 +473,12 @@ export function LevelPage({ onProgress }: Props) {
 
       const localHeard = capture.transcript?.trim() || ''
       if (localHeard) {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'info',
           lines: [`听到了：「${localHeard}」`, '正在核对…'],
         })
       } else {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'warn',
           lines: [
             '浏览器没有识别出文字',
@@ -484,7 +493,7 @@ export function LevelPage({ onProgress }: Props) {
         Capacitor.isNativePlatform() &&
         !localHeard
       ) {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'warn',
           lines: [
             '离线 Vosk 没有识别出文字',
@@ -510,7 +519,7 @@ export function LevelPage({ onProgress }: Props) {
           expect: beat.expect,
         })
       } catch (err) {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'error',
           lines: [
             '提交语音失败（/api/asr）',
@@ -518,13 +527,14 @@ export function LevelPage({ onProgress }: Props) {
             '请确认电脑上的 API 服务在跑（端口 8787）',
           ],
         })
+        setShowDevPanel(true)
         setPhase('fallback')
         return
       }
 
       const heard = (result.transcript || localHeard || '').trim()
       if (!heard) {
-        setVoiceStatus({
+        setVoiceDebug({
           tone: 'warn',
           lines: [
             '没有得到真实识别文字',
@@ -557,7 +567,7 @@ export function LevelPage({ onProgress }: Props) {
                     ? '来源：App 离线 Vosk'
                     : '来源：未知'
 
-      setVoiceStatus({
+      setVoiceDebug({
         tone: result.matched ? 'ok' : 'warn',
         lines: [
           `识别结果：「${heard}」`,
@@ -584,8 +594,8 @@ export function LevelPage({ onProgress }: Props) {
     )
     if (result === 'started') {
       setMicTip('listening')
-      setShowDevType(false)
-      setVoiceStatus({
+      setShowDevPanel(false)
+      setVoiceDebug({
         tone: 'info',
         lines: [
           nativeVosk ? '正在听（离线 Vosk）…' : '正在听… 请说英语单词',
@@ -606,12 +616,12 @@ export function LevelPage({ onProgress }: Props) {
     cancelAutoStop()
     setBusy(true)
     try {
-      setVoiceStatus({
+      setVoiceDebug({
         tone: 'info',
         lines: [`手动输入：「${devText}」`, '正在核对…'],
       })
       const result = await submitSpeech({ text: devText, expect: beat.expect })
-      setVoiceStatus({
+      setVoiceDebug({
         tone: result.matched ? 'ok' : 'warn',
         lines: [
           `识别结果：「${result.transcript || devText}」`,
@@ -622,7 +632,7 @@ export function LevelPage({ onProgress }: Props) {
       })
       await onOralResult(result.matched)
     } catch (err) {
-      setVoiceStatus({
+      setVoiceDebug({
         tone: 'error',
         lines: [
           '提交失败',
@@ -666,17 +676,13 @@ export function LevelPage({ onProgress }: Props) {
   const inClearFlow = phase === 'clearCeremony' || phase === 'beepTalk'
   const tipText =
     micTip === 'insecure'
-      ? Capacitor.isNativePlatform()
-        ? `App 无法开麦克风。请确认 Info.plist 有「Privacy - Microphone Usage Description」，在本机执行 npm run patch:ios-plist 后重新 Xcode Run；也可先在下方输入单词。`
-        : `当前是 ${pageProtocolHint() === 'http' ? 'http' : '非安全'} 页面，手机不能开麦克风。请在电脑运行 npm run dev:phone，手机用 https://电脑IP:5173 打开（证书点继续访问）；或先在下方输入单词。`
+      ? '请让爸爸妈妈帮忙开麦克风～'
       : micTip === 'denied'
-        ? Capacitor.isNativePlatform()
-          ? '未获得麦克风权限。请到 iPhone「设置 → Fruit Forest」允许麦克风；也可在下方输入单词。'
-          : '未获得麦克风权限。请在浏览器弹窗点「允许」，或到网站设置里打开麦克风；也可在下方输入单词。'
+        ? '请允许麦克风，或点右下角 · 打字'
         : micTip === 'listening'
-          ? '正在听… 请大声说英语单词，约 3 秒后自动结束；再点一次麦克风可提前结束。'
+          ? '正在听… 大声说英语～'
           : micTip === 'empty'
-            ? '没有听到声音。请再点麦克风说一次，或在下方输入单词（如 apple / bike）。'
+            ? '没听清，再试一次或点图～'
             : phase === 'listen' && !recording
               ? '点一下红色麦克风，然后大声说英语～'
               : null
@@ -786,14 +792,7 @@ export function LevelPage({ onProgress }: Props) {
             />
           )}
 
-          {voiceStatus && (
-            <div className={`voice-status voice-status--${voiceStatus.tone}`} role="status">
-              {voiceStatus.lines.map((line) => (
-                <div key={line}>{line}</div>
-              ))}
-            </div>
-          )}
-
+          {/* 儿童主画面不展示识别结果/来源；家长点右下角 · 查看 */}
           {tipText && (phase === 'listen' || micTip === 'insecure') && (
             <div className="mic-tip" role="status">
               {tipText}
@@ -850,20 +849,39 @@ export function LevelPage({ onProgress }: Props) {
             </div>
           )}
 
-          <button className="dev-toggle" onClick={() => setShowDevType((v) => !v)} type="button">
+          <button
+            className={`dev-toggle ${showDevPanel ? 'on' : ''}`}
+            onClick={() => setShowDevPanel((v) => !v)}
+            type="button"
+            aria-label="parent debug"
+            aria-expanded={showDevPanel}
+          >
             ·
           </button>
-          {showDevType && phase === 'listen' && (
-            <div className="dev-type">
-              <input
-                value={devText}
-                onChange={(e) => setDevText(e.target.value)}
-                placeholder="apple"
-                aria-label="type word"
-              />
-              <button type="button" onClick={handleDevSubmit}>
-                OK
-              </button>
+          {showDevPanel && (
+            <div className="voice-debug-panel" role="region" aria-label="voice debug">
+              {voiceDebug ? (
+                <div className={`voice-status voice-status--${voiceDebug.tone}`}>
+                  {voiceDebug.lines.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
+              ) : (
+                <div className="voice-debug-panel__empty">暂无识别调试信息</div>
+              )}
+              {(phase === 'listen' || phase === 'fallback') && (
+                <div className="dev-type dev-type--in-panel">
+                  <input
+                    value={devText}
+                    onChange={(e) => setDevText(e.target.value)}
+                    placeholder="apple"
+                    aria-label="type word"
+                  />
+                  <button type="button" onClick={handleDevSubmit}>
+                    OK
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
