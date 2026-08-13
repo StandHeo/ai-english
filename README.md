@@ -14,7 +14,8 @@ docs/             # 使用说明与技术方案
 ```
 
 **整体技术方案（架构 / 双轨语音 / 家庭日记 / 本地存储）：**  
-→ **[`docs/tech-architecture.md`](docs/tech-architecture.md)**
+→ **[`docs/tech-architecture.md`](docs/tech-architecture.md)**  
+→ 家长视角体验与待定：[`docs/parent-child-ux-notes.md`](docs/parent-child-ux-notes.md)
 
 ## 主题包
 

@@ -1,7 +1,8 @@
 # AI English · 整体技术方案
 
 > 基于当前 `main` 代码与文档整理，描述「现在整体程序在用什么技术、怎么串起来」。  
-> 配套操作说明见：`README.md`、`docs/android-phone-guide.md`、`docs/family-day-studio.md`、`docs/family-diary-whisper.md`。
+> 配套操作说明见：`README.md`、`docs/android-phone-guide.md`、`docs/family-day-studio.md`、`docs/family-diary-whisper.md`。  
+> 家长视角体验笔记（含待定）：[`docs/parent-child-ux-notes.md`](parent-child-ux-notes.md)。
 
 ---
 
