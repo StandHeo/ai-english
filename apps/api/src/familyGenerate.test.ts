@@ -66,3 +66,22 @@ test('validate rejects empty beats', () => {
     'beats_count',
   )
 })
+
+test('agnes llm without key throws api_key_required', async () => {
+  const prev = process.env.FAMILY_LLM_PROVIDER
+  process.env.FAMILY_LLM_PROVIDER = 'deepseek'
+  delete process.env.AGNES_API_KEY
+  try {
+    await assert.rejects(
+      () =>
+        generateFamilyLevel({
+          story: '今天去了公园玩滑梯',
+          date: '2026-08-18',
+          llm: 'agnes',
+        }),
+      (err: unknown) => err instanceof Error && err.message === 'api_key_required',
+    )
+  } finally {
+    process.env.FAMILY_LLM_PROVIDER = prev
+  }
+})

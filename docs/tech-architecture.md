@@ -106,7 +106,7 @@
 
 - Vite 将 `/api`、`/health` 代理到 `http://localhost:8787`。
 - `npm run dev:phone`：`VITE_PHONE=1` → HTTPS（`@vitejs/plugin-basic-ssl`）+ `0.0.0.0`，供真机麦克风。
-- App 包内不走 Vite 代理，需配置 `VITE_API_BASE` 指向可访问的 API。
+- App 包内不走 Vite 代理。家庭关卡生成/云端配图在已填云 Key 时直连厂商 HTTPS，不必 `VITE_API_BASE`。其它仍走 `/api` 的能力（如关卡口语）可配 `VITE_API_BASE` 或设置里的电脑 API 地址。
 
 ---
 
@@ -202,9 +202,10 @@
 
 | 能力 | 实现要点 |
 |------|----------|
-| 聊天制作台 | `/family/studio`：按日气泡（文字/语音可回放）、改字；DeepSeek/生成/选图折叠在「生成与设置」 |
-| 存储 | `ai-english-family-v1`：`messages[]`、`story`（合并缓存）、`level`、`photoHints`、`images`、`completed`、本机 API Key |
-| 生成 | `POST /api/family/generate-level`；mock 可无 Key 冒烟 |
+| 聊天制作台 | `/family/studio`：按日气泡；设置里切换 DeepSeek/Agnes、通义/Agnes 图 |
+| 存储 | `ai-english-family-v1`：关卡与图 + 各家 API Key、提供方选择 |
+| 生成 | App 有 Key 时直连云；浏览器 `POST /api/family/generate-level`（`llm`） |
+| 配图 | App 直连万相或 Agnes 图；浏览器 `/api/family/generate-images`（`imageProvider`） |
 | 日历 | 有关卡日着色；有语音日小圆点 |
 | 游玩 | `/family/:date/play`，与官方 pack 进度隔离 |
 

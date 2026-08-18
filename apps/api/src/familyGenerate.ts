@@ -264,24 +264,13 @@ function mockFromStory(story: string, date: string): GeneratedFamilyPayload {
   }
 }
 
-async function callDeepseek(
-  story: string,
-  date: string,
-  apiKey: string,
-  model: string,
-  minKeywords: number,
-): Promise<{ content: string; userContent: string }> {
-  const userContent = `Date: ${date}
-Minimum UNIQUE English keywords required: ${minKeywords}
-(This number is also the target image/slot count for family diary art.)
-(Count = unique short nouns from target_words + every picture option id. Must be >= ${minKeywords}.)
-
-Child day story:
-${story}
-
-If the story is thin, still invent plausible related kid nouns from a typical day so the keyword count is met.
-Return JSON only.`
-
+async function callChatCompletions(input: {
+  url: string
+  apiKey: string
+  model: string
+  userContent: string
+}): Promise<{ content: string; userContent: string }> {
+  const { url, apiKey, model, userContent } = input
   const requestBody = {
     model,
     temperature: 0.4,
@@ -292,36 +281,36 @@ Return JSON only.`
   }
 
   console.log(
-    '[deepseek] request',
+    '[family-llm] request',
     JSON.stringify({
+      url,
       model,
-      minKeywords,
       userContent,
       systemPreview: SYSTEM_PROMPT.slice(0, 400),
     }),
   )
 
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(180_000),
   })
   if (!res.ok) {
     const body = await res.text()
-    console.log('[deepseek] http_error', res.status, body.slice(0, 500))
-    throw new Error(`deepseek_http_${res.status}:${body.slice(0, 200)}`)
+    console.log('[family-llm] http_error', res.status, body.slice(0, 500))
+    throw new Error(`llm_http_${res.status}:${body.slice(0, 200)}`)
   }
   const data = (await res.json()) as {
     choices?: { message?: { content?: string } }[]
   }
   const content = data.choices?.[0]?.message?.content
-  if (!content) throw new Error('deepseek_empty')
+  if (!content) throw new Error('llm_empty')
   console.log(
-    '[deepseek] response',
+    '[family-llm] response',
     JSON.stringify({
       chars: content.length,
       preview: content.slice(0, 2000),
@@ -330,19 +319,46 @@ Return JSON only.`
   return { content, userContent }
 }
 
+function resolveLlm(raw?: string): 'deepseek' | 'agnes' | 'mock' {
+  const env = (process.env.FAMILY_LLM_PROVIDER || 'deepseek').trim().toLowerCase()
+  const v = (raw || env).trim().toLowerCase()
+  if (v === 'mock' || v === 'agnes' || v === 'deepseek') return v
+  return env === 'mock' || env === 'agnes' ? env : 'deepseek'
+}
+
+function llmConfig(llm: 'deepseek' | 'agnes'): {
+  url: string
+  model: string
+  envKeys: string[]
+} {
+  if (llm === 'agnes') {
+    return {
+      url: 'https://apihub.agnes-ai.com/v1/chat/completions',
+      model: process.env.AGNES_LLM_MODEL?.trim() || 'agnes-2.5-flash',
+      envKeys: ['AGNES_API_KEY', 'FAMILY_LLM_API_KEY'],
+    }
+  }
+  return {
+    url: 'https://api.deepseek.com/chat/completions',
+    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    envKeys: ['DEEPSEEK_API_KEY', 'FAMILY_LLM_API_KEY'],
+  }
+}
+
 export async function generateFamilyLevel(input: {
   story: string
   date: string
   apiKey?: string
   minKeywords?: number
+  llm?: string
 }): Promise<GeneratedFamilyPayload & { keywords: string[] }> {
   const story = input.story.trim()
   if (!story) throw new Error('story_required')
   const date = input.date || new Date().toISOString().slice(0, 10)
   const minKeywords = clampMinKeywords(input.minKeywords ?? 9)
 
-  const provider = process.env.FAMILY_LLM_PROVIDER || 'deepseek'
-  if (provider === 'mock') {
+  const llm = resolveLlm(input.llm)
+  if (llm === 'mock') {
     const payload = mockFromStory(story, date)
     const err = validateFamilyLevel(payload.level)
     if (err) throw new Error(`mock_invalid:${err}`)
@@ -366,23 +382,32 @@ export async function generateFamilyLevel(input: {
     }
   }
 
+  const cfg = llmConfig(llm)
   const apiKey =
     input.apiKey?.trim() ||
-    process.env.DEEPSEEK_API_KEY ||
-    process.env.FAMILY_LLM_API_KEY ||
+    cfg.envKeys.map((k) => process.env[k]?.trim()).find(Boolean) ||
     ''
   if (!apiKey) throw new Error('api_key_required')
 
-  const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  const model = cfg.model
+  const userContent = `Date: ${date}
+Minimum UNIQUE English keywords required: ${minKeywords}
+(This number is also the target image/slot count for family diary art.)
+(Count = unique short nouns from target_words + every picture option id. Must be >= ${minKeywords}.)
+
+Child day story:
+${story}
+
+If the story is thin, still invent plausible related kid nouns from a typical day so the keyword count is met.
+Return JSON only.`
 
   const attempt = async () => {
-    const { content, userContent } = await callDeepseek(
-      story,
-      date,
+    const { content } = await callChatCompletions({
+      url: cfg.url,
       apiKey,
       model,
-      minKeywords,
-    )
+      userContent,
+    })
     const parsed = extractJson(content) as {
       level?: unknown
       photoHints?: unknown
@@ -446,6 +471,7 @@ export async function generateFamilyLevel(input: {
     if (
       msg.startsWith('keywords_insufficient:') ||
       msg.startsWith('invalid_level') ||
+      msg.startsWith('llm_http_') ||
       msg.startsWith('deepseek_http_') ||
       msg.includes('TimeoutError') ||
       msg.includes('aborted') ||
@@ -456,7 +482,7 @@ export async function generateFamilyLevel(input: {
       } catch (second) {
         const s = second instanceof Error ? second : first
         if (s instanceof Error && (s.name === 'TimeoutError' || /timeout|aborted/i.test(s.message))) {
-          throw new Error('deepseek_timeout')
+          throw new Error('llm_timeout')
         }
         throw s instanceof Error ? s : first
       }

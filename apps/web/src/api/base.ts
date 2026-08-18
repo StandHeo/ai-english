@@ -19,8 +19,9 @@ export function setStoredApiBase(url: string): void {
 }
 
 /**
- * API 根地址。浏览器开发时为空走 Vite 同源代理；
- * Capacitor App 必须填电脑 LAN，例如 http://192.168.2.104:8787
+ * API 根地址。浏览器开发时为空走 Vite 同源代理。
+ * Capacitor App：家庭生成/配图有云 Key 时可直连厂商 HTTPS，不必填局域网；
+ * 仅当走电脑 .env 代理（关卡 ASR 等）时才需要，例如 http://192.168.2.104:8787
  */
 export function getApiBase(): string {
   return getStoredApiBase() || ENV_BASE

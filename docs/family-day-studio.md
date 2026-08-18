@@ -1,19 +1,20 @@
 # 家庭日记关卡工作室（当晚可玩）
 
-和官方主题包独立。家长用手机聊「今天做了什么」→ DeepSeek 生成一关 → 可选相册图 → 孩子在「家庭日历」里玩，并按日期攒下来。
+和官方主题包独立。家长用手机聊「今天做了什么」→ 所选模型（默认 DeepSeek，可切换 Agnes 2.5-flash）生成一关 → 可选图标/相册/云端配图 → 孩子在「家庭日历」里玩。
 
 > 聊天气泡 + 端侧 Whisper 说明见 [`family-diary-whisper.md`](./family-diary-whisper.md)。
 
 ## 前提
 
-1. API 与 Web 已启动；手机要用麦克风时请用 HTTPS：
+**打好的 App：** 在「家庭日记 → 设置」填写当前模型的云 Key 后，手机会直连 HTTPS，**不必**开电脑 `apps/api`、也不必填局域网地址。
+
+**电脑浏览器联调**仍要 API + Web：
 
 ```bash
 # 终端 1
 cd apps/api
 cp -n .env.example .env
-# 可选：写入 DEEPSEEK_API_KEY=sk-...
-# 可选：写入 DASHSCOPE_API_KEY=sk-...（通义配图，见 family-tongyi-images.md）
+# 可选：DEEPSEEK_API_KEY / AGNES_API_KEY / DASHSCOPE_API_KEY
 # 无 Key 联调可设 FAMILY_LLM_PROVIDER=mock
 # 配图联调可设 FAMILY_IMAGE_PROVIDER=mock
 npm run dev
@@ -23,16 +24,17 @@ cd apps/web
 npm run dev:phone
 ```
 
-2. 手机 Chrome 打开 `https://电脑IP:5173`（证书警告选继续访问）。
+手机 Chrome 打开 `https://电脑IP:5173`（证书警告选继续访问）。
 
 ## 家长：做今日关卡
 
 1. 首页右上角家庭图标 → 算术验证 → **家庭日记**
-2. 用聊天气泡打字或语音记录今日故事（Key / 自动配图在 **设置**）
-3. 点 **生成关卡**；若设置开启自动配图，会再请求通义万相（也可稍后「重新配图」或相册选图）
-4. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
+2. **设置**：关卡模型 DeepSeek / Agnes；云端配图通义 / Agnes 图；填对应 Key
+3. 聊天气泡打字或语音记录今日故事
+4. 点 **生成关卡**；若开启自动云端配图，会按当前提供方出图（也可「云端配图」或相册）
+5. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
 
-通义开通、费用与验收见 [`family-tongyi-images.md`](./family-tongyi-images.md)。  
+通义费用见 [`family-tongyi-images.md`](./family-tongyi-images.md)。Agnes 图以对方公开免费档为准，随时可能改价。  
 本地图标配图见 [`family-iconify-images.md`](./family-iconify-images.md)。
 
 ## 孩子：玩
@@ -45,4 +47,5 @@ npm run dev:phone
 - 同一天未通关可再次生成覆盖；已通关会先确认。
 - 生成关卡会检查英文关键词数量（目标词 + 选项 id 去重）；默认至少 9 个，可在日记设置里改（3–20）。不足时不保存关卡，提示追加日记后再生成。
 - 不会改写官方水果/机器人等 pack。
-- `FAMILY_LLM_PROVIDER=mock` 时不调用 DeepSeek，用固定演示关，方便冒烟。
+- `FAMILY_LLM_PROVIDER=mock` 时不调用云模型，用固定演示关，方便冒烟。
+- 浏览器联调请求体带 `llm`（`deepseek` | `agnes`）；服务端也可用 `AGNES_API_KEY`。

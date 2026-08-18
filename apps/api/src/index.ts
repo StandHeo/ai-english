@@ -80,10 +80,11 @@ app.post('/api/family/generate-level', async (req, res) => {
   try {
     const story = String(req.body.story || '').trim()
     const date = String(req.body.date || '').trim() || new Date().toISOString().slice(0, 10)
-    const headerKey = String(req.header('x-deepseek-key') || '').trim()
+    const headerKey = String(req.header('x-deepseek-key') || req.header('x-agnes-key') || '').trim()
     const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
     const apiKey = headerKey || bodyKey || undefined
     const minKeywords = req.body.minKeywords
+    const llm = typeof req.body.llm === 'string' ? req.body.llm : undefined
 
     if (!story) {
       res.status(400).json({ error: 'story_required' })
@@ -101,7 +102,7 @@ app.post('/api/family/generate-level', async (req, res) => {
       }),
     )
 
-    const payload = await generateFamilyLevel({ story, date, apiKey, minKeywords })
+    const payload = await generateFamilyLevel({ story, date, apiKey, minKeywords, llm })
     console.log(
       '[family/generate-level] result',
       JSON.stringify({
@@ -126,10 +127,10 @@ app.post('/api/family/generate-level', async (req, res) => {
       })
       return
     }
-    if (message === 'deepseek_timeout') {
+    if (message === 'deepseek_timeout' || message === 'llm_timeout') {
       res.status(504).json({
-        error: 'deepseek_timeout',
-        message: 'DeepSeek 响应超时，请稍后再试或把最少关键词调低',
+        error: 'llm_timeout',
+        message: '模型响应超时，请稍后再试或把最少关键词调低',
       })
       return
     }
@@ -147,11 +148,15 @@ app.post('/api/family/generate-level', async (req, res) => {
 app.post('/api/family/generate-images', async (req, res) => {
   try {
     const date = String(req.body.date || '').trim() || new Date().toISOString().slice(0, 10)
-    const headerKey = String(req.header('x-tongyi-key') || req.header('x-dashscope-key') || '').trim()
+    const headerKey = String(
+      req.header('x-tongyi-key') || req.header('x-dashscope-key') || req.header('x-agnes-key') || '',
+    ).trim()
     const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
     const apiKey = headerKey || bodyKey || undefined
     const forceMock = Boolean(req.body.forceMock)
     const maxSlots = req.body.maxSlots ?? req.body.minKeywords
+    const imageProvider =
+      typeof req.body.imageProvider === 'string' ? req.body.imageProvider : undefined
 
     let slots = Array.isArray(req.body.slots) ? req.body.slots : null
     if (!slots?.length && req.body.level && typeof req.body.level === 'object') {
@@ -194,6 +199,7 @@ app.post('/api/family/generate-images', async (req, res) => {
       apiKey,
       forceMock,
       maxSlots,
+      imageProvider,
     })
     console.log(
       '[family/generate-images] result',

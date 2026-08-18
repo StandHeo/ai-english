@@ -223,14 +223,17 @@ App 已接入 Capacitor `backButton`：在子页面侧滑或点返回键会回�
 App 需要录音权限。若说话没反应，在手机系统设置 → 应用 → 本 App → 权限 → 打开麦克风。  
 若清单里缺少权限，需在 `AndroidManifest.xml` 增加 `RECORD_AUDIO`（Capacitor 文档或 Android Studio 提示里会写）。
 
-### App 连 API 的注意点
+### App 连云与连电脑 API
 
 打成 App 后，请求不再走电脑 Vite 代理。手机上的 `localhost` 是手机自己，**不是电脑**。
 
+**家庭日记生成关卡 / 云端配图：** 在「设置」填写当前模型的云 Key（DeepSeek 或 Agnes；配图为通义或 Agnes 图）后，App 会 **直连 HTTPS**，不必开电脑 `apps/api`，也不必填局域网地址。
+
+**仍需要电脑 API 的情况：** 要用电脑 `.env` 里的 Key 做代理，或关卡口语识别等仍走 `/api` 的接口。此时：
+
 1. 电脑保持 `apps/api` 在跑（默认 `8787`），手机与电脑同一 Wi‑Fi。
 2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.2.104:8787`（把 IP 换成你电脑的）。
-3. Capacitor 已开启 `allowMixedContent`，并用原生 `CapacitorHttp` 发 API 请求，避免 HTTPS 页访问局域网 HTTP 被 Mixed Content 拦截。
-4. 回到日记页点「生成关卡」。
+3. Capacitor 已开启 `allowMixedContent`，并用原生 `CapacitorHttp` 发请求，避免 HTTPS 页访问局域网 HTTP 被 Mixed Content 拦截。
 
 也可在打包前设 `apps/web/.env.local`：`VITE_API_BASE=http://电脑IP:8787`，再 `npm run build && npx cap sync android`。
 

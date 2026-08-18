@@ -1,0 +1,138 @@
+import { cloudJson, downloadBinary } from '../api/cloudHttp'
+import { compressBytes, compressDataUrl, mockSlotDataUrl } from './compressImage'
+import {
+  buildKidsPrompt,
+  clampImageSlots,
+  type ImageSlot,
+} from './imageSlots'
+import {
+  AGNES_IMAGE_MODEL,
+  AGNES_IMAGE_URL,
+  TONGYI_IMAGE_MODEL,
+  TONGYI_IMAGE_URL,
+  type FamilyImageCloudProvider,
+} from './providers'
+
+export {
+  buildKidsPrompt,
+  clampImageSlots,
+  slotsFromLevel,
+  type ImageSlot,
+} from './imageSlots'
+
+export type DirectImagesResult = {
+  images: string[]
+  warnings: string[]
+  provider: FamilyImageCloudProvider
+}
+
+const NEGATIVE =
+  '文字,水印,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
+
+function extractImageUrls(payload: unknown): string[] {
+  const urls: string[] = []
+  const walk = (node: unknown) => {
+    if (!node) return
+    if (typeof node === 'string') {
+      if (/^https?:\/\//i.test(node) || node.startsWith('data:image')) urls.push(node)
+      return
+    }
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
+    if (typeof node === 'object') {
+      const o = node as Record<string, unknown>
+      if (typeof o.b64_json === 'string' && o.b64_json) {
+        urls.push(`data:image/png;base64,${o.b64_json}`)
+      }
+      if (typeof o.image === 'string') urls.push(o.image)
+      if (typeof o.url === 'string' && /^https?:\/\//i.test(o.url)) {
+        urls.push(o.url)
+      } else if (typeof o.url === 'string' && /\.(png|jpe?g|webp)(\?|$)/i.test(o.url)) {
+        urls.push(o.url)
+      }
+      Object.values(o).forEach(walk)
+    }
+  }
+  walk(payload)
+  return [...new Set(urls)]
+}
+
+async function toJpegDataUrl(raw: string): Promise<string> {
+  if (raw.startsWith('data:image')) return compressDataUrl(raw)
+  const bytes = await downloadBinary(raw)
+  return compressBytes(bytes)
+}
+
+async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
+  const res = await cloudJson(AGNES_IMAGE_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: {
+      model: AGNES_IMAGE_MODEL,
+      prompt,
+      size: '1K',
+      extra_body: { response_format: 'b64_json', ratio: '1:1' },
+    },
+    timeoutMs: 120_000,
+  })
+  if (!res.ok) throw new Error(`agnes_image_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  const urls = extractImageUrls(res.data)
+  if (!urls.length) throw new Error('agnes_no_image_in_response')
+  return toJpegDataUrl(urls[0])
+}
+
+async function callTongyiImage(apiKey: string, prompt: string): Promise<string> {
+  const res = await cloudJson(TONGYI_IMAGE_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: {
+      model: TONGYI_IMAGE_MODEL,
+      input: {
+        messages: [{ role: 'user', content: [{ text: prompt }] }],
+      },
+      parameters: {
+        prompt_extend: false,
+        watermark: false,
+        n: 1,
+        negative_prompt: NEGATIVE,
+        size: '1280*1280',
+      },
+    },
+    timeoutMs: 120_000,
+  })
+  if (!res.ok) throw new Error(`tongyi_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  const urls = extractImageUrls(res.data)
+  if (!urls.length) throw new Error('tongyi_no_image_in_response')
+  return toJpegDataUrl(urls[0])
+}
+
+export async function generateFamilyImagesDirect(input: {
+  slots: ImageSlot[]
+  apiKey: string
+  provider: FamilyImageCloudProvider
+  maxSlots?: number
+}): Promise<DirectImagesResult> {
+  const key = input.apiKey.trim()
+  if (!key) throw new Error('image_provider_unavailable')
+  const maxSlots = clampImageSlots(input.maxSlots)
+  const slots = input.slots.slice(0, maxSlots)
+  const warnings: string[] = []
+  const images: string[] = []
+  for (const slot of slots) {
+    const prompt = buildKidsPrompt(slot)
+    try {
+      const dataUrl =
+        input.provider === 'agnes'
+          ? await callAgnesImage(key, prompt)
+          : await callTongyiImage(key, prompt)
+      images.push(dataUrl)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      warnings.push(`slot_failed:${slot.subject}:${msg}`)
+      images.push(mockSlotDataUrl(slot.subject))
+    }
+  }
+  return { images, warnings, provider: input.provider }
+}

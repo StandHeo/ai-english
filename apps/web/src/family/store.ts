@@ -1,5 +1,13 @@
 import type { LevelScript } from '../types'
 import { deleteAudioClip, putAudioClip } from './audioDb'
+import {
+  DEFAULT_FAMILY_LLM,
+  DEFAULT_IMAGE_CLOUD,
+  isFamilyLlmProvider,
+  isImageCloudProvider,
+  type FamilyImageCloudProvider,
+  type FamilyLlmProvider,
+} from './providers'
 
 export type FamilyDiaryMessage = {
   id: string
@@ -38,9 +46,13 @@ type FamilyStore = {
   deepseekApiKey: string
   /** 通义/百炼 Key（可选；也可只用 API .env） */
   tongyiApiKey: string
-  /** 生成关卡后自动通义配图；默认关以免误扣费 */
+  /** Agnes 文本+配图共用 Key */
+  agnesApiKey: string
+  llmProvider: FamilyLlmProvider
+  imageCloudProvider: FamilyImageCloudProvider
+  /** 生成关卡后自动云端配图；默认关以免误扣费 */
   autoTongyiImages: boolean
-  /** 生成关卡后自动图标配图；默认开；与通义同时开时优先图标 */
+  /** 生成关卡后自动图标配图；默认开；与云端同时开时优先图标 */
   autoIconImages: boolean
   /** 一关最少英文关键词数（target_words + 选项 id 去重） */
   minLevelKeywords: number
@@ -55,6 +67,9 @@ function emptyStore(): FamilyStore {
     days: {},
     deepseekApiKey: '',
     tongyiApiKey: '',
+    agnesApiKey: '',
+    llmProvider: DEFAULT_FAMILY_LLM,
+    imageCloudProvider: DEFAULT_IMAGE_CLOUD,
     autoTongyiImages: false,
     autoIconImages: true,
     minLevelKeywords: DEFAULT_MIN_KEYWORDS,
@@ -173,8 +188,15 @@ export function loadFamilyStore(): FamilyStore {
       days,
       deepseekApiKey: typeof parsed.deepseekApiKey === 'string' ? parsed.deepseekApiKey : '',
       tongyiApiKey: typeof parsed.tongyiApiKey === 'string' ? parsed.tongyiApiKey : '',
+      agnesApiKey: typeof parsed.agnesApiKey === 'string' ? parsed.agnesApiKey : '',
+      llmProvider: isFamilyLlmProvider(String(parsed.llmProvider || ''))
+        ? parsed.llmProvider
+        : DEFAULT_FAMILY_LLM,
+      imageCloudProvider: isImageCloudProvider(String(parsed.imageCloudProvider || ''))
+        ? parsed.imageCloudProvider
+        : DEFAULT_IMAGE_CLOUD,
       autoTongyiImages: Boolean(parsed.autoTongyiImages),
-      autoIconImages: Boolean(parsed.autoIconImages),
+      autoIconImages: parsed.autoIconImages !== false,
       minLevelKeywords: clampMinKeywordsStored(parsed.minLevelKeywords),
     }
   } catch {
@@ -506,6 +528,48 @@ export function setTongyiKey(key: string): void {
 
 export function clearTongyiKey(): void {
   setTongyiKey('')
+}
+
+export function getAgnesKey(): string {
+  return loadFamilyStore().agnesApiKey
+}
+
+export function setAgnesKey(key: string): void {
+  const store = loadFamilyStore()
+  store.agnesApiKey = key.trim()
+  saveFamilyStore(store)
+}
+
+export function clearAgnesKey(): void {
+  setAgnesKey('')
+}
+
+export function getLlmProvider(): FamilyLlmProvider {
+  return loadFamilyStore().llmProvider
+}
+
+export function setLlmProvider(id: FamilyLlmProvider): void {
+  const store = loadFamilyStore()
+  store.llmProvider = id
+  saveFamilyStore(store)
+}
+
+export function getImageCloudProvider(): FamilyImageCloudProvider {
+  return loadFamilyStore().imageCloudProvider
+}
+
+export function setImageCloudProvider(id: FamilyImageCloudProvider): void {
+  const store = loadFamilyStore()
+  store.imageCloudProvider = id
+  saveFamilyStore(store)
+}
+
+export function getLlmApiKey(): string {
+  return getLlmProvider() === 'agnes' ? getAgnesKey() : getDeepseekKey()
+}
+
+export function getImageCloudApiKey(): string {
+  return getImageCloudProvider() === 'agnes' ? getAgnesKey() : getTongyiKey()
 }
 
 export function getAutoTongyiImages(): boolean {

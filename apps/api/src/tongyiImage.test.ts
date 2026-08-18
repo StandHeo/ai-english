@@ -101,3 +101,23 @@ test('tongyi mode without key throws image_provider_unavailable', async () => {
     /image_provider_unavailable/,
   )
 })
+
+test('agnes image without key throws image_provider_unavailable', async () => {
+  const prev = process.env.FAMILY_IMAGE_PROVIDER
+  delete process.env.AGNES_API_KEY
+  delete process.env.DASHSCOPE_API_KEY
+  delete process.env.TONGYI_API_KEY
+  try {
+    await assert.rejects(
+      () =>
+        generateFamilyImages({
+          date: '2026-08-18',
+          slots: [{ subject: 'park', role: 'scene' }],
+          imageProvider: 'agnes',
+        }),
+      /image_provider_unavailable/,
+    )
+  } finally {
+    process.env.FAMILY_IMAGE_PROVIDER = prev
+  }
+})

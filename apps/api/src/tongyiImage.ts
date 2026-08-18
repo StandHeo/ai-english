@@ -21,12 +21,14 @@ export type GenerateFamilyImagesInput = {
   forceMock?: boolean
   /** 配图张数上限（与设置里关键词数一致） */
   maxSlots?: number
+  /** tongyi | agnes | mock；缺省用 FAMILY_IMAGE_PROVIDER */
+  imageProvider?: string
 }
 
 export type GenerateFamilyImagesResult = {
   images: string[]
   warnings: string[]
-  provider: 'tongyi' | 'mock'
+  provider: 'tongyi' | 'agnes' | 'mock'
   debug?: {
     maxSlots: number
     calls: Array<{
@@ -74,12 +76,6 @@ export function clampImageSlots(n: unknown): number {
   return Math.min(12, Math.max(3, Math.floor(v)))
 }
 
-function providerMode(): 'tongyi' | 'mock' {
-  const p = (process.env.FAMILY_IMAGE_PROVIDER || '').trim().toLowerCase()
-  if (p === 'mock') return 'mock'
-  return 'tongyi'
-}
-
 export function buildKidsPrompt(slot: ImageSlot): string {
   const roleHint =
     slot.role === 'scene'
@@ -112,6 +108,9 @@ function extractImageUrls(payload: unknown): string[] {
     }
     if (typeof node === 'object') {
       const o = node as Record<string, unknown>
+      if (typeof o.b64_json === 'string' && o.b64_json) {
+        urls.push(`data:image/png;base64,${o.b64_json}`)
+      }
       if (typeof o.image === 'string') urls.push(o.image)
       if (typeof o.url === 'string' && /\.(png|jpe?g|webp)(\?|$)/i.test(o.url)) urls.push(o.url)
       if (typeof o.url === 'string' && /^https?:\/\//i.test(o.url) && !urls.includes(o.url)) {
@@ -315,6 +314,51 @@ export function slotsFromLevel(
   return slots.slice(0, max)
 }
 
+async function callAgnesOnce(
+  apiKey: string,
+  prompt: string,
+): Promise<{ dataUrl: string; rawPreview: string }> {
+  const model = process.env.AGNES_IMAGE_MODEL?.trim() || 'agnes-image-2.1-flash'
+  const endpoint =
+    process.env.AGNES_IMAGE_ENDPOINT?.trim() ||
+    'https://apihub.agnes-ai.com/v1/images/generations'
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt,
+      size: '1K',
+      extra_body: { response_format: 'b64_json', ratio: '1:1' },
+    }),
+    signal: AbortSignal.timeout(TONGYI_TIMEOUT_MS),
+  })
+  const text = await res.text()
+  let json: unknown
+  try {
+    json = JSON.parse(text)
+  } catch {
+    throw new Error(`agnes_bad_json_${res.status}`)
+  }
+  if (!res.ok) {
+    throw new Error(`agnes_image_http_${res.status}:${text.slice(0, 160)}`)
+  }
+  const urls = extractImageUrls(json)
+  if (!urls.length) throw new Error('agnes_no_image_in_response')
+  const dataUrl = await urlToDataUrl(urls[0])
+  return { dataUrl, rawPreview: `agnes url=${urls[0].slice(0, 80)}` }
+}
+
+function resolveImageProvider(raw?: string): 'tongyi' | 'agnes' | 'mock' {
+  const env = (process.env.FAMILY_IMAGE_PROVIDER || 'tongyi').trim().toLowerCase()
+  const v = (raw || env).trim().toLowerCase()
+  if (v === 'mock' || v === 'agnes' || v === 'tongyi') return v
+  return env === 'mock' || env === 'agnes' ? env : 'tongyi'
+}
+
 export async function generateFamilyImages(
   input: GenerateFamilyImagesInput,
 ): Promise<GenerateFamilyImagesResult> {
@@ -332,7 +376,8 @@ export async function generateFamilyImages(
     }
   }
 
-  const wantMock = Boolean(input.forceMock) || providerMode() === 'mock'
+  const imageKind = resolveImageProvider(input.imageProvider)
+  const wantMock = Boolean(input.forceMock) || imageKind === 'mock'
   if (wantMock) {
     for (const s of slots) {
       debugCalls.push({
@@ -350,7 +395,11 @@ export async function generateFamilyImages(
     }
   }
 
-  const key = input.apiKey?.trim() || envKey()
+  const key =
+    input.apiKey?.trim() ||
+    (imageKind === 'agnes'
+      ? process.env.AGNES_API_KEY?.trim() || envKey()
+      : envKey())
   if (!key) {
     throw new Error('image_provider_unavailable')
   }
@@ -359,7 +408,10 @@ export async function generateFamilyImages(
   for (const slot of slots) {
     const prompt = buildKidsPrompt(slot)
     try {
-      const { dataUrl, rawPreview } = await callTongyiWithRetry(key, prompt)
+      const { dataUrl, rawPreview } =
+        imageKind === 'agnes'
+          ? await callAgnesOnce(key, prompt)
+          : await callTongyiWithRetry(key, prompt)
       images.push(dataUrl)
       debugCalls.push({ subject: slot.subject, prompt, ok: true, detail: rawPreview })
     } catch (err) {
@@ -373,7 +425,7 @@ export async function generateFamilyImages(
   return {
     images,
     warnings,
-    provider: 'tongyi',
+    provider: imageKind === 'agnes' ? 'agnes' : 'tongyi',
     debug: { maxSlots, calls: debugCalls },
   }
 }
