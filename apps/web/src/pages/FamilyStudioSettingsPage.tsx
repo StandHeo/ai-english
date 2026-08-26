@@ -16,7 +16,6 @@ import {
   clearDeepseekKey,
   clearTongyiKey,
   getAgnesKey,
-  getAutoIconImages,
   getAutoTongyiImages,
   getDeepseekKey,
   getImageCloudProvider,
@@ -24,7 +23,6 @@ import {
   getMinLevelKeywords,
   getTongyiKey,
   setAgnesKey,
-  setAutoIconImages,
   setAutoTongyiImages,
   setDeepseekKey,
   setImageCloudProvider,
@@ -60,7 +58,6 @@ export function FamilyStudioSettingsPage() {
   const [llm, setLlm] = useState<FamilyLlmProvider>('deepseek')
   const [imageCloud, setImageCloud] = useState<FamilyImageCloudProvider>('tongyi')
   const [autoTongyi, setAutoTongyi] = useState(false)
-  const [autoIcon, setAutoIcon] = useState(false)
   const [minKeywords, setMinKeywords] = useState(9)
   const [apiBaseInput, setApiBaseInput] = useState(() => getStoredApiBase())
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
@@ -76,7 +73,6 @@ export function FamilyStudioSettingsPage() {
     setLlm(getLlmProvider())
     setImageCloud(getImageCloudProvider())
     setAutoTongyi(getAutoTongyiImages())
-    setAutoIcon(getAutoIconImages())
     setMinKeywords(getMinLevelKeywords())
     setApiBaseInput(getStoredApiBase())
     setWhisperModel(getDiaryWhisperModelId())
@@ -97,44 +93,20 @@ export function FamilyStudioSettingsPage() {
     setMinLevelKeywords(minKeywords)
     const n = getMinLevelKeywords()
     setMinKeywords(n)
-    setStatus(`已保存：至少 ${n} 个关键词，配图也最多 ${n} 张`)
+    setStatus(`已保存：至少 ${n} 个关键词，配图最多 ${n} 张（含 1 张场景背景）`)
   }
 
   function saveImageSettings() {
-    if (!autoIcon && !autoTongyi) {
-      setStatus('请至少勾选一种自动配图：图标或云端')
-      return
-    }
     setTongyiKey(tongyiKey)
     setAgnesKey(agnesKey)
     setImageCloudProvider(imageCloud)
     setAutoTongyiImages(autoTongyi)
-    setAutoIconImages(autoIcon)
     const cloudName = imageCloudLabel(imageCloud)
-    const bits = [
-      autoIcon ? '自动图标：开' : '自动图标：关',
-      autoTongyi ? `自动云端（${cloudName}）：开` : '自动云端：关',
-    ]
-    if (autoIcon && autoTongyi) {
-      bits.push(`两者皆开：先图标，未匹配再 ${cloudName} 补全`)
-    }
-    setStatus(bits.join('；'))
-  }
-
-  function onToggleAutoIcon(on: boolean) {
-    if (!on && !autoTongyi) {
-      setStatus('请至少保留一种自动配图')
-      return
-    }
-    setAutoIcon(on)
-  }
-
-  function onToggleAutoTongyi(on: boolean) {
-    if (!on && !autoIcon) {
-      setStatus('请至少保留一种自动配图')
-      return
-    }
-    setAutoTongyi(on)
+    setStatus(
+      autoTongyi
+        ? `已保存：自动云端配图开（${cloudName}）；1 场景背景 + 关键词道具图`
+        : `已保存：自动云端配图关；可手动「云端配图」（${cloudName}）或相册`,
+    )
   }
 
   function saveApiBase() {
@@ -273,8 +245,8 @@ export function FamilyStudioSettingsPage() {
 
         <h2>关卡最少关键词数 / 配图张数</h2>
         <p className="muted">
-          生成关卡时统计英文关键词（目标词 + 选项 id 去重），不足则不会保存关卡。同一数值也是配图槽位上限，默认
-          9，可设 3–12。
+          生成关卡时统计英文关键词（目标词 + 选项 id 去重），不足则不会保存关卡。同一数值也是配图槽位上限（含
+          1 张场景背景），默认 9，可设 3–12。
         </p>
         <input
           type="number"
@@ -291,21 +263,13 @@ export function FamilyStudioSettingsPage() {
 
         <h2>配图方式</h2>
         <p className="muted">
-          至少勾选一种。可都开：先本地图标，找不到再走云端。图标离线免费。云端提供方可切换。
+          仅云端配图（通义或 Agnes）与相册。开启自动后，生成关卡会出 1 张场景背景 + 各关键词道具图。
         </p>
         <label className="toggle-row">
           <input
             type="checkbox"
-            checked={autoIcon}
-            onChange={(e) => onToggleAutoIcon(e.target.checked)}
-          />
-          <span>生成关卡后自动图标配图</span>
-        </label>
-        <label className="toggle-row">
-          <input
-            type="checkbox"
             checked={autoTongyi}
-            onChange={(e) => onToggleAutoTongyi(e.target.checked)}
+            onChange={(e) => setAutoTongyi(e.target.checked)}
           />
           <span>生成关卡后自动云端配图</span>
         </label>

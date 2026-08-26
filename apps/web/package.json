@@ -10,11 +10,9 @@
     "fetch-vosk-model": "node scripts/fetch-vosk-model.mjs",
     "fetch-diary-whisper": "node scripts/fetch-diary-whisper.mjs",
     "fetch-piper-tts": "node scripts/fetch-piper-tts.mjs",
-    "build-icon-pack": "node scripts/build-family-icon-pack.mjs",
-    "build": "npm run build-icon-pack && npm run sync-content && tsc -b && vite build",
-    "test:icons": "tsx --test src/icons/**/*.test.ts",
+    "build": "npm run sync-content && tsc -b && vite build",
     "test:family": "tsx --test src/family/**/*.test.ts",
-    "test": "npm run test:icons && npm run test:family",
+    "test": "npm run test:family",
     "build:android": "npm run fetch-vosk-model && npm run fetch-diary-whisper && npm run fetch-piper-tts && npm run build && npx cap sync android",
     "build:ios": "npm run fetch-diary-whisper -- --ios-only && npm run fetch-piper-tts -- --ios-only && npm run build && npx cap sync ios && node scripts/patch-ios-info-plist.mjs",
     "patch:ios-plist": "node scripts/patch-ios-info-plist.mjs",
@@ -36,7 +34,6 @@
     "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
-    "@iconify-json/mdi": "^1.2.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

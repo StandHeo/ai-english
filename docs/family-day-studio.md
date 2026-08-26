@@ -1,6 +1,6 @@
 # 家庭日记关卡工作室（当晚可玩）
 
-和官方主题包独立。家长用手机聊「今天做了什么」→ 所选模型（默认 DeepSeek，可切换 Agnes 2.5-flash）生成一关 → 可选图标/相册/云端配图 → 孩子在「家庭日历」里玩。
+和官方主题包独立。家长用手机聊「今天做了什么」→ 所选模型（默认 DeepSeek，可切换 Agnes 2.5-flash）生成一关 → 可选云端配图或相册 → 孩子在「家庭日历」里玩。
 
 > 聊天气泡 + 端侧 Whisper 说明见 [`family-diary-whisper.md`](./family-diary-whisper.md)。
 
@@ -29,13 +29,13 @@ npm run dev:phone
 ## 家长：做今日关卡
 
 1. 首页右上角家庭图标 → 算术验证 → **家庭日记**
-2. **设置**：关卡模型 DeepSeek / Agnes；云端配图通义 / Agnes 图；填对应 Key
+2. **设置**：关卡模型 DeepSeek / Agnes；云端配图通义 / Agnes 图；填对应 Key；可选开启自动云端配图
 3. 聊天气泡打字或语音记录今日故事
-4. 点 **生成关卡**；若开启自动云端配图，会按当前提供方出图（也可「云端配图」或相册）
+4. 点 **生成关卡**；若开启自动云端配图，会出 **1 张场景背景 + 各关键词道具图**（也可手动「云端配图」或相册）
 5. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
 
 通义费用见 [`family-tongyi-images.md`](./family-tongyi-images.md)。Agnes 图以对方公开免费档为准，随时可能改价。  
-本地图标配图见 [`family-iconify-images.md`](./family-iconify-images.md)。
+本地图标配图已移除（见 [`family-iconify-images.md`](./family-iconify-images.md)）。
 
 ## 孩子：玩
 

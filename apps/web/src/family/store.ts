@@ -58,8 +58,6 @@ type FamilyStore = {
   imageCloudProvider: FamilyImageCloudProvider
   /** 生成关卡后自动云端配图；默认关以免误扣费 */
   autoTongyiImages: boolean
-  /** 生成关卡后自动图标配图；默认开；与云端同时开时优先图标 */
-  autoIconImages: boolean
   /** 一关最少英文关键词数（target_words + 选项 id 去重） */
   minLevelKeywords: number
 }
@@ -77,7 +75,6 @@ function emptyStore(): FamilyStore {
     llmProvider: DEFAULT_FAMILY_LLM,
     imageCloudProvider: DEFAULT_IMAGE_CLOUD,
     autoTongyiImages: false,
-    autoIconImages: true,
     minLevelKeywords: DEFAULT_MIN_KEYWORDS,
   }
 }
@@ -202,7 +199,6 @@ export function loadFamilyStore(): FamilyStore {
         ? parsed.imageCloudProvider
         : DEFAULT_IMAGE_CLOUD,
       autoTongyiImages: Boolean(parsed.autoTongyiImages),
-      autoIconImages: parsed.autoIconImages !== false,
       minLevelKeywords: clampMinKeywordsStored(parsed.minLevelKeywords),
     }
   } catch {
@@ -585,16 +581,6 @@ export function getAutoTongyiImages(): boolean {
 export function setAutoTongyiImages(on: boolean): void {
   const store = loadFamilyStore()
   store.autoTongyiImages = Boolean(on)
-  saveFamilyStore(store)
-}
-
-export function getAutoIconImages(): boolean {
-  return loadFamilyStore().autoIconImages
-}
-
-export function setAutoIconImages(on: boolean): void {
-  const store = loadFamilyStore()
-  store.autoIconImages = Boolean(on)
   saveFamilyStore(store)
 }
 

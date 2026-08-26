@@ -100,3 +100,15 @@ export function firstItemImage(slots: ImageSlot[], images: string[]): string | u
   }
   return undefined
 }
+
+/** 根据已有 images 长度，算出还缺哪些槽位（保留已有图，只补空位） */
+export function missingSlotsForImages(
+  level: Record<string, unknown>,
+  existingImages: string[],
+  maxSlots?: number,
+): ImageSlot[] {
+  const slots = slotsFromLevel(level, maxSlots)
+  const filled = existingImages.filter(Boolean).length
+  if (filled >= slots.length) return []
+  return slots.slice(filled)
+}

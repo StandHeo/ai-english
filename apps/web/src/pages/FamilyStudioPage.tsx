@@ -16,7 +16,6 @@ import {
   applyGeneratedImages,
   deleteMessage,
   ensureMessagesMigrated,
-  getAutoIconImages,
   getAutoTongyiImages,
   getDay,
   getImageCloudApiKey,
@@ -33,7 +32,7 @@ import {
   updateMessageText,
   type FamilyDiaryMessage,
 } from '../family/store'
-import { generateIconImagesForLevel, missingSlotsForImages } from '../icons/familyIconSearch'
+import { missingSlotsForImages } from '../family/imageSlots'
 import { getDiaryAsrStatus, transcribeDiaryAudio } from '../voice/diaryAsr'
 import {
   diaryWhisperModelLabel,
@@ -220,46 +219,6 @@ export function FamilyStudioPage() {
     }
   }
 
-  function applyIconImages(
-    level: LevelScript,
-    mode: 'fill_empty' | 'replace',
-  ): { ok: boolean; missed: string[]; count: number } {
-    const colors = getDay(date)?.iconColors
-    const maxSlots = getImageSlotMax()
-    const result = generateIconImagesForLevel(level, colors, maxSlots)
-    console.log(
-      '[family/icon] slots',
-      JSON.stringify({
-        maxSlots,
-        subjects: result.slots.map((s) => s.subject),
-        matched: result.matched,
-        missed: result.missed,
-      }),
-    )
-    if (!result.images.length) {
-      setStatus(
-        result.missed.length
-          ? `未匹配到图标（${result.missed.slice(0, 3).join('、')}）`
-          : '未匹配到图标',
-      )
-      return { ok: false, missed: result.missed, count: 0 }
-    }
-    const day = applyGeneratedImages(date, result.images, mode)
-    if (!day) {
-      setStatus('写入图标失败')
-      return { ok: false, missed: result.missed, count: 0 }
-    }
-    setImages(day.images)
-    const miss =
-      result.missed.length > 0 ? `；未匹配：${result.missed.slice(0, 3).join('、')}` : ''
-    setStatus(
-      mode === 'replace'
-        ? `已用图标配图 ${day.images.length} 张${miss}`
-        : `已用本地图标配图 ${day.images.length} 张${miss}`,
-    )
-    return { ok: true, missed: result.missed, count: day.images.length }
-  }
-
   async function requestImages(
     level: LevelScript,
     mode: 'fill_empty' | 'replace',
@@ -271,7 +230,11 @@ export function FamilyStudioPage() {
     const cloudName = imageCloudLabel(cloud)
     let slotsPayload: { subject: string; role?: 'scene' | 'item' }[] | undefined
     if (opts?.onlyEmpty || mode === 'fill_empty') {
-      slotsPayload = missingSlotsForImages(level, existing, maxSlots)
+      slotsPayload = missingSlotsForImages(
+        level as unknown as Record<string, unknown>,
+        existing,
+        maxSlots,
+      )
       if (!slotsPayload.length) {
         setStatus(`已有图已覆盖全部槽位；删掉不需要的图后再用${cloudName}补全`)
         return false
@@ -350,7 +313,7 @@ export function FamilyStudioPage() {
         warnings = Array.isArray(res.data.warnings) ? res.data.warnings : []
       }
       if (!list.length) {
-        setStatus(`关卡已保留；${cloudName}未返回图片，可继续用图标或相册`)
+        setStatus(`关卡已保留；${cloudName}未返回图片，可用相册补图`)
         return false
       }
       const day = applyGeneratedImages(date, list, mode === 'replace' ? 'replace' : 'fill_empty')
@@ -381,36 +344,12 @@ export function FamilyStudioPage() {
   }
 
   async function autoFillImagesAfterGenerate(level: LevelScript) {
-    const wantIcon = getAutoIconImages()
-    const wantTongyi = getAutoTongyiImages()
-    if (!wantIcon && !wantTongyi) {
-      setStatus('生成成功！请到设置至少开启一种自动配图，或手动点「图标配图」/相册/云端配图')
+    if (!getAutoTongyiImages()) {
+      setStatus('生成成功！可开「自动云端配图」，或手动点「云端配图」/相册')
       return
     }
-
-    const maxSlots = getImageSlotMax()
-    let needTongyi = wantTongyi
-    if (wantIcon) {
-      const iconResult = applyIconImages(level, 'fill_empty')
-      const remaining = missingSlotsForImages(level, getDay(date)?.images || [], maxSlots).length
-      if (wantTongyi) {
-        needTongyi = remaining > 0
-        if (!needTongyi && iconResult.ok) {
-          setStatus((s) => `${s}（图标已齐，无需云端配图）`)
-        }
-      } else {
-        needTongyi = false
-        if (!iconResult.ok) {
-          setStatus((s) => `${s}；可开云端自动或手动补全`)
-        }
-      }
-    }
-
-    if (needTongyi) {
-      setBusy(false)
-      const prefix = wantIcon ? '图标未全覆盖，' : ''
-      await requestImages(level, 'fill_empty', { statusPrefix: prefix, onlyEmpty: true })
-    }
+    setBusy(false)
+    await requestImages(level, 'fill_empty', { onlyEmpty: true })
   }
 
   async function generate(force = false) {
@@ -581,27 +520,8 @@ export function FamilyStudioPage() {
       setStatus('请先生成关卡')
       return
     }
-    // 保留未删除的已有图（图标/相册），只对空槽位调云端
+    // 保留未删除的已有图（相册/云端），只对空槽位调云端
     await requestImages(day.level, 'fill_empty', { onlyEmpty: true })
-  }
-
-  function fillWithIcons() {
-    const day = getDay(date)
-    if (!day?.level) {
-      setStatus('请先生成关卡')
-      return
-    }
-    let mode: 'fill_empty' | 'replace' = 'fill_empty'
-    if (day.images.length > 0) {
-      const replace = window.confirm('当前已有图片。确定用图标整表替换吗？\n点「取消」则只填充空位。')
-      mode = replace ? 'replace' : 'fill_empty'
-    }
-    setImaging(true)
-    try {
-      applyIconImages(day.level, mode)
-    } finally {
-      setImaging(false)
-    }
   }
 
   async function onPickFiles(files: FileList | null) {
@@ -796,7 +716,7 @@ export function FamilyStudioPage() {
           <div className="photo-block">
             <h2>关卡配图</h2>
             <p className="muted">
-              可用本地「图标配图」（离线免费）、相册；「云端配图」按设置里的通义或 Agnes，只补空位
+              自动/手动「云端配图」：1 张场景背景（优先 scene.setting）+ 各关键词道具图；也可用相册补图
             </p>
             {hints.length > 0 && (
               <>
@@ -817,9 +737,6 @@ export function FamilyStudioPage() {
               onChange={(e) => void onPickFiles(e.target.files)}
             />
             <div className="row photo-actions">
-              <button type="button" disabled={busy || imaging} onClick={() => fillWithIcons()}>
-                图标配图
-              </button>
               <button type="button" disabled={busy || imaging} onClick={() => fileRef.current?.click()}>
                 从相册选图
               </button>
