@@ -76,12 +76,16 @@ export function clampImageSlots(n: unknown): number {
   return Math.min(12, Math.max(3, Math.floor(v)))
 }
 
+function slotSubjectKey(subject: string): string {
+  return subject.trim().toLowerCase()
+}
+
 export function buildKidsPrompt(slot: ImageSlot): string {
-  const roleHint =
-    slot.role === 'scene'
-      ? '作为游戏主场景背景，'
-      : '作为儿童英语游戏中的单个道具或对象，居中，'
-  return `${SAFETY_PREFIX}${roleHint}主题：${slot.subject.trim()}`
+  const subject = slot.subject.trim()
+  if (slot.role === 'scene') {
+    return `${SAFETY_PREFIX}作为游戏主场景的环境全景背景，开阔画面，展示地点与氛围，不要把单个巨大道具放在画面正中，主题：${subject}`
+  }
+  return `${SAFETY_PREFIX}作为儿童英语游戏中的单个道具或对象，居中，主题：${subject}`
 }
 
 function mockDataUrl(label: string): string {
@@ -281,20 +285,33 @@ export function slotsFromLevel(
   maxSlots?: number,
 ): ImageSlot[] {
   const max = clampImageSlots(maxSlots ?? imageMax())
-  const slots: ImageSlot[] = []
   const words = Array.isArray(level.target_words)
-    ? level.target_words.map(String).filter(Boolean)
+    ? level.target_words.map(String).filter((w) => w.trim())
     : []
+  const setting =
+    level.scene && typeof level.scene === 'object'
+      ? String((level.scene as { setting?: unknown }).setting || '').trim()
+      : ''
+  const sceneSubject = setting || words[0]?.trim() || 'playground'
+  const slots: ImageSlot[] = [{ subject: sceneSubject, role: 'scene' }]
+  const seen = new Set<string>([slotSubjectKey(sceneSubject)])
 
-  for (const w of words) {
-    if (slots.length >= max) break
-    if (slots.some((s) => s.subject.toLowerCase() === w.toLowerCase())) continue
-    slots.push({ subject: w, role: slots.length === 0 ? 'scene' : 'item' })
+  const pushItem = (raw: string) => {
+    if (slots.length >= max) return
+    const subject = raw.trim()
+    if (!subject) return
+    const key = slotSubjectKey(subject)
+    if (seen.has(key)) return
+    seen.add(key)
+    slots.push({ subject, role: 'item' })
   }
+
+  for (const w of words) pushItem(w)
 
   const beats = Array.isArray(level.beats) ? level.beats : []
   for (const raw of beats) {
     if (slots.length >= max) break
+    if (!raw || typeof raw !== 'object') continue
     const b = raw as Record<string, unknown>
     let opts: unknown[] = []
     if (Array.isArray(b.options)) opts = b.options
@@ -304,10 +321,8 @@ export function slotsFromLevel(
     }
     for (const o of opts) {
       if (slots.length >= max) break
-      const id = String((o as { id?: string })?.id || '').trim()
-      if (!id) continue
-      if (slots.some((s) => s.subject.toLowerCase() === id.toLowerCase())) continue
-      slots.push({ subject: id, role: 'item' })
+      if (!o || typeof o !== 'object') continue
+      pushItem(String((o as { id?: string }).id || ''))
     }
   }
 

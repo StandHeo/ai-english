@@ -1,6 +1,12 @@
 import type { LevelScript } from '../types'
 import { deleteAudioClip, putAudioClip } from './audioDb'
 import {
+  clampImageSlots,
+  firstItemImage,
+  imageUrlBySubject,
+  slotsFromLevel,
+} from './imageSlots'
+import {
   DEFAULT_FAMILY_LLM,
   DEFAULT_IMAGE_CLOUD,
   isFamilyLlmProvider,
@@ -606,20 +612,30 @@ export function materializeLevelForPlay(day: FamilyDayRecord): LevelScript {
       </svg>`,
     )}`
 
-  const pick = (i: number, fallbackWord: string) =>
-    imgs[i] || imgs[0] || placeholder(fallbackWord)
+  const filled = imgs.filter(Boolean).length
+  const slots = slotsFromLevel(
+    level as unknown as Record<string, unknown>,
+    clampImageSlots(filled > 0 ? filled : 9),
+  )
+  const bg = imgs[0] || placeholder(level.target_words[0] || 'fun')
+  level.scene.image = bg
+  level.reward.stickerImage = bg
 
-  const mainWord = level.target_words[0] || 'fun'
-  level.scene.image = pick(0, mainWord)
-  level.reward.stickerImage = pick(0, mainWord)
+  const resolveWordImage = (word: string) => {
+    const hit = imageUrlBySubject(slots, imgs, word)
+    if (hit) return hit
+    const item = firstItemImage(slots, imgs)
+    if (item) return item
+    return placeholder(word || 'fun')
+  }
 
   level.beats = level.beats.map((beat, bi) => {
-    const word = beat.expect?.[0] || level.target_words[bi % level.target_words.length] || mainWord
-    const show = beat.show ? pick(Math.min(bi, Math.max(imgs.length - 1, 0)), word) : beat.show
+    const word = beat.expect?.[0] || level.target_words[bi % level.target_words.length] || 'fun'
+    const show = beat.show ? resolveWordImage(word) : beat.show
     const mapOpts = (opts?: { id: string; image: string; correct: boolean }[]) =>
-      opts?.map((o, oi) => ({
+      opts?.map((o) => ({
         ...o,
-        image: pick(o.correct ? 0 : Math.min(oi + 1, 2), o.id || word),
+        image: resolveWordImage(o.id || word),
       }))
     return {
       ...beat,

@@ -9,13 +9,21 @@ import {
   slotsFromLevel,
 } from './tongyiImage.ts'
 
-test('buildKidsPrompt includes safety prefix', () => {
+test('buildKidsPrompt includes safety prefix for items', () => {
   const p = buildKidsPrompt({ subject: 'slide', role: 'item' })
   assert.match(p, /儿童绘本/)
   assert.match(p, /slide/)
+  assert.match(p, /居中/)
 })
 
-test('slotsFromLevel prefers English words and respects maxSlots', () => {
+test('buildKidsPrompt scene asks for wide background', () => {
+  const p = buildKidsPrompt({ subject: '小区游乐场', role: 'scene' })
+  assert.match(p, /儿童绘本/)
+  assert.match(p, /全景|环境/)
+  assert.match(p, /小区游乐场/)
+})
+
+test('slotsFromLevel uses scene.setting as first scene slot', () => {
   const slots = slotsFromLevel(
     {
       target_words: ['park', 'slide', 'ball', 'tree', 'duck', 'bench'],
@@ -30,9 +38,10 @@ test('slotsFromLevel prefers English words and respects maxSlots', () => {
     5,
   )
   assert.equal(slots[0]?.role, 'scene')
-  assert.equal(slots[0]?.subject, 'park')
+  assert.equal(slots[0]?.subject, '公园滑梯')
+  assert.equal(slots[1]?.role, 'item')
+  assert.equal(slots[1]?.subject, 'park')
   assert.equal(slots.length, 5)
-  assert.ok(slots.every((s) => /^[a-z]/i.test(s.subject)))
 })
 
 test('compressImageBuffer shrinks large png to jpeg under limit', async () => {

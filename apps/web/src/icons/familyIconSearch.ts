@@ -1,3 +1,8 @@
+import {
+  clampImageSlots,
+  slotsFromLevel as slotsFromLevelShared,
+  type ImageSlot,
+} from '../family/imageSlots'
 import pack from '../icons/familyIconPack.json'
 
 export type IconPack = {
@@ -10,10 +15,7 @@ export type IconPack = {
 
 const data = pack as IconPack
 
-export type IconSlot = {
-  subject: string
-  role?: 'scene' | 'item'
-}
+export type IconSlot = ImageSlot
 
 function normalizeKey(raw: string): string {
   return raw
@@ -65,6 +67,28 @@ export function findIconName(subject: string): string | null {
   return best && best.score >= 40 ? best.name : null
 }
 
+const SCENE_ICON_FALLBACKS = [
+  'image-filter-hdr',
+  'forest',
+  'pine-tree',
+  'tree',
+  'nature',
+  'landscape',
+  'flower',
+]
+
+function findSceneIconName(subject: string): string | null {
+  const direct = findIconName(subject)
+  if (direct) return direct
+  for (const name of SCENE_ICON_FALLBACKS) {
+    if (data.icons[name]) return name
+    const via = findIconName(name)
+    if (via) return via
+  }
+  const first = Object.keys(data.icons)[0]
+  return first || null
+}
+
 /** 儿童向温馨配色：浅底 + 柔和主色（可按词轮换） */
 const KID_PALETTE = [
   { bg: '#FFF3E0', fg: '#E07A3D', caption: '#8B5A2B' }, // 暖橙
@@ -111,39 +135,7 @@ export function slotsFromLevel(
   },
   maxSlots = 9,
 ): IconSlot[] {
-  const max = Math.min(12, Math.max(3, Math.floor(maxSlots) || 9))
-  const slots: IconSlot[] = []
-  const words = Array.isArray(level.target_words)
-    ? level.target_words.map(String).filter(Boolean)
-    : []
-
-  for (const w of words) {
-    if (slots.length >= max) break
-    if (slots.some((s) => s.subject.toLowerCase() === w.toLowerCase())) continue
-    slots.push({ subject: w, role: slots.length === 0 ? 'scene' : 'item' })
-  }
-
-  const beats = Array.isArray(level.beats) ? level.beats : []
-  for (const raw of beats) {
-    if (slots.length >= max) break
-    const b = raw as Record<string, unknown>
-    let opts: unknown[] = []
-    if (Array.isArray(b.options)) {
-      opts = b.options
-    } else if (b.fallback && typeof b.fallback === 'object') {
-      const fb = (b.fallback as { options?: unknown }).options
-      if (Array.isArray(fb)) opts = fb
-    }
-    for (const o of opts) {
-      if (slots.length >= max) break
-      const id = String((o as { id?: string })?.id || '').trim()
-      if (!id) continue
-      if (slots.some((s) => s.subject.toLowerCase() === id.toLowerCase())) continue
-      slots.push({ subject: id, role: 'item' })
-    }
-  }
-
-  return slots.slice(0, max)
+  return slotsFromLevelShared(level as Record<string, unknown>, clampImageSlots(maxSlots))
 }
 
 export type IconImagesResult = {
@@ -186,16 +178,31 @@ export function generateIconImagesForLevel(
   const missedSlots: IconSlot[] = []
 
   for (const slot of slots) {
-    const name = findIconName(slot.subject)
+    const name =
+      slot.role === 'scene' ? findSceneIconName(slot.subject) : findIconName(slot.subject)
     if (!name) {
       missed.push(slot.subject)
       missedSlots.push(slot)
+      // 背景槽必须占位，避免后续索引错位
+      if (slot.role === 'scene') {
+        const ph = iconToDataUrl(
+          Object.keys(data.icons)[0] || 'star',
+          slot.subject.slice(0, 18) || 'scene',
+          colorsForSubject(slot.subject, iconColors),
+        )
+        images.push(ph || `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`)
+        matched.push(`${slot.subject}→scene-placeholder`)
+      }
       continue
     }
     const url = iconToDataUrl(name, slot.subject, colorsForSubject(slot.subject, iconColors))
     if (!url) {
       missed.push(slot.subject)
       missedSlots.push(slot)
+      if (slot.role === 'scene') {
+        images.push(`data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`)
+        matched.push(`${slot.subject}→scene-placeholder`)
+      }
       continue
     }
     images.push(url)
