@@ -348,8 +348,8 @@ async function callAgnesOnce(
       body: JSON.stringify({
         model,
         prompt,
-        size: '1K',
-        extra_body: { response_format: 'b64_json', ratio: '1:1' },
+        n: 1,
+        size: process.env.AGNES_IMAGE_SIZE?.trim() || '1024x1024',
       }),
       signal: AbortSignal.timeout(TONGYI_TIMEOUT_MS),
     })

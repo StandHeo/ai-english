@@ -8,6 +8,7 @@ import {
 } from './imageSlots'
 import {
   AGNES_IMAGE_MODEL,
+  AGNES_IMAGE_SIZE,
   AGNES_IMAGE_URL,
   TONGYI_IMAGE_MODEL,
   TONGYI_IMAGE_URL,
@@ -76,8 +77,8 @@ async function onceAgnesImage(apiKey: string, prompt: string): Promise<string> {
       body: {
         model: AGNES_IMAGE_MODEL,
         prompt,
-        size: '1K',
-        extra_body: { response_format: 'b64_json', ratio: '1:1' },
+        n: 1,
+        size: AGNES_IMAGE_SIZE,
       },
       timeoutMs: IMAGE_TIMEOUT_MS,
     })

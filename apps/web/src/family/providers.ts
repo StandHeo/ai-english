@@ -8,6 +8,8 @@ export const AGNES_CHAT_URL = 'https://apihub.agnes-ai.com/v1/chat/completions'
 export const AGNES_IMAGE_URL = 'https://apihub.agnes-ai.com/v1/images/generations'
 export const AGNES_CHAT_MODEL = 'agnes-2.5-flash'
 export const AGNES_IMAGE_MODEL = 'agnes-image-2.1-flash'
+/** apihub 对 `1K` + `extra_body` 会挂起；`1024x1024` 返回 URL */
+export const AGNES_IMAGE_SIZE = '1024x1024'
 
 export const DEEPSEEK_CHAT_URL = 'https://api.deepseek.com/chat/completions'
 export const DEEPSEEK_CHAT_MODEL = 'deepseek-chat'
