@@ -34,7 +34,7 @@ npm run dev:phone
 4. 点 **生成关卡**；若开启自动云端配图，会出 **1 张场景背景 + 各关键词道具图**（也可手动「云端配图」或相册）
 5. 打开 **家庭日历** 或回首页点 **Family / 今日冒险**
 
-通义费用见 [`family-tongyi-images.md`](./family-tongyi-images.md)。Agnes 图以对方公开免费档为准，随时可能改价。  
+通义费用见 [`family-tongyi-images.md`](./family-tongyi-images.md)。Agnes 图以对方公开免费档为准，随时可能改价；**免费档约 20 次 API/分钟**，App 已限速排队，多图配图会变慢。  
 本地图标配图已移除（见 [`family-iconify-images.md`](./family-iconify-images.md)）。
 
 ## 孩子：玩

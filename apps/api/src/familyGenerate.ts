@@ -1,3 +1,5 @@
+import { runAgnesCall } from './agnesRateLimit'
+
 export type GeneratedFamilyPayload = {
   level: Record<string, unknown>
   photoHints: string[]
@@ -402,12 +404,14 @@ If the story is thin, still invent plausible related kid nouns from a typical da
 Return JSON only.`
 
   const attempt = async () => {
-    const { content } = await callChatCompletions({
-      url: cfg.url,
-      apiKey,
-      model,
-      userContent,
-    })
+    const call = () =>
+      callChatCompletions({
+        url: cfg.url,
+        apiKey,
+        model,
+        userContent,
+      })
+    const { content } = llm === 'agnes' ? await runAgnesCall(call) : await call()
     const parsed = extractJson(content) as {
       level?: unknown
       photoHints?: unknown

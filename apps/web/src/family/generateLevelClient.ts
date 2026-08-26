@@ -1,4 +1,5 @@
 import { cloudJson } from '../api/cloudHttp'
+import { runAgnesCall } from './agnesRateLimit'
 import {
   AGNES_CHAT_MODEL,
   AGNES_CHAT_URL,
@@ -42,19 +43,26 @@ async function callOnce(
 ): Promise<DirectLevelResult> {
   const { url, model } = chatEndpoint(llm)
   const userContent = buildLevelUserContent(story, date, minKeywords)
-  const res = await cloudJson(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: {
-      model,
-      temperature: 0.4,
-      messages: [
-        { role: 'system', content: FAMILY_LEVEL_SYSTEM_PROMPT },
-        { role: 'user', content: userContent },
-      ],
-    },
-    timeoutMs: 180_000,
-  })
+  const doRequest = async () => {
+    const r = await cloudJson(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: {
+        model,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: FAMILY_LEVEL_SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
+      },
+      timeoutMs: 180_000,
+    })
+    if (!r.ok && (r.status === 429 || /429|rate.?limit/i.test(String(r.error || '')))) {
+      throw new Error(`${llm}_http_429:${(r.error || r.text).slice(0, 200)}`)
+    }
+    return r
+  }
+  const res = llm === 'agnes' ? await runAgnesCall(doRequest) : await doRequest()
   if (!res.ok) {
     if (res.error === 'llm_timeout') throw new Error('llm_timeout')
     throw new Error(`${llm}_http_${res.status}:${(res.error || res.text).slice(0, 200)}`)
@@ -122,5 +130,8 @@ export async function generateFamilyLevelDirect(input: {
 }
 
 export function llmBusyLabel(llm: FamilyLlmProvider): string {
+  if (llm === 'agnes') {
+    return `正在生成关卡（${familyLlmLabel(llm)}，免费档约 20 次/分钟，可能稍慢）…`
+  }
   return `正在生成关卡（${familyLlmLabel(llm)}，可能需要 1–3 分钟）…`
 }
