@@ -44,12 +44,12 @@ import './family-studio.css'
 
 const LLM_OPTIONS: { id: FamilyLlmProvider; hint: string }[] = [
   { id: 'deepseek', hint: '现有路径，JSON 较稳' },
-  { id: 'agnes', hint: 'agnes-2.5-flash，试用对比' },
+  { id: 'agnes', hint: 'agnes-2.5-flash，试用对比；免费档约 20 次/分钟' },
 ]
 
 const IMAGE_CLOUD_OPTIONS: { id: FamilyImageCloudProvider; hint: string }[] = [
   { id: 'tongyi', hint: '万相，按张计费' },
-  { id: 'agnes', hint: 'agnes-image-2.1-flash，宣传免费档' },
+  { id: 'agnes', hint: 'agnes-image-2.1-flash；免费档约 20 次/分钟，多图会排队' },
 ]
 
 export function FamilyStudioSettingsPage() {

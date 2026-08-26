@@ -289,7 +289,11 @@ export function FamilyStudioPage() {
       slotsPayload ||
       slotsFromLevel(level as unknown as Record<string, unknown>, maxSlots)
     setImaging(true)
-    setStatus(`${opts?.statusPrefix || ''}正在${cloudName}配图…`.trim())
+    setStatus(
+      cloud === 'agnes'
+        ? `${opts?.statusPrefix || ''}正在${cloudName}配图（免费档约 20 次/分钟，可能稍慢）…`.trim()
+        : `${opts?.statusPrefix || ''}正在${cloudName}配图…`.trim(),
+    )
     try {
       let list: string[] = []
       let warnings: unknown[] = []

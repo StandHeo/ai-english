@@ -1,4 +1,5 @@
 import { cloudJson, downloadBinary } from '../api/cloudHttp'
+import { runAgnesCall } from './agnesRateLimit'
 import { compressBytes, compressDataUrl, mockSlotDataUrl } from './compressImage'
 import {
   buildKidsPrompt,
@@ -66,16 +67,22 @@ async function toJpegDataUrl(raw: string): Promise<string> {
 }
 
 async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
-  const res = await cloudJson(AGNES_IMAGE_URL, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: {
-      model: AGNES_IMAGE_MODEL,
-      prompt,
-      size: '1K',
-      extra_body: { response_format: 'b64_json', ratio: '1:1' },
-    },
-    timeoutMs: 120_000,
+  const res = await runAgnesCall(async () => {
+    const r = await cloudJson(AGNES_IMAGE_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: {
+        model: AGNES_IMAGE_MODEL,
+        prompt,
+        size: '1K',
+        extra_body: { response_format: 'b64_json', ratio: '1:1' },
+      },
+      timeoutMs: 120_000,
+    })
+    if (!r.ok && (r.status === 429 || /429|rate.?limit/i.test(String(r.error || '')))) {
+      throw new Error(`agnes_image_http_429:${(r.error || '').slice(0, 160)}`)
+    }
+    return r
   })
   if (!res.ok) throw new Error(`agnes_image_http_${res.status}:${(res.error || '').slice(0, 160)}`)
   const urls = extractImageUrls(res.data)

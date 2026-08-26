@@ -4,6 +4,7 @@
  */
 
 import sharp from 'sharp'
+import { runAgnesCall } from './agnesRateLimit'
 
 export type ImageSlot = {
   /** 用于 prompt 的主体描述（英文词或中文场景） */
@@ -318,38 +319,40 @@ async function callAgnesOnce(
   apiKey: string,
   prompt: string,
 ): Promise<{ dataUrl: string; rawPreview: string }> {
-  const model = process.env.AGNES_IMAGE_MODEL?.trim() || 'agnes-image-2.1-flash'
-  const endpoint =
-    process.env.AGNES_IMAGE_ENDPOINT?.trim() ||
-    'https://apihub.agnes-ai.com/v1/images/generations'
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      prompt,
-      size: '1K',
-      extra_body: { response_format: 'b64_json', ratio: '1:1' },
-    }),
-    signal: AbortSignal.timeout(TONGYI_TIMEOUT_MS),
+  return runAgnesCall(async () => {
+    const model = process.env.AGNES_IMAGE_MODEL?.trim() || 'agnes-image-2.1-flash'
+    const endpoint =
+      process.env.AGNES_IMAGE_ENDPOINT?.trim() ||
+      'https://apihub.agnes-ai.com/v1/images/generations'
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        prompt,
+        size: '1K',
+        extra_body: { response_format: 'b64_json', ratio: '1:1' },
+      }),
+      signal: AbortSignal.timeout(TONGYI_TIMEOUT_MS),
+    })
+    const text = await res.text()
+    let json: unknown
+    try {
+      json = JSON.parse(text)
+    } catch {
+      throw new Error(`agnes_bad_json_${res.status}`)
+    }
+    if (!res.ok) {
+      throw new Error(`agnes_image_http_${res.status}:${text.slice(0, 160)}`)
+    }
+    const urls = extractImageUrls(json)
+    if (!urls.length) throw new Error('agnes_no_image_in_response')
+    const dataUrl = await urlToDataUrl(urls[0])
+    return { dataUrl, rawPreview: `agnes url=${urls[0].slice(0, 80)}` }
   })
-  const text = await res.text()
-  let json: unknown
-  try {
-    json = JSON.parse(text)
-  } catch {
-    throw new Error(`agnes_bad_json_${res.status}`)
-  }
-  if (!res.ok) {
-    throw new Error(`agnes_image_http_${res.status}:${text.slice(0, 160)}`)
-  }
-  const urls = extractImageUrls(json)
-  if (!urls.length) throw new Error('agnes_no_image_in_response')
-  const dataUrl = await urlToDataUrl(urls[0])
-  return { dataUrl, rawPreview: `agnes url=${urls[0].slice(0, 80)}` }
 }
 
 function resolveImageProvider(raw?: string): 'tongyi' | 'agnes' | 'mock' {
