@@ -81,7 +81,7 @@ export async function apiJson(
         method,
         headers,
         data: init.body,
-        connectTimeout: 20_000,
+        connectTimeout: 60_000,
         readTimeout: timeoutMs,
         responseType: 'json',
       })
@@ -119,6 +119,10 @@ export async function apiJson(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return { ok: false, status: 0, data: {}, error: msg }
+    const timeout =
+      /timeout|timed\s*out|aborted|AbortError|SocketTimeout|Socket closed|SocketException|ETIMEDOUT/i.test(
+        msg,
+      )
+    return { ok: false, status: 0, data: {}, error: timeout ? 'llm_timeout' : msg }
   }
 }

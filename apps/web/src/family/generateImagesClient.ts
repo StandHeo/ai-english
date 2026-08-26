@@ -1,4 +1,4 @@
-import { cloudJson, downloadBinary } from '../api/cloudHttp'
+import { cloudJson, downloadBinary, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
 import { compressBytes, compressDataUrl, mockSlotDataUrl } from './compressImage'
 import {
@@ -66,7 +66,9 @@ async function toJpegDataUrl(raw: string): Promise<string> {
   return compressBytes(bytes)
 }
 
-async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
+const IMAGE_TIMEOUT_MS = 180_000
+
+async function onceAgnesImage(apiKey: string, prompt: string): Promise<string> {
   const res = await runAgnesCall(async () => {
     const r = await cloudJson(AGNES_IMAGE_URL, {
       method: 'POST',
@@ -77,20 +79,37 @@ async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
         size: '1K',
         extra_body: { response_format: 'b64_json', ratio: '1:1' },
       },
-      timeoutMs: 120_000,
+      timeoutMs: IMAGE_TIMEOUT_MS,
     })
     if (!r.ok && (r.status === 429 || /429|rate.?limit/i.test(String(r.error || '')))) {
       throw new Error(`agnes_image_http_429:${(r.error || '').slice(0, 160)}`)
     }
     return r
   })
-  if (!res.ok) throw new Error(`agnes_image_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  if (!res.ok) {
+    if (res.error === 'llm_timeout' || isCloudTimeoutMessage(String(res.error || ''))) {
+      throw new Error('llm_timeout')
+    }
+    throw new Error(`agnes_image_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  }
   const urls = extractImageUrls(res.data)
   if (!urls.length) throw new Error('agnes_no_image_in_response')
   return toJpegDataUrl(urls[0])
 }
 
-async function callTongyiImage(apiKey: string, prompt: string): Promise<string> {
+async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
+  try {
+    return await onceAgnesImage(apiKey, prompt)
+  } catch (first) {
+    const msg = first instanceof Error ? first.message : String(first)
+    if (msg === 'llm_timeout' || isCloudTimeoutMessage(msg)) {
+      return await onceAgnesImage(apiKey, prompt)
+    }
+    throw first instanceof Error ? first : new Error(msg)
+  }
+}
+
+async function onceTongyiImage(apiKey: string, prompt: string): Promise<string> {
   const res = await cloudJson(TONGYI_IMAGE_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -107,12 +126,29 @@ async function callTongyiImage(apiKey: string, prompt: string): Promise<string> 
         size: '1280*1280',
       },
     },
-    timeoutMs: 120_000,
+    timeoutMs: IMAGE_TIMEOUT_MS,
   })
-  if (!res.ok) throw new Error(`tongyi_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  if (!res.ok) {
+    if (res.error === 'llm_timeout' || isCloudTimeoutMessage(String(res.error || ''))) {
+      throw new Error('llm_timeout')
+    }
+    throw new Error(`tongyi_http_${res.status}:${(res.error || '').slice(0, 160)}`)
+  }
   const urls = extractImageUrls(res.data)
   if (!urls.length) throw new Error('tongyi_no_image_in_response')
   return toJpegDataUrl(urls[0])
+}
+
+async function callTongyiImage(apiKey: string, prompt: string): Promise<string> {
+  try {
+    return await onceTongyiImage(apiKey, prompt)
+  } catch (first) {
+    const msg = first instanceof Error ? first.message : String(first)
+    if (msg === 'llm_timeout' || isCloudTimeoutMessage(msg)) {
+      return await onceTongyiImage(apiKey, prompt)
+    }
+    throw first instanceof Error ? first : new Error(msg)
+  }
 }
 
 export async function generateFamilyImagesDirect(input: {

@@ -229,6 +229,8 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 
 **家庭日记生成关卡 / 云端配图：** 在「设置」填写当前模型的云 Key（DeepSeek 或 Agnes；配图为通义或 Agnes 图）后，App 会 **直连 HTTPS**，不必开电脑 `apps/api`，也不必填局域网地址。
 
+直连走原生 `CapacitorHttp`。若 Logcat 出现 `SocketTimeoutException: timeout`（偶发还有 `Socket closed`），通常是手机到云端读超时，而不是 SurfaceFlinger 的 “Out of order buffers”（后者多为系统合成层噪声，可忽略）。可检查：手机外网、是否高峰限流、稍后再试。App 侧已加长连接/读超时，并对瞬时超时自动重试一次。
+
 **仍需要电脑 API 的情况：** 要用电脑 `.env` 里的 Key 做代理，或关卡口语识别等仍走 `/api` 的接口。此时：
 
 1. 电脑保持 `apps/api` 在跑（默认 `8787`），手机与电脑同一 Wi‑Fi。

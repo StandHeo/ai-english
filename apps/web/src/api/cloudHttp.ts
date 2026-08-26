@@ -1,5 +1,8 @@
 import { CapacitorHttp } from '@capacitor/core'
 import { isNativeApp } from './base'
+import { isCloudTimeoutMessage } from './cloudTimeout'
+
+export { isCloudTimeoutMessage } from './cloudTimeout'
 
 export type CloudJsonResult = {
   ok: boolean
@@ -8,6 +11,12 @@ export type CloudJsonResult = {
   text: string
   error?: string
 }
+
+/** 原生连接超时：弱网 / 切换 Wi‑Fi 时 20s 偏短 */
+export const NATIVE_CONNECT_TIMEOUT_MS = 60_000
+
+/** 默认读超时（关卡/配图可再加长） */
+export const DEFAULT_CLOUD_TIMEOUT_MS = 180_000
 
 /**
  * JSON HTTPS 调用。App 走 CapacitorHttp（无 CORS）；浏览器走 fetch。
@@ -27,7 +36,7 @@ export async function cloudJson(
     ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     ...init.headers,
   }
-  const timeoutMs = init.timeoutMs ?? 120_000
+  const timeoutMs = init.timeoutMs ?? DEFAULT_CLOUD_TIMEOUT_MS
 
   try {
     if (isNativeApp()) {
@@ -36,7 +45,7 @@ export async function cloudJson(
         method,
         headers,
         data: init.body,
-        connectTimeout: 20_000,
+        connectTimeout: NATIVE_CONNECT_TIMEOUT_MS,
         readTimeout: timeoutMs,
         responseType: 'json',
       })
@@ -88,43 +97,48 @@ export async function cloudJson(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    const timeout = /timeout|aborted|AbortError/i.test(msg)
     return {
       ok: false,
       status: 0,
       data: {},
       text: '',
-      error: timeout ? 'llm_timeout' : msg,
+      error: isCloudTimeoutMessage(msg) ? 'llm_timeout' : msg,
     }
   }
 }
 
-export async function downloadBinary(url: string, timeoutMs = 60_000): Promise<Uint8Array> {
-  if (isNativeApp()) {
-    const res = await CapacitorHttp.request({
-      url,
-      method: 'GET',
-      connectTimeout: 20_000,
-      readTimeout: timeoutMs,
-      responseType: 'arraybuffer',
-    })
-    if (res.status < 200 || res.status >= 300) {
-      throw new Error(`image_download_failed_${res.status}`)
+export async function downloadBinary(url: string, timeoutMs = 120_000): Promise<Uint8Array> {
+  try {
+    if (isNativeApp()) {
+      const res = await CapacitorHttp.request({
+        url,
+        method: 'GET',
+        connectTimeout: NATIVE_CONNECT_TIMEOUT_MS,
+        readTimeout: timeoutMs,
+        responseType: 'arraybuffer',
+      })
+      if (res.status < 200 || res.status >= 300) {
+        throw new Error(`image_download_failed_${res.status}`)
+      }
+      const data = res.data
+      if (data instanceof ArrayBuffer) return new Uint8Array(data)
+      if (ArrayBuffer.isView(data)) {
+        return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      }
+      if (typeof data === 'string' && data) {
+        const bin = atob(data)
+        const out = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+        return out
+      }
+      throw new Error('image_download_empty')
     }
-    const data = res.data
-    if (data instanceof ArrayBuffer) return new Uint8Array(data)
-    if (ArrayBuffer.isView(data)) {
-      return new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
-    }
-    if (typeof data === 'string' && data) {
-      const bin = atob(data)
-      const out = new Uint8Array(bin.length)
-      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-      return out
-    }
-    throw new Error('image_download_empty')
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) throw new Error(`image_download_failed_${res.status}`)
+    return new Uint8Array(await res.arrayBuffer())
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (isCloudTimeoutMessage(msg)) throw new Error('llm_timeout')
+    throw err instanceof Error ? err : new Error(msg)
   }
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) })
-  if (!res.ok) throw new Error(`image_download_failed_${res.status}`)
-  return new Uint8Array(await res.arrayBuffer())
 }
