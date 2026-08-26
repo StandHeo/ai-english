@@ -1,4 +1,4 @@
-import { cloudJson } from '../api/cloudHttp'
+import { cloudJson, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
 import {
   AGNES_CHAT_MODEL,
@@ -55,7 +55,8 @@ async function callOnce(
           { role: 'user', content: userContent },
         ],
       },
-      timeoutMs: 180_000,
+      // App 直连弱网时 Agnes/DeepSeek 常 >2 分钟才回首包
+      timeoutMs: 240_000,
     })
     if (!r.ok && (r.status === 429 || /429|rate.?limit/i.test(String(r.error || '')))) {
       throw new Error(`${llm}_http_429:${(r.error || r.text).slice(0, 200)}`)
@@ -64,7 +65,9 @@ async function callOnce(
   }
   const res = llm === 'agnes' ? await runAgnesCall(doRequest) : await doRequest()
   if (!res.ok) {
-    if (res.error === 'llm_timeout') throw new Error('llm_timeout')
+    if (res.error === 'llm_timeout' || isCloudTimeoutMessage(String(res.error || ''))) {
+      throw new Error('llm_timeout')
+    }
     throw new Error(`${llm}_http_${res.status}:${(res.error || res.text).slice(0, 200)}`)
   }
   const choices = res.data.choices
@@ -115,13 +118,13 @@ export async function generateFamilyLevelDirect(input: {
       msg.startsWith('invalid_level') ||
       msg.includes('_http_') ||
       msg === 'llm_timeout' ||
-      /timeout|aborted/i.test(msg)
+      isCloudTimeoutMessage(msg)
     ) {
       try {
         return await attempt()
       } catch (second) {
         const s = second instanceof Error ? second.message : ''
-        if (s === 'llm_timeout' || /timeout|aborted/i.test(s)) throw new Error('llm_timeout')
+        if (s === 'llm_timeout' || isCloudTimeoutMessage(s)) throw new Error('llm_timeout')
         throw second instanceof Error ? second : first
       }
     }

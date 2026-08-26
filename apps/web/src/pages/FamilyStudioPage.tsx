@@ -446,9 +446,9 @@ export function FamilyStudioPage() {
             return
           }
           const err = String(data.error || res.error || res.status)
-          if (/timeout|deepseek_timeout|llm_timeout/i.test(err)) {
+          if (/timeout|deepseek_timeout|llm_timeout|Socket closed|SocketTimeout/i.test(err)) {
             setStatus(
-              `生成超时：${familyLlmLabel(llm)} 响应较慢。请检查手机/电脑网络后重试；也可把「最少关键词」调低。`,
+              `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认手机能访问外网后重试；高峰期可稍后再试，或把「最少关键词」调低。`,
             )
             return
           }
@@ -498,9 +498,9 @@ export function FamilyStudioPage() {
         setStatus(`生成失败：模型返回的关卡不合格（${msg}）。可换一家模型再试。`)
         return
       }
-      if (/timeout|llm_timeout/i.test(msg)) {
+      if (/timeout|llm_timeout|Socket closed|SocketTimeout/i.test(msg)) {
         setStatus(
-          `生成超时：${familyLlmLabel(llm)} 较慢。请检查网络，或把最少关键词调低。`,
+          `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认手机能访问外网后重试；高峰期可稍后再试，或把最少关键词调低。`,
         )
         return
       }
