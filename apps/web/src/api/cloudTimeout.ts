@@ -1,6 +1,9 @@
-/** 识别 CapacitorHttp / OkHttp / fetch 的读超时与断连文案 */
+/**
+ * 识别 CapacitorHttp / OkHttp / fetch 的瞬时网络失败文案。
+ * 含读超时，以及 Clash/切后台常见的 connection abort。
+ */
 export function isCloudTimeoutMessage(msg: string): boolean {
-  return /timeout|timed\s*out|llm_timeout|aborted|AbortError|SocketTimeout|Socket closed|SocketException|ETIMEDOUT|ECONNRESET/i.test(
+  return /timeout|timed\s*out|llm_timeout|abort|AbortError|SocketTimeout|Socket closed|SocketException|ETIMEDOUT|ECONNRESET|ECONNABORTED|connection reset/i.test(
     msg,
   )
 }
