@@ -90,6 +90,9 @@ export function FamilyLevelPage({ onProgress }: Props) {
       if (cancelled) return
       setBeatIndex(0)
       setRetries(0)
+      setPhase('speak')
+      setCeleb(null)
+      finishingRef.current = false
       startedAt.current = Date.now()
       if (!Capacitor.isNativePlatform() && (!isMicAllowedByBrowser() || pageProtocolHint() === 'http')) {
         setMicTip('当前可能无法开麦克风，可用右下角打字。')
@@ -129,7 +132,21 @@ export function FamilyLevelPage({ onProgress }: Props) {
     onProgress(next)
     persistPlayTime()
     await requestTts('Yay!')
-    window.setTimeout(() => navigate(levelId ? `/family/${date}` : '/family'), 1000)
+    window.setTimeout(() => {
+      if (!levelId) {
+        navigate('/family')
+        return
+      }
+      // 与官方 pack 一样：通关后自动进下一关，最后一关再回当日地图
+      const levels = getDay(date)?.miniLevels || []
+      const idx = levels.findIndex((m) => m.id === levelId)
+      const nextId = idx >= 0 ? levels[idx + 1]?.id : undefined
+      if (nextId) {
+        navigate(`/family/${date}/play/${encodeURIComponent(nextId)}`, { replace: true })
+        return
+      }
+      navigate(`/family/${date}`)
+    }, 1000)
   }, [date, level, levelId, navigate, onProgress, persistPlayTime])
 
   const advance = useCallback(async () => {
@@ -297,7 +314,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
         className="exit-btn"
         onClick={() => {
           persistPlayTime()
-          navigate('/family')
+          navigate(levelId ? `/family/${date}` : '/family')
         }}
         aria-label="exit"
       />
