@@ -100,6 +100,90 @@ export function normalizeIconColors(raw: unknown): IconColorHint[] {
   return out.slice(0, 8)
 }
 
+function normalizePictureOptions(
+  opts: unknown,
+  correctId?: string,
+): { id: string; image: string; correct: boolean }[] {
+  if (!Array.isArray(opts)) return []
+  const out: { id: string; image: string; correct: boolean }[] = []
+  for (const raw of opts) {
+    if (!raw || typeof raw !== 'object') continue
+    const o = raw as Record<string, unknown>
+    const id = String(o.id || o.label || o.word || '').trim()
+    if (!id) continue
+    const image =
+      typeof o.image === 'string' && o.image.trim() ? String(o.image) : 'placeholder'
+    let correct = Boolean(o.correct)
+    if (!correct && correctId && id === correctId) correct = true
+    out.push({ id, image, correct })
+  }
+  if (out.length >= 2 && !out.some((o) => o.correct)) {
+    out[0]!.correct = true
+  }
+  return out
+}
+
+/**
+ * 把模型常见「走样」字段修成引擎认的 beat 形状（Agnes 常把 npc_say 写成 question）。
+ */
+export function normalizeFamilyLevel(level: Record<string, unknown>): Record<string, unknown> {
+  const beatsIn = Array.isArray(level.beats) ? level.beats : []
+  const beats = beatsIn.map((raw) => {
+    if (!raw || typeof raw !== 'object') return raw
+    const b = { ...(raw as Record<string, unknown>) }
+    if (typeof b.npc_say !== 'string' || !String(b.npc_say).trim()) {
+      const alt = b.question ?? b.prompt ?? b.say ?? b.text
+      if (typeof alt === 'string' && alt.trim()) b.npc_say = alt.trim()
+    }
+    if (typeof b.expect === 'string' && b.expect.trim()) {
+      b.expect = [b.expect.trim()]
+    } else if (!Array.isArray(b.expect) && typeof b.answer === 'string' && b.answer.trim()) {
+      b.expect = [b.answer.trim()]
+    }
+
+    if (b.type === 'ask') {
+      const fbRaw =
+        b.fallback && typeof b.fallback === 'object'
+          ? { ...(b.fallback as Record<string, unknown>) }
+          : {}
+      const correctId = String(fbRaw.correct_id || fbRaw.correctId || '').trim()
+      const options = normalizePictureOptions(fbRaw.options, correctId || undefined)
+      if (options.length >= 2) {
+        b.fallback = {
+          type: 'picture_choice',
+          options,
+        }
+      }
+      if (!b.hint_say && typeof b.hint === 'string') b.hint_say = b.hint
+      if (!b.success_say && typeof b.success === 'string') b.success_say = b.success
+      if (!b.hint_say) b.hint_say = String((b.expect as string[])?.[0] || 'Try!')
+      if (!b.success_say) b.success_say = 'Yes!'
+    }
+
+    if (b.type === 'find') {
+      const correctId = String(b.correct_id || b.correctId || '').trim()
+      let options = normalizePictureOptions(b.options, correctId || undefined)
+      if (options.length < 2 && b.fallback && typeof b.fallback === 'object') {
+        const fb = b.fallback as Record<string, unknown>
+        options = normalizePictureOptions(
+          fb.options,
+          String(fb.correct_id || fb.correctId || correctId || '').trim() || undefined,
+        )
+      }
+      if (options.length >= 2) {
+        b.options = options
+        delete b.correct_id
+        delete b.correctId
+      }
+    }
+
+    delete b.question
+    return b
+  })
+
+  return { ...level, beats }
+}
+
 export function validateFamilyLevel(level: unknown): string | null {
   if (!level || typeof level !== 'object') return 'level_not_object'
   const L = level as Record<string, unknown>
@@ -171,7 +255,8 @@ export function parseValidatedFamilyLevel(
     photoHints?: unknown
     iconColors?: unknown
   }
-  const level = (parsed.level || parsed) as Record<string, unknown>
+  let level = (parsed.level || parsed) as Record<string, unknown>
+  level = normalizeFamilyLevel(level)
   const err = validateFamilyLevel(level)
   if (err) throw new Error(`invalid_level:${err}`)
   const hints = Array.isArray(parsed.photoHints)

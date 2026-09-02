@@ -2,11 +2,28 @@
  * 家庭迷你 pack 生成（与 apps/web packSchema 对齐）。
  */
 import { runAgnesCall } from './agnesRateLimit.js'
-import { validateFamilyLevel } from './familyGenerate.js'
+import { normalizeFamilyLevel, validateFamilyLevel } from './familyGenerate.js'
 
 const PACK_SYSTEM_PROMPT = `You are a kids English oral-adventure designer for ages 4-6.
 Given a Chinese (or mixed) family diary about a child's day, output ONE mini CONTENT PACK as JSON only (no markdown).
 The pack is like the official "fruit forest" pack: several short levels, each focused on ONE main English noun with its own scene.
+
+CRITICAL beat field names (do NOT invent other names):
+- Every beat MUST have "type" and "npc_say" (never use "question" instead of npc_say).
+- ask beat example:
+  {"type":"ask","npc_say":"Say park!","expect":["park"],"hint_say":"Park!","success_say":"Yes!",
+   "fallback":{"type":"picture_choice","options":[
+     {"id":"park","image":"placeholder","correct":true},
+     {"id":"bus","image":"placeholder","correct":false}
+   ]}}
+- find beat example:
+  {"type":"find","npc_say":"Find the park!","hint_say":"Park!","success_say":"Yes!",
+   "options":[
+     {"id":"park","image":"placeholder","correct":true},
+     {"id":"cake","image":"placeholder","correct":false}
+   ]}
+- Do NOT use correct_id / label-only options. Each option needs id, image:"placeholder", correct boolean.
+- expect MUST be an array of strings, not a single string.
 
 Schema:
 {
@@ -37,8 +54,8 @@ Rules:
 - Each level MUST focus on a DIFFERENT main word in target_words[0].
 - scene.setting MUST be a short PLACE / atmosphere line (Chinese or English OK). Do NOT paste the whole diary into setting.
 - Beat types: "introduce" | "ask" | "find". Keep npc_say simple English (max ~8 words).
-- ask beats MUST have expect, hint_say, success_say, and fallback picture_choice with >=2 options.
-- find beats MUST have options with >=2 items and one correct.
+- ask beats MUST have expect (array), hint_say, success_say, and fallback.picture_choice with >=2 options.
+- find beats MUST have options with >=2 items and one correct:true.
 - Distractor option ids may reuse other levels' main words or simple nouns (bus, cake, home, tree…).
 - Use image:"placeholder" everywhere.
 - Do NOT include beep_talk.
@@ -100,7 +117,8 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
   for (const raw of rawLevels.slice(0, want)) {
     if (!raw || typeof raw !== 'object') continue
     const entry = raw as { level?: unknown; photoHints?: unknown }
-    const level = (entry.level || raw) as Record<string, unknown>
+    let level = (entry.level || raw) as Record<string, unknown>
+    level = normalizeFamilyLevel(level)
     const err = validateFamilyLevel(level)
     if (err) throw new Error(`invalid_level:${err}`)
 
