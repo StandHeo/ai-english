@@ -106,6 +106,17 @@ function migrateSwimPack(pack: PackProgress): PackProgress {
   }
 }
 
+/** 自行车包追加 bike-09 后，已通关复习关的老玩家自动解锁泵道关 */
+function migrateBikePack(pack: PackProgress): PackProgress {
+  const PUMP = 'bike-09-pump-track'
+  const REVIEW = 'bike-08-review'
+  const unlocked = new Set(pack.unlocked)
+  if (pack.completed.includes(REVIEW) || unlocked.has(REVIEW)) {
+    unlocked.add(PUMP)
+  }
+  return { ...pack, unlocked: [...unlocked] }
+}
+
 export function loadProgress(): ProgressState {
   try {
     const v2 = localStorage.getItem(KEY)
@@ -115,6 +126,9 @@ export function loadProgress(): ProgressState {
       const packs = { ...base.packs, ...(parsed.packs || {}) }
       if (packs[SWIM]) {
         packs[SWIM] = migrateSwimPack(packs[SWIM])
+      }
+      if (packs[BIKE]) {
+        packs[BIKE] = migrateBikePack(packs[BIKE])
       }
       return {
         ...base,
