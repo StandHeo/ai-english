@@ -364,11 +364,15 @@ export function FamilyStudioPage() {
           setStatus(
             `${prefix}${cloudName}配图 ${done}/${targets.length}：${word}（${slots.length} 张）`.trim(),
           )
-        } catch {
+        } catch (err) {
           failCount += 1
           done += 1
+          const em = err instanceof Error ? err.message : String(err)
+          const netAbort = /connection abort|SocketException|llm_timeout|ETIMEDOUT|abort/i.test(em)
           setStatus(
-            `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 出错（继续并行）`.trim(),
+            netAbort
+              ? `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 网络中断（继续并行，勿切 App）`.trim()
+              : `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 出错（继续并行）`.trim(),
           )
         }
       })
@@ -376,7 +380,7 @@ export function FamilyStudioPage() {
       await persistTail
       if (failCount > 0) {
         setStatus(
-          `配图结束（${cloudName}）：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}`,
+          `配图结束（${cloudName}）：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}。配图时勿切 App；Clash 请开 TUN 并把本 App 纳入代理`,
         )
         return failCount < targets.length
       }
@@ -387,6 +391,10 @@ export function FamilyStudioPage() {
       if (/quota|exceeded/i.test(msg)) {
         setStatus(
           `关卡已保留；本机存储已满，配图已改为 IndexedDB 仍失败。请清理旧日记图后重试（${msg.slice(0, 80)}）`,
+        )
+      } else if (/connection abort|SocketException|llm_timeout|ETIMEDOUT|abort/i.test(msg)) {
+        setStatus(
+          `关卡已保留；${cloudName}网络中断（${msg.slice(0, 80)}）。Clash 请开 TUN 并勿切 App，可重试配图`,
         )
       } else {
         setStatus(`关卡已保留；${cloudName}配图出错（${msg}）`)

@@ -10,6 +10,11 @@ describe('isCloudTimeoutMessage', () => {
     assert.equal(isCloudTimeoutMessage('llm_timeout'), true)
     assert.equal(isCloudTimeoutMessage('The operation was aborted'), true)
     assert.equal(isCloudTimeoutMessage('ETIMEDOUT'), true)
+    assert.equal(isCloudTimeoutMessage('Software caused connection abort'), true)
+    assert.equal(
+      isCloudTimeoutMessage('agnes_image_http_0:Software caused connection abort'),
+      true,
+    )
   })
 
   it('rejects unrelated errors', () => {
