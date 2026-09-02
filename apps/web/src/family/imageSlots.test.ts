@@ -52,6 +52,7 @@ test('buildKidsPrompt differs for scene vs item', () => {
   const item = buildKidsPrompt({ subject: 'slide', role: 'item' })
   assert.match(scene, /全景|环境/)
   assert.match(scene, /小区游乐场/)
+  assert.match(scene, /绘本画风|卡通兔/)
   assert.match(item, /居中/)
   assert.match(item, /slide/)
   assert.doesNotMatch(item, /全景/)

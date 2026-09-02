@@ -6,6 +6,7 @@ import { matchExpect } from './match.js'
 import { recognizeSpeech } from './asr.js'
 import { synthesizeSpeech } from './tts.js'
 import { generateFamilyLevel } from './familyGenerate.js'
+import { generateFamilyPack } from './familyPackGenerate.js'
 import {
   generateFamilyImages,
   slotsFromLevel,
@@ -84,7 +85,9 @@ app.post('/api/family/generate-level', async (req, res) => {
     const bodyKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : ''
     const apiKey = headerKey || bodyKey || undefined
     const minKeywords = req.body.minKeywords
+    const levelCount = req.body.levelCount ?? minKeywords
     const llm = typeof req.body.llm === 'string' ? req.body.llm : undefined
+    const mode = String(req.body.mode || 'pack').trim().toLowerCase()
 
     if (!story) {
       res.status(400).json({ error: 'story_required' })
@@ -95,12 +98,36 @@ app.post('/api/family/generate-level', async (req, res) => {
       '[family/generate-level] incoming',
       JSON.stringify({
         date,
+        mode,
+        levelCount,
         minKeywords,
         storyChars: story.length,
         storyPreview: story.slice(0, 400),
         hasKey: Boolean(apiKey),
       }),
     )
+
+    // 默认迷你 pack；mode=legacy 保留旧单关（调试）
+    if (mode !== 'legacy') {
+      const payload = await generateFamilyPack({
+        story,
+        date,
+        apiKey,
+        levelCount,
+        minKeywords,
+        llm,
+      })
+      console.log(
+        '[family/generate-level] pack result',
+        JSON.stringify({
+          title: payload.pack.title,
+          levelCount: payload.levelCount,
+          mainWords: payload.mainWords,
+        }),
+      )
+      res.json(payload)
+      return
+    }
 
     const payload = await generateFamilyLevel({ story, date, apiKey, minKeywords, llm })
     console.log(
@@ -127,17 +154,27 @@ app.post('/api/family/generate-level', async (req, res) => {
       })
       return
     }
+    if (message.startsWith('pack_levels_insufficient:')) {
+      const [, count, min] = message.split(':')
+      res.status(422).json({
+        error: 'pack_levels_insufficient',
+        count: Number(count) || 0,
+        levelCount: Number(min) || 4,
+        message: '迷你关卡包关数不足，请再补充今日故事后重试',
+      })
+      return
+    }
     if (message === 'deepseek_timeout' || message === 'llm_timeout') {
       res.status(504).json({
         error: 'llm_timeout',
-        message: '模型响应超时，请稍后再试或把最少关键词调低',
+        message: '模型响应超时，请稍后再试或把今日关数调低',
       })
       return
     }
     const status =
       message === 'api_key_required' || message === 'story_required'
         ? 400
-        : message.startsWith('invalid_level')
+        : message.startsWith('invalid_level') || message.startsWith('pack_levels')
           ? 422
           : 500
     console.error('[family/generate-level]', message)

@@ -31,17 +31,40 @@ export type FamilyIconColor = {
   bg: string
 }
 
+/** 当日迷你 pack 中的一关（对齐官方「一词一景」） */
+export type FamilyMiniLevel = {
+  id: string
+  level: LevelScript
+  /** 可编辑出图主题；缺省用 level.scene.setting */
+  scenePrompt?: string
+  itemPrompts?: string[]
+  imageBg?: string
+  itemImages?: string[]
+  completed?: boolean
+}
+
+export type FamilyDayPack = {
+  title: string
+  theme: 'family'
+  levelIds: string[]
+}
+
 export type FamilyDayRecord = {
   date: string
   /** Merged cache of message texts for level generation */
   story: string
   messages: FamilyDiaryMessage[]
+  /** 旧：一天一关；新生成默认不写，仅 legacy 保留 */
   level: LevelScript | null
   photoHints: string[]
   /** DeepSeek 建议的图标配色 */
   iconColors: FamilyIconColor[]
-  /** data URL or blob URL strings attached by parent */
+  /** data URL or blob URL strings attached by parent（legacy 扁平配图） */
   images: string[]
+  /** 新：迷你 pack 元数据 */
+  pack?: FamilyDayPack | null
+  /** 新：当日多关 */
+  miniLevels?: FamilyMiniLevel[]
   completed: boolean
   updatedAt: number
 }
@@ -58,12 +81,15 @@ type FamilyStore = {
   imageCloudProvider: FamilyImageCloudProvider
   /** 生成关卡后自动云端配图；默认关以免误扣费 */
   autoTongyiImages: boolean
-  /** 一关最少英文关键词数（target_words + 选项 id 去重） */
+  /**
+   * 设置项：今日迷你 pack 关数目标（兼旧「最少关键词」）。
+   * 实际关数见 getPackLevelCount()，夹紧到 3–5。
+   */
   minLevelKeywords: number
 }
 
 const KEY = 'ai-english-family-v1'
-const DEFAULT_MIN_KEYWORDS = 9
+const DEFAULT_MIN_KEYWORDS = 4
 
 function emptyStore(): FamilyStore {
   return {
@@ -95,9 +121,23 @@ export function setMinLevelKeywords(n: number): void {
   saveFamilyStore(store)
 }
 
-/** 配图张数上限 = 设置里的最少关键词数 */
+/** 今日迷你 pack 关数（3–5） */
+export function getPackLevelCount(): number {
+  return Math.min(5, Math.max(3, getMinLevelKeywords()))
+}
+
+/** 配图张数上限 = 设置里的最少关键词数（legacy 扁平图）；pack 按关另算 */
 export function getImageSlotMax(): number {
   return getMinLevelKeywords()
+}
+
+export function dayHasPlayableContent(day: FamilyDayRecord | null | undefined): boolean {
+  if (!day) return false
+  return Boolean(day.level) || (Array.isArray(day.miniLevels) && day.miniLevels.length > 0)
+}
+
+export function dayHasMiniPack(day: FamilyDayRecord | null | undefined): boolean {
+  return Boolean(day && Array.isArray(day.miniLevels) && day.miniLevels.length > 0)
 }
 
 export function todayKey(d = new Date()): string {
@@ -158,12 +198,70 @@ function normalizeIconColors(raw: unknown): FamilyIconColor[] {
   return out.slice(0, 12)
 }
 
+function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
+  if (!Array.isArray(raw)) return []
+  const out: FamilyMiniLevel[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Partial<FamilyMiniLevel>
+    if (typeof o.id !== 'string' || !o.id || !o.level || typeof o.level !== 'object') continue
+    out.push({
+      id: o.id,
+      level: o.level as LevelScript,
+      ...(typeof o.scenePrompt === 'string' && o.scenePrompt.trim()
+        ? { scenePrompt: o.scenePrompt.trim() }
+        : {}),
+      ...(Array.isArray(o.itemPrompts)
+        ? { itemPrompts: o.itemPrompts.map(String).filter((s) => s.trim()) }
+        : {}),
+      ...(typeof o.imageBg === 'string' && o.imageBg ? { imageBg: o.imageBg } : {}),
+      ...(Array.isArray(o.itemImages)
+        ? { itemImages: o.itemImages.map(String).filter(Boolean) }
+        : {}),
+      completed: Boolean(o.completed),
+    })
+  }
+  return out
+}
+
+function normalizePack(raw: unknown, miniLevels: FamilyMiniLevel[]): FamilyDayPack | null {
+  if (raw && typeof raw === 'object') {
+    const o = raw as Partial<FamilyDayPack>
+    const title = typeof o.title === 'string' && o.title.trim() ? o.title.trim() : 'My Day'
+    const levelIds = Array.isArray(o.levelIds)
+      ? o.levelIds.map(String).filter(Boolean)
+      : miniLevels.map((m) => m.id)
+    return { title, theme: 'family', levelIds }
+  }
+  if (miniLevels.length) {
+    return {
+      title: 'My Day',
+      theme: 'family',
+      levelIds: miniLevels.map((m) => m.id),
+    }
+  }
+  return null
+}
+
+function deriveDayCompleted(day: {
+  completed?: boolean
+  level?: LevelScript | null
+  miniLevels?: FamilyMiniLevel[]
+}): boolean {
+  if (day.miniLevels && day.miniLevels.length > 0) {
+    return day.miniLevels.every((m) => Boolean(m.completed))
+  }
+  return Boolean(day.completed)
+}
+
 function normalizeDay(date: string, raw: Partial<FamilyDayRecord> | undefined): FamilyDayRecord {
   const messages = normalizeMessages(raw?.messages)
   const story =
     typeof raw?.story === 'string'
       ? raw.story
       : mergeStoryFromMessages(messages)
+  const miniLevels = normalizeMiniLevels(raw?.miniLevels)
+  const pack = normalizePack(raw?.pack, miniLevels)
   return {
     date,
     story,
@@ -172,7 +270,13 @@ function normalizeDay(date: string, raw: Partial<FamilyDayRecord> | undefined): 
     photoHints: Array.isArray(raw?.photoHints) ? raw.photoHints.map(String) : [],
     iconColors: normalizeIconColors(raw?.iconColors),
     images: Array.isArray(raw?.images) ? raw.images.map(String) : [],
-    completed: Boolean(raw?.completed),
+    pack,
+    miniLevels,
+    completed: deriveDayCompleted({
+      completed: raw?.completed,
+      level: raw?.level || null,
+      miniLevels,
+    }),
     updatedAt: typeof raw?.updatedAt === 'number' ? raw.updatedAt : Date.now(),
   }
 }
@@ -242,7 +346,7 @@ export function getDay(date: string): FamilyDayRecord | null {
 
 export function listDaysWithLevels(): FamilyDayRecord[] {
   return Object.values(loadFamilyStore().days)
-    .filter((d) => d.level)
+    .filter((d) => dayHasPlayableContent(d))
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
@@ -265,6 +369,8 @@ export function ensureMessagesMigrated(date: string): FamilyDayRecord {
       photoHints: [],
       iconColors: [],
       images: [],
+      pack: null,
+      miniLevels: [],
       completed: false,
       updatedAt: Date.now(),
     }
@@ -417,7 +523,7 @@ export function saveGeneratedLevel(
 ): { ok: true; day: FamilyDayRecord } | { ok: false; reason: 'needs_confirm' } {
   const store = loadFamilyStore()
   const prev = store.days[date]
-  if (prev?.completed && prev.level && !opts.force) {
+  if (prev?.completed && dayHasPlayableContent(prev) && !opts.force) {
     return { ok: false, reason: 'needs_confirm' }
   }
   const base = prev || normalizeDay(date, undefined)
@@ -430,12 +536,157 @@ export function saveGeneratedLevel(
     photoHints,
     iconColors: normalizeIconColors(opts.iconColors),
     images: [],
+    pack: null,
+    miniLevels: [],
     completed: false,
     updatedAt: Date.now(),
   }
   store.days[date] = next
   saveFamilyStore(store)
   return { ok: true, day: next }
+}
+
+export function saveGeneratedPack(
+  date: string,
+  input: {
+    title: string
+    levels: LevelScript[]
+    photoHints?: string[]
+    force?: boolean
+  },
+): { ok: true; day: FamilyDayRecord } | { ok: false; reason: 'needs_confirm' } {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (prev?.completed && dayHasPlayableContent(prev) && !input.force) {
+    return { ok: false, reason: 'needs_confirm' }
+  }
+  const base = prev || normalizeDay(date, undefined)
+  const miniLevels: FamilyMiniLevel[] = input.levels.map((level) => {
+    const id = level.id || `family-${date.replace(/-/g, '')}-day`
+    const setting = String(level.scene?.setting || level.target_words?.[0] || 'playground')
+    return {
+      id,
+      level: { ...level, id },
+      scenePrompt: setting,
+      completed: false,
+    }
+  })
+  const pack: FamilyDayPack = {
+    title: input.title.trim() || 'My Day',
+    theme: 'family',
+    levelIds: miniLevels.map((m) => m.id),
+  }
+  const next: FamilyDayRecord = {
+    ...base,
+    date,
+    story: base.story || mergeStoryFromMessages(base.messages),
+    messages: base.messages,
+    level: null,
+    photoHints: Array.isArray(input.photoHints) ? input.photoHints.map(String) : [],
+    iconColors: [],
+    images: [],
+    pack,
+    miniLevels,
+    completed: false,
+    updatedAt: Date.now(),
+  }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return { ok: true, day: next }
+}
+
+export function getMiniLevel(
+  date: string,
+  levelId: string,
+): FamilyMiniLevel | null {
+  const day = getDay(date)
+  if (!day?.miniLevels?.length) return null
+  return day.miniLevels.find((m) => m.id === levelId) || null
+}
+
+export function setMiniLevelScenePrompt(
+  date: string,
+  levelId: string,
+  scenePrompt: string,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  const prompt = scenePrompt.trim()
+  if (!prompt) return null
+  const miniLevels = prev.miniLevels.map((m) =>
+    m.id === levelId ? { ...m, scenePrompt: prompt } : m,
+  )
+  if (!miniLevels.some((m) => m.id === levelId)) return null
+  const next = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+export function resetMiniLevelScenePrompt(
+  date: string,
+  levelId: string,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  const miniLevels = prev.miniLevels.map((m) => {
+    if (m.id !== levelId) return m
+    const setting = String(m.level.scene?.setting || m.level.target_words?.[0] || 'playground')
+    return { ...m, scenePrompt: setting }
+  })
+  if (!miniLevels.some((m) => m.id === levelId)) return null
+  const next = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+export function setMiniLevelImages(
+  date: string,
+  levelId: string,
+  opts: { imageBg?: string; itemImages?: string[] },
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  let found = false
+  const miniLevels = prev.miniLevels.map((m) => {
+    if (m.id !== levelId) return m
+    found = true
+    return {
+      ...m,
+      ...(opts.imageBg !== undefined ? { imageBg: opts.imageBg } : {}),
+      ...(opts.itemImages !== undefined ? { itemImages: opts.itemImages.filter(Boolean) } : {}),
+    }
+  })
+  if (!found) return null
+  const next = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+export function markMiniLevelCompleted(
+  date: string,
+  levelId: string,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  let found = false
+  const miniLevels = prev.miniLevels.map((m) => {
+    if (m.id !== levelId) return m
+    found = true
+    return { ...m, completed: true }
+  })
+  if (!found) return null
+  const completed = miniLevels.every((m) => Boolean(m.completed))
+  const next = { ...prev, miniLevels, completed, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
 }
 
 export function setDayImages(date: string, images: string[]): FamilyDayRecord | null {
@@ -497,7 +748,15 @@ export function removeDayImage(
 export function markDayCompleted(date: string): FamilyDayRecord | null {
   const store = loadFamilyStore()
   const prev = store.days[date]
-  if (!prev?.level) return null
+  if (!prev?.level && !dayHasMiniPack(prev)) return null
+  if (dayHasMiniPack(prev)) {
+    // legacy helper：整日完成；prefer markMiniLevelCompleted per level
+    const miniLevels = (prev.miniLevels || []).map((m) => ({ ...m, completed: true }))
+    const next = { ...prev, miniLevels, completed: true, updatedAt: Date.now() }
+    store.days[date] = next
+    saveFamilyStore(store)
+    return next
+  }
   const next = { ...prev, completed: true, updatedAt: Date.now() }
   store.days[date] = next
   saveFamilyStore(store)
@@ -584,19 +843,23 @@ export function setAutoTongyiImages(on: boolean): void {
   saveFamilyStore(store)
 }
 
-/** Apply album/placeholder images onto a copy of the level for play */
+function svgPlaceholder(word: string): string {
+  const safe = word.replace(/[<>&"']/g, '').slice(0, 24) || 'fun'
+  return `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+      <rect width="100%" height="100%" fill="#ffe8c8"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+        font-family="sans-serif" font-size="48" fill="#5a3d1b">${safe}</text>
+    </svg>`,
+  )}`
+}
+
+/** Apply album/placeholder images onto a copy of the level for play (legacy day) */
 export function materializeLevelForPlay(day: FamilyDayRecord): LevelScript {
   if (!day.level) throw new Error('no_level')
   const level = structuredClone(day.level)
   const imgs = day.images
-  const placeholder = (word: string) =>
-    `data:image/svg+xml,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-        <rect width="100%" height="100%" fill="#ffe8c8"/>
-        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-          font-family="sans-serif" font-size="48" fill="#5a3d1b">${word}</text>
-      </svg>`,
-    )}`
+  const placeholder = svgPlaceholder
 
   const filled = imgs.filter(Boolean).length
   const slots = slotsFromLevel(
@@ -633,4 +896,56 @@ export function materializeLevelForPlay(day: FamilyDayRecord): LevelScript {
     }
   })
   return level
+}
+
+/** Materialize one mini-pack level for play */
+export function materializeMiniLevelForPlay(
+  day: FamilyDayRecord,
+  levelId: string,
+): LevelScript {
+  const mini = day.miniLevels?.find((m) => m.id === levelId)
+  if (!mini) throw new Error('no_mini_level')
+  const level = structuredClone(mini.level)
+  const mainWord = level.target_words[0] || 'fun'
+  const bg = mini.imageBg || svgPlaceholder(mainWord)
+  const itemImg = mini.itemImages?.[0] || bg
+  level.scene.image = bg
+  level.reward.stickerImage = bg
+
+  const resolveWordImage = (word: string) => {
+    const w = word.trim().toLowerCase()
+    if (w === mainWord.toLowerCase()) return itemImg
+    // 其它选项：若有其它关的背景可复用；否则占位
+    const other = day.miniLevels?.find(
+      (m) => (m.level.target_words[0] || '').toLowerCase() === w && m.imageBg,
+    )
+    if (other?.imageBg) return other.imageBg
+    if (other?.itemImages?.[0]) return other.itemImages[0]
+    return svgPlaceholder(word || 'fun')
+  }
+
+  level.beats = level.beats.map((beat, bi) => {
+    const word = beat.expect?.[0] || level.target_words[bi % level.target_words.length] || 'fun'
+    const show = beat.show ? resolveWordImage(word) : beat.show
+    const mapOpts = (opts?: { id: string; image: string; correct: boolean }[]) =>
+      opts?.map((o) => ({
+        ...o,
+        image: resolveWordImage(o.id || word),
+      }))
+    return {
+      ...beat,
+      show,
+      options: mapOpts(beat.options),
+      fallback: beat.fallback
+        ? { ...beat.fallback, options: mapOpts(beat.fallback.options) || beat.fallback.options }
+        : beat.fallback,
+    }
+  })
+  return level
+}
+
+export function effectiveScenePrompt(mini: FamilyMiniLevel): string {
+  const custom = mini.scenePrompt?.trim()
+  if (custom) return custom
+  return String(mini.level.scene?.setting || mini.level.target_words?.[0] || 'playground')
 }

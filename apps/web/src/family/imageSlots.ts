@@ -4,7 +4,7 @@ export type ImageSlot = {
 }
 
 const SAFETY_PREFIX =
-  '儿童绘本插画，温暖明亮，简单卡通，适合4到6岁儿童，无文字水印，无暴力恐怖血腥，正方形构图，'
+  '儿童绘本插画，温暖明亮，简单卡通，统一友好绘本画风，可含一只可爱卡通兔角色氛围，适合4到6岁儿童，无文字水印，无暴力恐怖血腥，正方形构图，'
 
 export function clampImageSlots(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)

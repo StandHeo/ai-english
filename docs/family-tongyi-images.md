@@ -1,17 +1,17 @@
 # 家庭关卡云端配图（通义万相 / Agnes）
 
-生成关卡后可选云端文生图，写入当日 `images[]`，与相册共用玩法路径（本地图标配图已移除）。设置里可切换 **通义万相** 或 **Agnes 图**。
+生成**迷你 pack** 后可为**每一关**云端文生图（专属背景 + 主词道具），与相册/占位共用玩法路径。设置里可切换 **通义万相** 或 **Agnes 图**。
 
 **App：** 填了对应 Key 后手机直连云接口，不经过电脑局域网 API。  
-**电脑浏览器：** 仍走 `POST /api/family/generate-images`，body 带 `imageProvider`。
+**电脑浏览器：** 仍走 `POST /api/family/generate-images`，body 带 `imageProvider` 与 `slots`。
 
-## 槽位布局
+## 迷你 pack 槽位
 
-- `images[0]`：**场景背景**，主题优先用关卡里的 `scene.setting`（如「小区游乐场」），云端 prompt 强调环境全景。
-- `images[1…]`：**道具 / 选项词**（`target_words` 与选项 id），居中单物体。
-- 游玩时选项图按英文 `id` 映射到对应道具图，正确答案不再绑死背景图。
+- 每一关：`imageBg` = 场景背景（主题优先可编辑的 `scenePrompt`，否则 `scene.setting`）
+- 同一关：`itemImages[0]` ≈ 主词道具图
+- 游玩时选项图优先本关主词图，其它词可复用其它关背景
 
-旧日配图若仍是「首词当背景」，点一次「云端配图」或重新生成即可换成新布局。
+旧「一天一关 + 扁平 images[]」仍可读；重新生成后改为按关存图。
 
 ## 开通
 
@@ -26,6 +26,7 @@
 1. 在 [Agnes 控制台](https://platform.agnes-ai.com/) 创建 API Key。
 2. 默认 `agnes-image-2.1-flash`（公开文档曾标 $0/张，以对方为准）。
 3. 与关卡 Agnes 共用日记设置里的 **Agnes API Key**。
+4. 请求体使用 `n: 1` + `size: 1024x1024`（勿用会挂起的 `1K` + `extra_body`）。
 
 ```bash
 # 仅电脑浏览器代理需要
@@ -36,21 +37,19 @@
 
 ## 费用与安全（约）
 
-- 通义万相按张计费（`wan2.6-t2i` 公开价约 **0.20 元/张**）；一关张数=设置里的关键词上限（含 1 张场景背景，常见 9 张则约 ¥1.8）。
-- Agnes 图以官方活动价为准，可能有 RPM 限制（公开免费档常见约 **20 次/分钟**）。客户端与 `apps/api` 已对 Agnes 调用做约 18/分钟排队，多槽配图会拉长总时间。
+- 通义万相按张计费；迷你 pack 常见 **3–5 关 ×（背景+道具）≈ 6–10 张**。
+- Agnes 图以官方活动价为准；客户端与 `apps/api` 已对 Agnes 调用做约 18/分钟排队。
 - **自动云端配图默认关闭**；需 Key 与网络。
-- Prompt 固定儿童安全前缀；失败单张 SVG 占位，**不丢关卡**。
+- Prompt 固定儿童绘本风格锚点；单关失败不丢整包。
 
 ## 接口（浏览器代理）
 
 - `POST /api/family/generate-images`
-- Body：`{ date, level | slots, imageProvider?: 'tongyi'|'agnes', apiKey? }`
+- Body：`{ date, slots | level, imageProvider?: 'tongyi'|'agnes', apiKey? }`
 - 成功：`{ images: string[], warnings?: string[], provider }`
 
 ## 手工验收
 
-1. **无通义 Key**：能生成关卡；开自动配图时提示缺 Key，关卡仍在，可用相册。
-2. **有 Key + 开自动配图**：生成后出现「正在配图…」，缩略图 ≤4 张，家庭日历可玩。
-3. **通义失败 / 断网**：状态提示配图失败，关卡保留；可「重新配图」或相册。
-4. **重新配图**：有已有图时需确认；确认后替换。
-5. `FAMILY_IMAGE_PROVIDER=mock`：不扣费，返回 SVG 占位，便于冒烟。
+1. 生成迷你 pack 后按关改中文场景词，再「配图本关」。
+2. 日历 → 关列表 → 进关，背景应为该关图。
+3. 旧单关日记录仍可直接玩。

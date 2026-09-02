@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
-import { generateFamilyImagesDirect, slotsFromLevel } from '../family/generateImagesClient'
-import { generateFamilyLevelDirect, llmBusyLabel } from '../family/generateLevelClient'
+import { generateFamilyImagesDirect } from '../family/generateImagesClient'
+import { generateFamilyPackDirect, llmBusyLabel } from '../family/generateLevelClient'
 import {
   familyLlmLabel,
   imageCloudLabel,
@@ -13,8 +13,10 @@ import {
 import {
   appendTextMessage,
   appendVoiceMessage,
-  applyGeneratedImages,
+  dayHasMiniPack,
+  dayHasPlayableContent,
   deleteMessage,
+  effectiveScenePrompt,
   ensureMessagesMigrated,
   getAutoTongyiImages,
   getDay,
@@ -23,16 +25,19 @@ import {
   getImageSlotMax,
   getLlmApiKey,
   getLlmProvider,
-  getMinLevelKeywords,
+  getPackLevelCount,
   mergeStoryFromMessages,
   removeDayImage,
-  saveGeneratedLevel,
+  resetMiniLevelScenePrompt,
+  saveGeneratedPack,
   setDayImages,
+  setMiniLevelImages,
+  setMiniLevelScenePrompt,
   todayKey,
   updateMessageText,
   type FamilyDiaryMessage,
+  type FamilyMiniLevel,
 } from '../family/store'
-import { missingSlotsForImages } from '../family/imageSlots'
 import { getDiaryAsrStatus, transcribeDiaryAudio } from '../voice/diaryAsr'
 import {
   diaryWhisperModelLabel,
@@ -57,6 +62,8 @@ export function FamilyStudioPage() {
   const [busy, setBusy] = useState(false)
   const [imaging, setImaging] = useState(false)
   const [hasLevel, setHasLevel] = useState(false)
+  const [miniLevels, setMiniLevels] = useState<FamilyMiniLevel[]>([])
+  const [packTitle, setPackTitle] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [completed, setCompleted] = useState(false)
   const [asrHint, setAsrHint] = useState('')
@@ -136,7 +143,9 @@ export function FamilyStudioPage() {
     const day = ensureMessagesMigrated(date)
     setMessages(day.messages)
     setHints(day.photoHints || [])
-    setHasLevel(Boolean(day.level))
+    setHasLevel(dayHasPlayableContent(day))
+    setMiniLevels(day.miniLevels || [])
+    setPackTitle(day.pack?.title || '')
     setImages(day.images || [])
     setCompleted(Boolean(day.completed))
   }
@@ -219,141 +228,90 @@ export function FamilyStudioPage() {
     }
   }
 
-  async function requestImages(
-    level: LevelScript,
-    mode: 'fill_empty' | 'replace',
-    opts?: { statusPrefix?: string; onlyEmpty?: boolean },
+  async function requestMiniLevelImages(
+    levels: FamilyMiniLevel[],
+    opts?: { onlyMissingBg?: boolean; statusPrefix?: string },
   ): Promise<boolean> {
-    const maxSlots = getImageSlotMax()
-    const existing = getDay(date)?.images || []
     const cloud = getImageCloudProvider()
     const cloudName = imageCloudLabel(cloud)
-    let slotsPayload: { subject: string; role?: 'scene' | 'item' }[] | undefined
-    if (opts?.onlyEmpty || mode === 'fill_empty') {
-      slotsPayload = missingSlotsForImages(
-        level as unknown as Record<string, unknown>,
-        existing,
-        maxSlots,
-      )
-      if (!slotsPayload.length) {
-        setStatus(`已有图已覆盖全部槽位；删掉不需要的图后再用${cloudName}补全`)
-        return false
-      }
-    }
-
     const cloudKey = getImageCloudApiKey()
     const useDirect = isNativeApp() && Boolean(cloudKey)
     if (isNativeApp() && !nativeFamilyCloudReady(Boolean(cloudKey), getApiBase())) {
-      setStatus(`关卡已保留；请到设置填写${cloudName} Key，或可选填电脑 API 用 .env`)
+      setStatus(`关卡已保留；请到设置填写${cloudName} Key`)
       return false
     }
-
-    const slots =
-      slotsPayload ||
-      slotsFromLevel(level as unknown as Record<string, unknown>, maxSlots)
+    const targets = levels.filter((m) => !(opts?.onlyMissingBg && m.imageBg))
+    if (!targets.length) {
+      setStatus('各关背景图已齐')
+      return true
+    }
     setImaging(true)
     setStatus(
-      cloud === 'agnes'
-        ? `${opts?.statusPrefix || ''}正在${cloudName}配图（免费档约 20 次/分钟，可能稍慢）…`.trim()
-        : `${opts?.statusPrefix || ''}正在${cloudName}配图…`.trim(),
+      `${opts?.statusPrefix || ''}正在为 ${targets.length} 关${cloudName}配背景…`.trim(),
     )
     try {
-      let list: string[] = []
-      let warnings: unknown[] = []
-      if (useDirect) {
-        const payload = await generateFamilyImagesDirect({
-          slots,
-          apiKey: cloudKey,
-          provider: cloud,
-          maxSlots,
-        })
-        list = payload.images
-        warnings = payload.warnings
-        console.log(
-          '[family-images] direct',
-          JSON.stringify({
-            provider: payload.provider,
-            imageCount: list.length,
-            warnings: payload.warnings,
-          }),
-        )
-      } else {
-        const res = await apiJson('/api/family/generate-images', {
-          method: 'POST',
-          headers: {
-            ...(cloudKey && cloud === 'tongyi' ? { 'x-tongyi-key': cloudKey } : {}),
-            ...(cloudKey && cloud === 'agnes' ? { 'x-agnes-key': cloudKey } : {}),
-          },
-          body: {
-            date,
-            maxSlots,
-            minKeywords: maxSlots,
-            imageProvider: cloud,
-            ...(slotsPayload ? { slots: slotsPayload } : { level }),
-            apiKey: cloudKey || undefined,
-          },
-          timeoutMs: 300_000,
-        })
-        console.log(
-          '[family-images] proxy',
-          JSON.stringify({
-            ok: res.ok,
-            status: res.status,
-            error: res.data.error || res.error,
-            imageCount: Array.isArray(res.data.images) ? res.data.images.length : 0,
-            provider: res.data.provider,
-          }),
-        )
-        if (!res.ok) {
-          const err = String(res.data.error || res.error || res.status)
-          setStatus(
-            err === 'image_provider_unavailable' || err === 'missing_api_base'
-              ? `关卡已保留；${cloudName}配图需要 Key`
-              : `关卡已保留；${cloudName}配图失败：${err}`,
-          )
-          return false
+      for (const mini of targets) {
+        const subject = effectiveScenePrompt(mini)
+        const word = mini.level.target_words?.[0] || 'item'
+        const slots = [
+          { subject, role: 'scene' as const },
+          { subject: word, role: 'item' as const },
+        ]
+        let list: string[] = []
+        if (useDirect) {
+          const payload = await generateFamilyImagesDirect({
+            slots,
+            apiKey: cloudKey,
+            provider: cloud,
+            maxSlots: 2,
+          })
+          list = payload.images
+        } else {
+          const res = await apiJson('/api/family/generate-images', {
+            method: 'POST',
+            headers: {
+              ...(cloudKey && cloud === 'tongyi' ? { 'x-tongyi-key': cloudKey } : {}),
+              ...(cloudKey && cloud === 'agnes' ? { 'x-agnes-key': cloudKey } : {}),
+            },
+            body: {
+              date,
+              maxSlots: 2,
+              imageProvider: cloud,
+              slots,
+              apiKey: cloudKey || undefined,
+            },
+            timeoutMs: 300_000,
+          })
+          if (!res.ok) {
+            setStatus(`关卡已保留；${mini.id} 配图失败：${res.error || res.status}`)
+            continue
+          }
+          list = Array.isArray(res.data.images) ? (res.data.images as string[]) : []
         }
-        list = Array.isArray(res.data.images) ? (res.data.images as string[]) : []
-        warnings = Array.isArray(res.data.warnings) ? res.data.warnings : []
+        const day = setMiniLevelImages(date, mini.id, {
+          imageBg: list[0] || mini.imageBg,
+          itemImages: list.slice(1).filter(Boolean),
+        })
+        if (day) setMiniLevels(day.miniLevels || [])
       }
-      if (!list.length) {
-        setStatus(`关卡已保留；${cloudName}未返回图片，可用相册补图`)
-        return false
-      }
-      const day = applyGeneratedImages(date, list, mode === 'replace' ? 'replace' : 'fill_empty')
-      if (day) {
-        setImages(day.images)
-        const warn = warnings.length ? `（部分槽位用了占位：${warnings.length}）` : ''
-        setStatus(
-          mode === 'replace'
-            ? `已${cloudName}配图 ${day.images.length} 张${warn}`
-            : `已保留已有图，${cloudName}补全至 ${day.images.length} 张${warn}`,
-        )
-        return true
-      }
-      setStatus('关卡已保留；写入配图失败')
-      return false
+      setStatus(`配图完成（${cloudName}，每关背景+主词道具）`)
+      return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.log('[family-images] error', msg)
-      setStatus(
-        useDirect
-          ? `关卡已保留；${cloudName}直连失败（${msg}）。请检查手机网络与 Key`
-          : `关卡已保留；${cloudName}网络错误（${msg}）`,
-      )
+      setStatus(`关卡已保留；${cloudName}配图出错（${msg}）`)
       return false
     } finally {
       setImaging(false)
     }
   }
 
-  async function autoFillImagesAfterGenerate(level: LevelScript) {
+  async function autoFillImagesAfterGenerate(levels: FamilyMiniLevel[]) {
     if (!getAutoTongyiImages()) {
-      setStatus('生成成功！可开「自动云端配图」，或手动点「云端配图」/相册')
+      setStatus('生成成功！可开「自动云端配图」，或按关编辑场景词后点「云端配图」')
       return
     }
     setBusy(false)
-    await requestImages(level, 'fill_empty', { onlyEmpty: true })
+    await requestMiniLevelImages(levels, { onlyMissingBg: true })
   }
 
   async function generate(force = false) {
@@ -374,8 +332,8 @@ export function FamilyStudioPage() {
     try {
       if (!force) {
         const existing = getDay(date)
-        if (existing?.completed && existing.level) {
-          const ok = window.confirm('今天这关孩子已经通关。确定覆盖并重置通关状态吗？')
+        if (existing?.completed && dayHasPlayableContent(existing)) {
+          const ok = window.confirm('今天关卡孩子已经通关。确定覆盖并重置通关状态吗？')
           if (!ok) {
             setStatus('已取消覆盖')
             return
@@ -383,33 +341,33 @@ export function FamilyStudioPage() {
           force = true
         }
       }
-      const minKeywords = getMinLevelKeywords()
-      let level: LevelScript
+      const levelCount = getPackLevelCount()
+      let levels: LevelScript[] = []
+      let title = 'My Day'
       let photoHints: string[] = []
-      let iconColors: { word: string; fg: string; bg: string }[] = []
-      let keywords: string[] | undefined
+      let mainWords: string[] = []
 
       if (useDirect) {
-        const payload = await generateFamilyLevelDirect({
+        const payload = await generateFamilyPackDirect({
           story,
           date,
           apiKey: key,
           llm,
-          minKeywords,
+          levelCount,
         })
         console.log(
-          '[family-llm] direct',
+          '[family-llm] direct pack',
           JSON.stringify({
             provider: payload.provider,
             model: payload.model,
-            keywords: payload.keywords,
-            title: payload.level.title,
+            mainWords: payload.mainWords,
+            title: payload.title,
           }),
         )
-        level = payload.level as LevelScript
+        levels = payload.levels
+        title = payload.title
         photoHints = payload.photoHints
-        iconColors = payload.iconColors
-        keywords = payload.keywords
+        mainWords = payload.mainWords
       } else {
         const res = await apiJson('/api/family/generate-level', {
           method: 'POST',
@@ -421,34 +379,34 @@ export function FamilyStudioPage() {
             story,
             date,
             apiKey: key || undefined,
-            minKeywords,
+            levelCount,
+            minKeywords: levelCount,
             llm,
+            mode: 'pack',
           },
           timeoutMs: 240_000,
         })
         const data = res.data
         console.log(
-          '[family-llm] proxy',
+          '[family-llm] proxy pack',
           JSON.stringify({
             ok: res.ok,
             status: res.status,
             error: data.error || res.error,
-            keywords: data.keywords,
+            mainWords: data.mainWords,
           }),
         )
         if (!res.ok) {
-          if (data.error === 'keywords_insufficient') {
-            const count = Number(data.count) || 0
-            const min = Number(data.minKeywords) || minKeywords
+          if (data.error === 'pack_levels_insufficient') {
             setStatus(
-              `关键词不足（${count}/${min}）。请再追加几句今日场景描述，然后重新点「生成关卡」。`,
+              `迷你关卡包关数不足。请再追加几句今日故事，或把设置里「今日关数」调低后重试。`,
             )
             return
           }
           const err = String(data.error || res.error || res.status)
           if (/timeout|deepseek_timeout|llm_timeout|Socket closed|SocketTimeout/i.test(err)) {
             setStatus(
-              `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认手机能访问外网后重试；高峰期可稍后再试，或把「最少关键词」调低。`,
+              `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把「今日关数」调低。`,
             )
             return
           }
@@ -459,17 +417,17 @@ export function FamilyStudioPage() {
           )
           return
         }
-        level = data.level as LevelScript
+        title = String((data.pack as { title?: string })?.title || data.title || 'My Day')
+        levels = Array.isArray(data.levels) ? (data.levels as LevelScript[]) : []
         photoHints = (data.photoHints as string[]) || []
-        iconColors = Array.isArray(data.iconColors)
-          ? (data.iconColors as { word: string; fg: string; bg: string }[])
-          : []
-        keywords = Array.isArray(data.keywords) ? (data.keywords as string[]) : undefined
+        mainWords = Array.isArray(data.mainWords) ? (data.mainWords as string[]) : []
       }
 
-      const saved = saveGeneratedLevel(date, level, photoHints, {
+      const saved = saveGeneratedPack(date, {
+        title,
+        levels,
+        photoHints,
         force,
-        iconColors,
       })
       if (!saved.ok) {
         setStatus('需要确认覆盖已通关内容')
@@ -477,21 +435,18 @@ export function FamilyStudioPage() {
       }
       setHints(photoHints)
       setHasLevel(true)
+      setMiniLevels(saved.day.miniLevels || [])
+      setPackTitle(saved.day.pack?.title || title)
       setImages([])
       setCompleted(false)
-      if (keywords?.length) {
-        setStatus(`生成成功（${familyLlmLabel(llm)}，关键词 ${keywords.length} 个）`)
-      } else {
-        setStatus(`生成成功（${familyLlmLabel(llm)}）`)
-      }
-      await autoFillImagesAfterGenerate(level)
+      setStatus(
+        `生成成功（${familyLlmLabel(llm)}，${levels.length} 关：${mainWords.join(', ') || '…'}）`,
+      )
+      await autoFillImagesAfterGenerate(saved.day.miniLevels || [])
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg.startsWith('keywords_insufficient:')) {
-        const [, count, min] = msg.split(':')
-        setStatus(
-          `关键词不足（${count}/${min}）。请再追加几句今日场景描述，然后重新点「生成关卡」。`,
-        )
+      if (msg.startsWith('pack_levels_insufficient:')) {
+        setStatus('迷你关卡包关数不足。请再追加几句今日故事后重试。')
         return
       }
       if (msg.startsWith('invalid_level')) {
@@ -500,7 +455,7 @@ export function FamilyStudioPage() {
       }
       if (/timeout|llm_timeout|Socket closed|SocketTimeout/i.test(msg)) {
         setStatus(
-          `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认手机能访问外网后重试；高峰期可稍后再试，或把最少关键词调低。`,
+          `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把今日关数调低。`,
         )
         return
       }
@@ -520,12 +475,36 @@ export function FamilyStudioPage() {
 
   async function regenerateImages() {
     const day = getDay(date)
-    if (!day?.level) {
-      setStatus('请先生成关卡')
+    if (!dayHasMiniPack(day)) {
+      setStatus('请先生成迷你关卡包')
       return
     }
-    // 保留未删除的已有图（相册/云端），只对空槽位调云端
-    await requestImages(day.level, 'fill_empty', { onlyEmpty: true })
+    await requestMiniLevelImages(day!.miniLevels || [], { onlyMissingBg: true })
+  }
+
+  function saveScenePrompt(levelId: string, value: string) {
+    const day = setMiniLevelScenePrompt(date, levelId, value)
+    if (day) {
+      setMiniLevels(day.miniLevels || [])
+      setStatus('已保存场景词')
+    } else {
+      setStatus('场景词不能为空')
+    }
+  }
+
+  function resetScenePrompt(levelId: string) {
+    const day = resetMiniLevelScenePrompt(date, levelId)
+    if (day) {
+      setMiniLevels(day.miniLevels || [])
+      setStatus('已重置为关卡默认场景')
+    }
+  }
+
+  async function imageOneLevel(levelId: string) {
+    const day = getDay(date)
+    const mini = day?.miniLevels?.find((m) => m.id === levelId)
+    if (!mini) return
+    await requestMiniLevelImages([mini])
   }
 
   async function onPickFiles(files: FileList | null) {
@@ -712,15 +691,17 @@ export function FamilyStudioPage() {
         </button>
         {hasLevel && (
           <p className="muted generate-meta">
-            今日已有关卡{completed ? '（已通关）' : ''}
+            今日已有迷你关卡包{packTitle ? `「${packTitle}」` : ''}
+            {miniLevels.length ? ` · ${miniLevels.length} 关` : ''}
+            {completed ? '（已全部通关）' : ''}
           </p>
         )}
 
-        {hasLevel && (
+        {hasLevel && miniLevels.length > 0 && (
           <div className="photo-block">
-            <h2>关卡配图</h2>
+            <h2>迷你关卡包 · 配图</h2>
             <p className="muted">
-              自动/手动「云端配图」：1 张场景背景（优先 scene.setting）+ 各关键词道具图；也可用相册补图
+              每关一词一景。可中英文编辑场景主题后再「云端配图」；道具词尽量保留英文主词，以免点图对不上。
             </p>
             {hints.length > 0 && (
               <>
@@ -732,6 +713,93 @@ export function FamilyStudioPage() {
                 </ul>
               </>
             )}
+            <div className="row photo-actions">
+              <button
+                type="button"
+                className="ghost"
+                disabled={busy || imaging || recording || transcribing}
+                onClick={() => void regenerateImages()}
+              >
+                {imaging ? '配图中…' : '云端配全部关'}
+              </button>
+              <button type="button" className="ghost" onClick={() => navigate(`/family/${date}`)}>
+                预览关列表
+              </button>
+            </div>
+            <ul className="mini-level-edit" style={{ listStyle: 'none', padding: 0 }}>
+              {miniLevels.map((m, i) => {
+                const word = m.level.target_words?.[0] || m.id
+                return (
+                  <li
+                    key={m.id}
+                    style={{
+                      marginBottom: '1rem',
+                      padding: '0.75rem',
+                      border: '1px solid #e8dcc8',
+                      borderRadius: 12,
+                    }}
+                  >
+                    <strong>
+                      {i + 1}. {m.level.title || word}
+                    </strong>
+                    <span className="muted" style={{ display: 'block', marginBottom: 6 }}>
+                      主词 {word}
+                      {m.completed ? ' · 已通关' : ''}
+                    </span>
+                    <label className="muted" style={{ display: 'block', fontSize: 13 }}>
+                      场景主题（中/英）
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={effectiveScenePrompt(m)}
+                      key={`${m.id}-${m.scenePrompt || ''}`}
+                      onBlur={(e) => {
+                        if (e.target.value.trim() !== effectiveScenePrompt(m)) {
+                          saveScenePrompt(m.id, e.target.value)
+                        }
+                      }}
+                      style={{ width: '100%', marginBottom: 8 }}
+                    />
+                    <div className="row">
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={busy || imaging}
+                        onClick={() => resetScenePrompt(m.id)}
+                      >
+                        重置场景词
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy || imaging}
+                        onClick={() => void imageOneLevel(m.id)}
+                      >
+                        配图本关
+                      </button>
+                    </div>
+                    {m.imageBg && (
+                      <div className="photo-thumbs" style={{ marginTop: 8 }}>
+                        <div className="photo-thumb">
+                          <img src={m.imageBg} alt={`${word} 背景`} />
+                        </div>
+                        {(m.itemImages || []).map((src, j) => (
+                          <div key={j} className="photo-thumb">
+                            <img src={src} alt={`${word} 道具 ${j + 1}`} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {hasLevel && miniLevels.length === 0 && (
+          <div className="photo-block">
+            <h2>关卡配图（旧单关）</h2>
+            <p className="muted">这天仍是旧版一天一关数据。重新「生成关卡」可升级为迷你 pack。</p>
             <input
               ref={fileRef}
               type="file"
@@ -743,14 +811,6 @@ export function FamilyStudioPage() {
             <div className="row photo-actions">
               <button type="button" disabled={busy || imaging} onClick={() => fileRef.current?.click()}>
                 从相册选图
-              </button>
-              <button
-                type="button"
-                className="ghost"
-                disabled={busy || imaging || recording || transcribing}
-                onClick={() => void regenerateImages()}
-              >
-                {imaging ? '配图中…' : '云端配图'}
               </button>
             </div>
             {images.length > 0 && (

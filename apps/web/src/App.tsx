@@ -11,6 +11,7 @@ import { ParentPage } from './pages/ParentPage'
 import { FamilyStudioPage } from './pages/FamilyStudioPage'
 import { FamilyStudioSettingsPage } from './pages/FamilyStudioSettingsPage'
 import { FamilyCalendarPage } from './pages/FamilyCalendarPage'
+import { FamilyDayPackPage } from './pages/FamilyDayPackPage'
 import { FamilyLevelPage } from './pages/FamilyLevelPage'
 import './App.css'
 
@@ -34,6 +35,11 @@ function AppRoutes() {
       <Route path="/family" element={<FamilyCalendarPage />} />
       <Route path="/family/studio" element={<FamilyStudioPage />} />
       <Route path="/family/studio/settings" element={<FamilyStudioSettingsPage />} />
+      <Route path="/family/:date" element={<FamilyDayPackPage />} />
+      <Route
+        path="/family/:date/play/:levelId"
+        element={<FamilyLevelPage onProgress={setProgress} />}
+      />
       <Route
         path="/family/:date/play"
         element={<FamilyLevelPage onProgress={setProgress} />}

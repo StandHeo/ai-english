@@ -243,27 +243,27 @@ export function FamilyStudioSettingsPage() {
           </button>
         </div>
 
-        <h2>关卡最少关键词数 / 配图张数</h2>
+        <h2>今日迷你关卡数（3–5）</h2>
         <p className="muted">
-          生成关卡时统计英文关键词（目标词 + 选项 id 去重），不足则不会保存关卡。同一数值也是配图槽位上限（含
-          1 张场景背景），默认 9，可设 3–12。
+          生成「一天一个迷你 pack」时的关数目标；实际会夹紧到 3–5 关。每关约一个英文主词 + 专属场景背景（像水果关）。
+          设置里仍可填 3–12，大于 5 时按 5 关生成。
         </p>
         <input
           type="number"
           min={3}
           max={12}
           value={minKeywords}
-          onChange={(e) => setMinKeywords(Number(e.target.value) || 9)}
+          onChange={(e) => setMinKeywords(Number(e.target.value) || 4)}
         />
         <div className="row">
           <button type="button" onClick={saveMinKeywords}>
-            保存关键词数
+            保存今日关数
           </button>
         </div>
 
         <h2>配图方式</h2>
         <p className="muted">
-          仅云端配图（通义或 Agnes）与相册。开启自动后，生成关卡会出 1 张场景背景 + 各关键词道具图。
+          仅云端配图（通义或 Agnes）。开启自动后，生成迷你 pack 会为每关出背景图（+ 主词道具图）。
         </p>
         <label className="toggle-row">
           <input

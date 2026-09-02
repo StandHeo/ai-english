@@ -2,9 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import {
+  dayHasMiniPack,
+  dayHasPlayableContent,
   getDay,
   markDayCompleted,
+  markMiniLevelCompleted,
   materializeLevelForPlay,
+  materializeMiniLevelForPlay,
 } from '../family/store'
 import { addPlaySeconds, loadProgress, saveProgress } from '../progress/store'
 import { markStickerEarnedTonight } from '../progress/stickerTonight'
@@ -29,7 +33,8 @@ type Props = {
 }
 
 export function FamilyLevelPage({ onProgress }: Props) {
-  const { date = '' } = useParams()
+  const { date = '', levelId: levelIdParam } = useParams()
+  const levelId = levelIdParam ? decodeURIComponent(levelIdParam) : ''
   const navigate = useNavigate()
   const [level, setLevel] = useState<LevelScript | null>(null)
   const [beatIndex, setBeatIndex] = useState(0)
@@ -57,11 +62,26 @@ export function FamilyLevelPage({ onProgress }: Props) {
 
   useEffect(() => {
     const day = getDay(date)
-    if (!day?.level) {
+    if (!dayHasPlayableContent(day)) {
       navigate('/family')
       return
     }
-    setLevel(materializeLevelForPlay(day))
+    try {
+      if (levelId && dayHasMiniPack(day)) {
+        setLevel(materializeMiniLevelForPlay(day!, levelId))
+      } else if (day?.level) {
+        setLevel(materializeLevelForPlay(day))
+      } else if (dayHasMiniPack(day)) {
+        navigate(`/family/${date}`, { replace: true })
+        return
+      } else {
+        navigate('/family')
+        return
+      }
+    } catch {
+      navigate(`/family/${date}`)
+      return
+    }
     setBeatIndex(0)
     setRetries(0)
     startedAt.current = Date.now()
@@ -69,7 +89,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
       setMicTip('当前可能无法开麦克风，可用右下角打字。')
       setShowDevType(true)
     }
-  }, [date, navigate])
+  }, [date, levelId, navigate])
 
   // 录音结束后清掉「正在听」，避免一直挂着
   useEffect(() => {
@@ -86,7 +106,11 @@ export function FamilyLevelPage({ onProgress }: Props) {
 
   const finishLevel = useCallback(async () => {
     setPhase('celebrate')
-    markDayCompleted(date)
+    if (levelId) {
+      markMiniLevelCompleted(date, levelId)
+    } else {
+      markDayCompleted(date)
+    }
     const p = loadProgress()
     const stickerId = level?.reward?.sticker
     if (stickerId) markStickerEarnedTonight(stickerId)
@@ -95,8 +119,8 @@ export function FamilyLevelPage({ onProgress }: Props) {
     onProgress(next)
     persistPlayTime()
     await requestTts('Yay!')
-    window.setTimeout(() => navigate('/family'), 1000)
-  }, [date, level, navigate, onProgress, persistPlayTime])
+    window.setTimeout(() => navigate(levelId ? `/family/${date}` : '/family'), 1000)
+  }, [date, level, levelId, navigate, onProgress, persistPlayTime])
 
   const advance = useCallback(async () => {
     if (!level) return

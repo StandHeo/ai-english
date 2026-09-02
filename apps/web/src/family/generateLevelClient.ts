@@ -1,6 +1,12 @@
 import { cloudJson, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
 import {
+  FAMILY_PACK_SYSTEM_PROMPT,
+  buildPackUserContent,
+  clampPackLevelCount,
+  parseValidatedFamilyPack,
+} from './packSchema'
+import {
   AGNES_CHAT_MODEL,
   AGNES_CHAT_URL,
   DEEPSEEK_CHAT_MODEL,
@@ -8,21 +14,18 @@ import {
   familyLlmLabel,
   type FamilyLlmProvider,
 } from './providers'
-import {
-  FAMILY_LEVEL_SYSTEM_PROMPT,
-  buildLevelUserContent,
-  clampMinKeywords,
-  parseValidatedFamilyLevel,
-  type ParsedFamilyLevel,
-} from './levelSchema'
+import type { LevelScript } from '../types'
 
-export type DirectLevelResult = ParsedFamilyLevel & {
+export type DirectPackResult = {
+  title: string
+  photoHints: string[]
+  mainWords: string[]
+  levels: LevelScript[]
   provider: FamilyLlmProvider
   model: string
   debug?: {
-    minKeywords: number
-    keywordCount: number
-    keywords: string[]
+    levelCount: number
+    mainWords: string[]
     model: string
     userContent: string
     responsePreview: string
@@ -39,10 +42,10 @@ async function callOnce(
   apiKey: string,
   story: string,
   date: string,
-  minKeywords: number,
-): Promise<DirectLevelResult> {
+  levelCount: number,
+): Promise<DirectPackResult> {
   const { url, model } = chatEndpoint(llm)
-  const userContent = buildLevelUserContent(story, date, minKeywords)
+  const userContent = buildPackUserContent(story, date, levelCount)
   const doRequest = async () => {
     const r = await cloudJson(url, {
       method: 'POST',
@@ -51,11 +54,10 @@ async function callOnce(
         model,
         temperature: 0.4,
         messages: [
-          { role: 'system', content: FAMILY_LEVEL_SYSTEM_PROMPT },
+          { role: 'system', content: FAMILY_PACK_SYSTEM_PROMPT },
           { role: 'user', content: userContent },
         ],
       },
-      // App 直连弱网时 Agnes/DeepSeek 常 >2 分钟才回首包
       timeoutMs: 240_000,
     })
     if (!r.ok && (r.status === 429 || /429|rate.?limit/i.test(String(r.error || '')))) {
@@ -76,15 +78,18 @@ async function callOnce(
       ? String((choices[0] as { message?: { content?: string } }).message?.content || '')
       : ''
   if (!content.trim()) throw new Error(`${llm}_empty`)
-  const parsed = parseValidatedFamilyLevel(content, date, minKeywords)
+  const parsed = parseValidatedFamilyPack(content, date, levelCount)
+  const levels = parsed.levels.map((e) => e.level as unknown as LevelScript)
   return {
-    ...parsed,
+    title: parsed.title,
+    photoHints: parsed.photoHints,
+    mainWords: parsed.mainWords,
+    levels,
     provider: llm,
     model,
     debug: {
-      minKeywords,
-      keywordCount: parsed.keywords.length,
-      keywords: parsed.keywords,
+      levelCount: levels.length,
+      mainWords: parsed.mainWords,
       model,
       userContent,
       responsePreview: content.slice(0, 2500),
@@ -92,29 +97,29 @@ async function callOnce(
   }
 }
 
-export async function generateFamilyLevelDirect(input: {
+export async function generateFamilyPackDirect(input: {
   story: string
   date: string
   apiKey: string
   llm: FamilyLlmProvider
-  minKeywords?: number
-}): Promise<DirectLevelResult> {
+  levelCount?: number
+}): Promise<DirectPackResult> {
   const story = input.story.trim()
   if (!story) throw new Error('story_required')
   const apiKey = input.apiKey.trim()
   if (!apiKey) throw new Error('api_key_required')
   const date = input.date || new Date().toISOString().slice(0, 10)
-  const minKeywords = clampMinKeywords(input.minKeywords ?? 9)
+  const levelCount = clampPackLevelCount(input.levelCount ?? 4)
   const llm = input.llm
 
-  const attempt = () => callOnce(llm, apiKey, story, date, minKeywords)
+  const attempt = () => callOnce(llm, apiKey, story, date, levelCount)
   try {
     return await attempt()
   } catch (first) {
     const msg = first instanceof Error ? first.message : ''
     if (msg === 'api_key_required' || msg === 'story_required') throw first
     if (
-      msg.startsWith('keywords_insufficient:') ||
+      msg.startsWith('pack_levels_insufficient:') ||
       msg.startsWith('invalid_level') ||
       msg.includes('_http_') ||
       msg === 'llm_timeout' ||
@@ -132,9 +137,26 @@ export async function generateFamilyLevelDirect(input: {
   }
 }
 
+/** @deprecated 单关直连已由迷你 pack 取代；保留导出以免旧引用炸 */
+export async function generateFamilyLevelDirect(input: {
+  story: string
+  date: string
+  apiKey: string
+  llm: FamilyLlmProvider
+  minKeywords?: number
+}): Promise<DirectPackResult> {
+  return generateFamilyPackDirect({
+    story: input.story,
+    date: input.date,
+    apiKey: input.apiKey,
+    llm: input.llm,
+    levelCount: input.minKeywords,
+  })
+}
+
 export function llmBusyLabel(llm: FamilyLlmProvider): string {
   if (llm === 'agnes') {
-    return `正在生成关卡（${familyLlmLabel(llm)}，免费档约 20 次/分钟，可能稍慢）…`
+    return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 3–5 关）…`
   }
-  return `正在生成关卡（${familyLlmLabel(llm)}，可能需要 1–3 分钟）…`
+  return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 3–5 关，可能需要 1–3 分钟）…`
 }
