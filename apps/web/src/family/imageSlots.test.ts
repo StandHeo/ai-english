@@ -5,6 +5,8 @@ import {
   clampImageSlots,
   firstItemImage,
   imageUrlBySubject,
+  miniLevelMissingImageSlots,
+  slotsForMiniLevel,
   slotsFromLevel,
 } from './imageSlots.ts'
 
@@ -71,4 +73,50 @@ test('imageUrlBySubject maps option id to item slot', () => {
   assert.equal(imageUrlBySubject(slots, images, 'slide'), 'slide-img')
   assert.equal(imageUrlBySubject(slots, images, '公园'), 'bg')
   assert.equal(firstItemImage(slots, images), 'park-img')
+})
+
+test('slotsForMiniLevel includes distractor option ids like fork', () => {
+  const slots = slotsForMiniLevel(
+    {
+      target_words: ['chopsticks'],
+      scene: { setting: 'lunch table' },
+      beats: [
+        {
+          type: 'ask',
+          fallback: {
+            type: 'picture_choice',
+            options: [
+              { id: 'chopsticks', correct: true },
+              { id: 'fork', correct: false },
+            ],
+          },
+        },
+      ],
+    },
+    'A cozy dining table at lunchtime',
+    4,
+  )
+  assert.equal(slots[0]?.role, 'scene')
+  assert.equal(slots[0]?.subject, 'A cozy dining table at lunchtime')
+  assert.deepEqual(
+    slots.filter((s) => s.role === 'item').map((s) => s.subject),
+    ['chopsticks', 'fork'],
+  )
+})
+
+test('miniLevelMissingImageSlots detects missing distractor art', () => {
+  const level = {
+    target_words: ['chopsticks'],
+    scene: { setting: 'table' },
+    beats: [
+      {
+        fallback: {
+          options: [{ id: 'chopsticks' }, { id: 'fork' }],
+        },
+      },
+    ],
+  }
+  const missing = miniLevelMissingImageSlots(level, 'table', 'bg-url', ['chopsticks-url'])
+  assert.equal(missing.length, 1)
+  assert.equal(missing[0]?.subject, 'fork')
 })

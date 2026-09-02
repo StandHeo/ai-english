@@ -422,22 +422,36 @@ export async function generateFamilyImages(
     throw new Error('image_provider_unavailable')
   }
 
+  // 同请求内多槽位并行出图（顺序与 slots 一致）
+  const settled = await Promise.all(
+    slots.map(async (slot) => {
+      const prompt = buildKidsPrompt(slot)
+      try {
+        const { dataUrl, rawPreview } =
+          imageKind === 'agnes'
+            ? await callAgnesOnce(key, prompt)
+            : await callTongyiWithRetry(key, prompt)
+        return {
+          dataUrl,
+          warning: null as string | null,
+          debug: { subject: slot.subject, prompt, ok: true as const, detail: rawPreview },
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return {
+          dataUrl: mockDataUrl(slot.subject),
+          warning: `slot_failed:${slot.subject}:${msg}`,
+          debug: { subject: slot.subject, prompt, ok: false as const, detail: msg },
+        }
+      }
+    }),
+  )
+
   const images: string[] = []
-  for (const slot of slots) {
-    const prompt = buildKidsPrompt(slot)
-    try {
-      const { dataUrl, rawPreview } =
-        imageKind === 'agnes'
-          ? await callAgnesOnce(key, prompt)
-          : await callTongyiWithRetry(key, prompt)
-      images.push(dataUrl)
-      debugCalls.push({ subject: slot.subject, prompt, ok: true, detail: rawPreview })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      warnings.push(`slot_failed:${slot.subject}:${msg}`)
-      images.push(mockDataUrl(slot.subject))
-      debugCalls.push({ subject: slot.subject, prompt, ok: false, detail: msg })
-    }
+  for (const row of settled) {
+    images.push(row.dataUrl)
+    if (row.warning) warnings.push(row.warning)
+    debugCalls.push(row.debug)
   }
 
   return {

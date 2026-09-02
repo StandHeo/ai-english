@@ -29,6 +29,7 @@ import {
   setMiniLevelScenePrompt,
   setMinLevelKeywords,
   getDay,
+  type FamilyDayRecord,
 } from './store.ts'
 
 const sampleLevel = (id: string, word: string): LevelScript => ({
@@ -126,10 +127,17 @@ test('setMiniLevelScenePrompt and materializeMiniLevelForPlay', async () => {
   // 非 data URL，不走 IndexedDB，便于 node 单测
   const dayAfter = await setMiniLevelImages(date, 'family-20990104-park', {
     imageBg: 'https://example.com/park.png',
+    itemImages: ['https://example.com/park-item.png', 'https://example.com/bus.png'],
   })
   const day = dayAfter || getDay(date)!
   const play = materializeMiniLevelForPlay(day, 'family-20990104-park')
   assert.equal(play.scene.image, 'https://example.com/park.png')
+  const askOpts = play.beats[1]?.fallback?.options || []
+  const parkOpt = askOpts.find((o) => o.id === 'park')
+  const busOpt = askOpts.find((o) => o.id === 'bus')
+  assert.equal(parkOpt?.image, 'https://example.com/park-item.png')
+  assert.equal(busOpt?.image, 'https://example.com/bus.png')
+  assert.notEqual(busOpt?.image, play.scene.image)
 })
 
 test('legacy day without miniLevels still counts as playable', () => {

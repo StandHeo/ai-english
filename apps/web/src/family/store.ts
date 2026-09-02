@@ -10,6 +10,7 @@ import {
   clampImageSlots,
   firstItemImage,
   imageUrlBySubject,
+  slotsForMiniLevel,
   slotsFromLevel,
 } from './imageSlots'
 import {
@@ -1093,20 +1094,29 @@ export function materializeMiniLevelForPlay(
   if (!mini) throw new Error('no_mini_level')
   const level = structuredClone(mini.level)
   const mainWord = level.target_words[0] || 'fun'
-  const bg = mini.imageBg || svgPlaceholder(mainWord)
-  const itemImg = mini.itemImages?.[0] || bg
+  const scenePrompt = effectiveScenePrompt(mini)
+  const slots = slotsForMiniLevel(level as unknown as Record<string, unknown>, scenePrompt, 4)
+  const images = [mini.imageBg || '', ...(mini.itemImages || [])]
+  const bg = images[0] || svgPlaceholder(mainWord)
   level.scene.image = bg
   level.reward.stickerImage = bg
 
   const resolveWordImage = (word: string) => {
+    const hit = imageUrlBySubject(slots, images, word)
+    if (hit) return hit
     const w = word.trim().toLowerCase()
-    if (w === mainWord.toLowerCase()) return itemImg
-    // 其它选项：若有其它关的背景可复用；否则占位
+    if (w === mainWord.toLowerCase()) {
+      const item = firstItemImage(slots, images)
+      if (item) return item
+    }
+    // 其它关同词可复用（同日迷你包）
     const other = day.miniLevels?.find(
-      (m) => (m.level.target_words[0] || '').toLowerCase() === w && m.imageBg,
+      (m) => (m.level.target_words[0] || '').toLowerCase() === w && (m.imageBg || m.itemImages?.[0]),
     )
+    if (other?.itemImages?.[0] && (other.level.target_words[0] || '').toLowerCase() === w) {
+      return other.itemImages[0]
+    }
     if (other?.imageBg) return other.imageBg
-    if (other?.itemImages?.[0]) return other.itemImages[0]
     return svgPlaceholder(word || 'fun')
   }
 

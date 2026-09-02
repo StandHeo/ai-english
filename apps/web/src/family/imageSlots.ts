@@ -112,3 +112,41 @@ export function missingSlotsForImages(
   if (filled >= slots.length) return []
   return slots.slice(filled)
 }
+
+/**
+ * 迷你关配图槽：场景用可编辑 scenePrompt，道具含目标词 + picture_choice 选项
+ *（确保 fork 等干扰项也有独立插画，而不是文字占位）。
+ */
+export function slotsForMiniLevel(
+  level: Record<string, unknown>,
+  scenePrompt: string,
+  maxSlots = 4,
+): ImageSlot[] {
+  const max = clampImageSlots(maxSlots)
+  const scene = level.scene && typeof level.scene === 'object' ? { ...(level.scene as object) } : {}
+  const setting = scenePrompt.trim() || String((scene as { setting?: unknown }).setting || '')
+  return slotsFromLevel(
+    {
+      ...level,
+      scene: { ...scene, setting: setting || 'playground' },
+    },
+    max,
+  )
+}
+
+/** 迷你关是否还缺背景或任一选项道具图 */
+export function miniLevelMissingImageSlots(
+  level: Record<string, unknown>,
+  scenePrompt: string,
+  imageBg: string | undefined,
+  itemImages: string[] | undefined,
+  maxSlots = 4,
+): ImageSlot[] {
+  const slots = slotsForMiniLevel(level, scenePrompt, maxSlots)
+  const images = [imageBg, ...(itemImages || [])].map((u) => u || '')
+  const missing: ImageSlot[] = []
+  for (let i = 0; i < slots.length; i++) {
+    if (!images[i]) missing.push(slots[i]!)
+  }
+  return missing
+}

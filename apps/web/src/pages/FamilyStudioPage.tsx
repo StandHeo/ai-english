@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
-import { generateFamilyImagesDirect } from '../family/generateImagesClient'
+import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
 import { generateFamilyPackDirect, llmBusyLabel } from '../family/generateLevelClient'
 import {
   familyLlmLabel,
   imageCloudLabel,
   nativeFamilyCloudReady,
 } from '../family/providers'
+import { miniLevelMissingImageSlots, slotsForMiniLevel } from '../family/imageSlots'
 import {
   appendTextMessage,
   appendVoiceMessage,
@@ -67,6 +68,7 @@ export function FamilyStudioPage() {
   const [packTitle, setPackTitle] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [completed, setCompleted] = useState(false)
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [asrHint, setAsrHint] = useState('')
   const [asrReady, setAsrReady] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
@@ -175,6 +177,15 @@ export function FamilyStudioPage() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages.length])
 
+  useEffect(() => {
+    if (!previewSrc) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewSrc(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [previewSrc])
+
   function storyFromState(list: FamilyDiaryMessage[]) {
     return mergeStoryFromMessages(list)
   }
@@ -246,61 +257,130 @@ export function FamilyStudioPage() {
       setStatus(`关卡已保留；请到设置填写${cloudName} Key`)
       return false
     }
-    const targets = levels.filter((m) => !(opts?.onlyMissingBg && (m.imageBg || m.imageBgId)))
+    const targets = levels.filter((m) => {
+      if (!opts?.onlyMissingBg) return true
+      return (
+        miniLevelMissingImageSlots(
+          m.level as unknown as Record<string, unknown>,
+          effectiveScenePrompt(m),
+          m.imageBg,
+          m.itemImages,
+        ).length > 0
+      )
+    })
     if (!targets.length) {
-      setStatus('各关背景图已齐')
+      setStatus(opts?.onlyMissingBg ? '各关背景与选项图已齐' : '没有需要配图的关卡')
       return true
     }
+    const prefix = (opts?.statusPrefix || '').trim()
+    const conc = Math.min(FAMILY_IMAGE_LEVEL_CONCURRENCY, targets.length)
     setImaging(true)
     setStatus(
-      `${opts?.statusPrefix || ''}正在为 ${targets.length} 关${cloudName}配背景…`.trim(),
+      `${prefix}${cloudName}并行配图：共 ${targets.length} 关（同时 ${conc} 关，含选项图）…`.trim(),
     )
     try {
-      for (const mini of targets) {
-        const subject = effectiveScenePrompt(mini)
-        const word = mini.level.target_words?.[0] || 'item'
-        const slots = [
-          { subject, role: 'scene' as const },
-          { subject: word, role: 'item' as const },
-        ]
-        let list: string[] = []
+      let done = 0
+      let failCount = 0
+      // 并行完成后写 store 串行，避免 load/save 竞态丢图
+      let persistTail: Promise<void> = Promise.resolve()
+      const persistImages = (mini: FamilyMiniLevel, list: string[]) => {
+        const run = async () => {
+          const day = await setMiniLevelImages(date, mini.id, {
+            imageBg: list[0] || mini.imageBg,
+            itemImages: list.slice(1).filter(Boolean),
+          })
+          if (day) setMiniLevels(day.miniLevels || [])
+        }
+        const p = persistTail.then(run, run)
+        persistTail = p.then(
+          () => undefined,
+          () => undefined,
+        )
+        return p
+      }
+
+      const fetchSlots = async (slots: { subject: string; role?: 'scene' | 'item' }[]) => {
         if (useDirect) {
           const payload = await generateFamilyImagesDirect({
             slots,
             apiKey: cloudKey,
             provider: cloud,
-            maxSlots: 2,
+            maxSlots: Math.max(slots.length, 3),
           })
-          list = payload.images
-        } else {
-          const res = await apiJson('/api/family/generate-images', {
-            method: 'POST',
-            headers: {
-              ...(cloudKey && cloud === 'tongyi' ? { 'x-tongyi-key': cloudKey } : {}),
-              ...(cloudKey && cloud === 'agnes' ? { 'x-agnes-key': cloudKey } : {}),
-            },
-            body: {
-              date,
-              maxSlots: 2,
-              imageProvider: cloud,
-              slots,
-              apiKey: cloudKey || undefined,
-            },
-            timeoutMs: 300_000,
-          })
-          if (!res.ok) {
-            setStatus(`关卡已保留；${mini.id} 配图失败：${res.error || res.status}`)
-            continue
-          }
-          list = Array.isArray(res.data.images) ? (res.data.images as string[]) : []
+          return payload.images
         }
-        const day = await setMiniLevelImages(date, mini.id, {
-          imageBg: list[0] || mini.imageBg,
-          itemImages: list.slice(1).filter(Boolean),
+        const res = await apiJson('/api/family/generate-images', {
+          method: 'POST',
+          headers: {
+            ...(cloudKey && cloud === 'tongyi' ? { 'x-tongyi-key': cloudKey } : {}),
+            ...(cloudKey && cloud === 'agnes' ? { 'x-agnes-key': cloudKey } : {}),
+          },
+          body: {
+            date,
+            maxSlots: Math.max(slots.length, 3),
+            imageProvider: cloud,
+            slots,
+            apiKey: cloudKey || undefined,
+          },
+          timeoutMs: 300_000,
         })
-        if (day) setMiniLevels(day.miniLevels || [])
+        if (!res.ok) throw new Error(res.error || String(res.status))
+        return Array.isArray(res.data.images) ? (res.data.images as string[]) : []
       }
-      setStatus(`配图完成（${cloudName}，每关背景+主词道具）`)
+
+      await mapPool(targets, conc, async (mini) => {
+        const word = mini.level.target_words?.[0] || 'item'
+        const scenePrompt = effectiveScenePrompt(mini)
+        const slots = slotsForMiniLevel(
+          mini.level as unknown as Record<string, unknown>,
+          scenePrompt,
+          4,
+        )
+        try {
+          let list: string[]
+          if (opts?.onlyMissingBg) {
+            const existing = [mini.imageBg || '', ...(mini.itemImages || [])]
+            while (existing.length < slots.length) existing.push('')
+            const needIdx: number[] = []
+            const needSlots = slots.filter((_, i) => {
+              if (existing[i]) return false
+              needIdx.push(i)
+              return true
+            })
+            if (!needSlots.length) {
+              done += 1
+              return
+            }
+            const generated = await fetchSlots(needSlots)
+            list = [...existing]
+            needIdx.forEach((idx, j) => {
+              if (generated[j]) list[idx] = generated[j]!
+            })
+          } else {
+            list = await fetchSlots(slots)
+          }
+          await persistImages(mini, list)
+          done += 1
+          setStatus(
+            `${prefix}${cloudName}配图 ${done}/${targets.length}：${word}（${slots.length} 张）`.trim(),
+          )
+        } catch {
+          failCount += 1
+          done += 1
+          setStatus(
+            `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 出错（继续并行）`.trim(),
+          )
+        }
+      })
+
+      await persistTail
+      if (failCount > 0) {
+        setStatus(
+          `配图结束（${cloudName}）：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}`,
+        )
+        return failCount < targets.length
+      }
+      setStatus(`配图完成（${cloudName}，并行 ${targets.length} 关，含选项图）`)
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -486,6 +566,16 @@ export function FamilyStudioPage() {
   }
 
   async function regenerateImages() {
+    const day = getDay(date)
+    if (!dayHasMiniPack(day)) {
+      setStatus('请先生成迷你关卡包')
+      return
+    }
+    // 一次跑完全部关（不跳过已有图，便于改场景词后重画）
+    await requestMiniLevelImages(day!.miniLevels || [])
+  }
+
+  async function regenerateMissingImages() {
     const day = getDay(date)
     if (!dayHasMiniPack(day)) {
       setStatus('请先生成迷你关卡包')
@@ -728,16 +818,27 @@ export function FamilyStudioPage() {
             <div className="row photo-actions">
               <button
                 type="button"
-                className="ghost"
+                className="primary"
                 disabled={busy || imaging || recording || transcribing}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '配图中…' : '云端配全部关'}
+                {imaging ? '全部配图中…' : '全部配图'}
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                disabled={busy || imaging || recording || transcribing}
+                onClick={() => void regenerateMissingImages()}
+              >
+                只补缺图
               </button>
               <button type="button" className="ghost" onClick={() => navigate(`/family/${date}`)}>
                 预览关列表
               </button>
             </div>
+            <p className="muted" style={{ marginTop: 4 }}>
+              点「全部配图」会按关排队生成（慢属正常），不用一关关点。
+            </p>
             <ul className="mini-level-edit" style={{ listStyle: 'none', padding: 0 }}>
               {miniLevels.map((m, i) => {
                 const word = m.level.target_words?.[0] || m.id
@@ -761,16 +862,25 @@ export function FamilyStudioPage() {
                     <label className="muted" style={{ display: 'block', fontSize: 13 }}>
                       场景主题（中/英）
                     </label>
-                    <input
-                      type="text"
+                    <textarea
                       defaultValue={effectiveScenePrompt(m)}
                       key={`${m.id}-${m.scenePrompt || ''}`}
+                      rows={3}
                       onBlur={(e) => {
                         if (e.target.value.trim() !== effectiveScenePrompt(m)) {
                           saveScenePrompt(m.id, e.target.value)
                         }
                       }}
-                      style={{ width: '100%', marginBottom: 8 }}
+                      style={{
+                        width: '100%',
+                        marginBottom: 8,
+                        minHeight: 72,
+                        fontSize: 16,
+                        lineHeight: 1.4,
+                        padding: '10px 12px',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                      }}
                     />
                     <div className="row">
                       <button
@@ -791,13 +901,24 @@ export function FamilyStudioPage() {
                     </div>
                     {m.imageBg && (
                       <div className="photo-thumbs" style={{ marginTop: 8 }}>
-                        <div className="photo-thumb">
+                        <button
+                          type="button"
+                          className="photo-thumb photo-thumb-btn"
+                          onClick={() => setPreviewSrc(m.imageBg!)}
+                          aria-label={`${word} 背景放大查看`}
+                        >
                           <img src={m.imageBg} alt={`${word} 背景`} />
-                        </div>
+                        </button>
                         {(m.itemImages || []).map((src, j) => (
-                          <div key={j} className="photo-thumb">
+                          <button
+                            type="button"
+                            key={j}
+                            className="photo-thumb photo-thumb-btn"
+                            onClick={() => setPreviewSrc(src)}
+                            aria-label={`${word} 道具 ${j + 1} 放大查看`}
+                          >
                             <img src={src} alt={`${word} 道具 ${j + 1}`} />
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -805,6 +926,16 @@ export function FamilyStudioPage() {
                 )
               })}
             </ul>
+            <div className="row photo-actions" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="primary"
+                disabled={busy || imaging || recording || transcribing}
+                onClick={() => void regenerateImages()}
+              >
+                {imaging ? '全部配图中…' : '全部配图'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -829,7 +960,14 @@ export function FamilyStudioPage() {
               <div className="photo-thumbs">
                 {images.map((src, i) => (
                   <div key={`${i}-${src.slice(0, 24)}`} className="photo-thumb">
-                    <img src={src} alt={`已选 ${i + 1}`} />
+                    <button
+                      type="button"
+                      className="photo-thumb-btn photo-thumb-fill"
+                      onClick={() => setPreviewSrc(src)}
+                      aria-label={`第 ${i + 1} 张放大查看`}
+                    >
+                      <img src={src} alt={`已选 ${i + 1}`} />
+                    </button>
                     <button
                       type="button"
                       className="photo-thumb-del"
@@ -856,6 +994,31 @@ export function FamilyStudioPage() {
           回首页
         </button>
       </div>
+
+      {previewSrc && (
+        <div
+          className="image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="图片预览"
+          onClick={() => setPreviewSrc(null)}
+        >
+          <button
+            type="button"
+            className="image-lightbox-close"
+            aria-label="关闭预览"
+            onClick={() => setPreviewSrc(null)}
+          >
+            ×
+          </button>
+          <img
+            src={previewSrc}
+            alt="放大预览"
+            className="image-lightbox-img"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

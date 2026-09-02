@@ -152,6 +152,30 @@ async function callTongyiImage(apiKey: string, prompt: string): Promise<string> 
   }
 }
 
+/** 有限并发跑异步任务，结果顺序与 items 一致 */
+export async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  const limit = Math.max(1, Math.min(concurrency, items.length || 1))
+  async function worker() {
+    for (;;) {
+      const i = next
+      next += 1
+      if (i >= items.length) return
+      results[i] = await fn(items[i]!, i)
+    }
+  }
+  await Promise.all(Array.from({ length: limit }, () => worker()))
+  return results
+}
+
+/** 全部配图时同时跑几关（每天最多约 5 关；每关内场景+道具也会并行） */
+export const FAMILY_IMAGE_LEVEL_CONCURRENCY = 5
+
 export async function generateFamilyImagesDirect(input: {
   slots: ImageSlot[]
   apiKey: string
@@ -163,20 +187,20 @@ export async function generateFamilyImagesDirect(input: {
   const maxSlots = clampImageSlots(input.maxSlots)
   const slots = input.slots.slice(0, maxSlots)
   const warnings: string[] = []
-  const images: string[] = []
-  for (const slot of slots) {
-    const prompt = buildKidsPrompt(slot)
-    try {
-      const dataUrl =
-        input.provider === 'agnes'
+  // 同关场景 / 道具并行请求，缩短单关耗时
+  const images = await Promise.all(
+    slots.map(async (slot) => {
+      const prompt = buildKidsPrompt(slot)
+      try {
+        return input.provider === 'agnes'
           ? await callAgnesImage(key, prompt)
           : await callTongyiImage(key, prompt)
-      images.push(dataUrl)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      warnings.push(`slot_failed:${slot.subject}:${msg}`)
-      images.push(mockSlotDataUrl(slot.subject))
-    }
-  }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        warnings.push(`slot_failed:${slot.subject}:${msg}`)
+        return mockSlotDataUrl(slot.subject)
+      }
+    }),
+  )
   return { images, warnings, provider: input.provider }
 }

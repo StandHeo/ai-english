@@ -1,0 +1,98 @@
+.family-day-map {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 200, 120, 0.4), transparent 42%),
+    linear-gradient(160deg, #fff6e8, #e8f4ff 55%, #dff0ff);
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.family-day-map-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.family-day-map-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.family-day-map-title h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #3d2a14;
+  line-height: 1.2;
+}
+
+.family-day-map-title p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #7a6a58;
+}
+
+.family-pack-nodes {
+  margin-top: 2vh;
+  gap: 28px;
+}
+
+.family-pack-node-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(72%, 220px);
+}
+
+.family-pack-node-wrap.odd {
+  align-self: flex-start;
+  margin-left: 8%;
+}
+
+.family-pack-node-wrap.even {
+  align-self: flex-end;
+  margin-right: 8%;
+}
+
+.family-pack-node-wrap .level-node {
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+}
+
+.family-pack-node-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  max-width: 160px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: rgba(255, 252, 245, 0.92);
+  box-shadow: 0 4px 12px rgba(40, 30, 20, 0.08);
+}
+
+.family-pack-node-label strong {
+  font-size: 0.95rem;
+  color: #3d2a14;
+}
+
+.family-pack-node-label small {
+  font-size: 0.75rem;
+  color: #7a6a58;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
