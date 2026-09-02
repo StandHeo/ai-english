@@ -1,0 +1,234 @@
+{
+  "id": "bike-09-pump-track",
+  "approved": true,
+  "theme": "bikes",
+  "title": "Pump Track Park",
+  "target_words": [
+    "bike",
+    "helmet",
+    "scooter",
+    "balance bike",
+    "pads"
+  ],
+  "scene": {
+    "setting": "A sunny kids pump track with helmets and pads",
+    "image": "assets/scenes/pump-track.png",
+    "character": "bunny"
+  },
+  "beats": [
+    {
+      "type": "introduce",
+      "show": "assets/items/rider-kid.png",
+      "npc_say": "Pump track! Wear your gear!",
+      "hint_say": "Go!"
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the helmet!",
+      "hint_say": "Helmet!",
+      "success_say": "Safe head!",
+      "options": [
+        {
+          "id": "helmet",
+          "image": "assets/items/helmet.png",
+          "correct": true
+        },
+        {
+          "id": "bell",
+          "image": "assets/items/bell.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the knee pads!",
+      "hint_say": "Pads!",
+      "success_say": "Good pads!",
+      "options": [
+        {
+          "id": "pads",
+          "image": "assets/items/knee-pads.png",
+          "correct": true
+        },
+        {
+          "id": "hat",
+          "image": "assets/items/hat.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/bike.png",
+      "npc_say": "Two wheels! What is it?",
+      "expect": [
+        "bike",
+        "a bike",
+        "bicycle",
+        "a bicycle"
+      ],
+      "hint_say": "Bike!",
+      "success_say": "Yes! Bike!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "bike",
+            "image": "assets/items/bike.png",
+            "correct": true
+          },
+          {
+            "id": "scooter",
+            "image": "assets/items/scooter.png",
+            "correct": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "find",
+      "npc_say": "Find the scooter!",
+      "hint_say": "Scooter!",
+      "success_say": "Zoom!",
+      "options": [
+        {
+          "id": "scooter",
+          "image": "assets/items/scooter.png",
+          "correct": true
+        },
+        {
+          "id": "bike",
+          "image": "assets/items/bike.png",
+          "correct": false
+        }
+      ]
+    },
+    {
+      "type": "ask",
+      "show": "assets/items/balance-bike.png",
+      "npc_say": "No pedals! Balance bike!",
+      "expect": [
+        "balance bike",
+        "a balance bike",
+        "balance",
+        "bike"
+      ],
+      "hint_say": "Balance bike!",
+      "success_say": "Nice ride!",
+      "fallback": {
+        "type": "picture_choice",
+        "options": [
+          {
+            "id": "balance",
+            "image": "assets/items/balance-bike.png",
+            "correct": true
+          },
+          {
+            "id": "scooter",
+            "image": "assets/items/scooter.png",
+            "correct": false
+          }
+        ]
+      }
+    }
+  ],
+  "reward": {
+    "sticker": "sticker-pump-track",
+    "stickerImage": "assets/items/rider-kid.png",
+    "stars": 1
+  },
+  "beep_talk": {
+    "start": "safe",
+    "nodes": {
+      "safe": {
+        "robot_say": "Beep! Helmet on?",
+        "expect": [
+          "helmet",
+          "a helmet",
+          "yes",
+          "yeah"
+        ],
+        "hint_say": "Say helmet!",
+        "success_say": "Safe!",
+        "show": "assets/items/helmet.png",
+        "next": "bike",
+        "on_fail_next": "bike",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/helmet.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/bell.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bike": {
+        "robot_say": "What do we ride?",
+        "expect": [
+          "bike",
+          "a bike",
+          "bicycle",
+          "scooter",
+          "a scooter"
+        ],
+        "hint_say": "Say bike!",
+        "success_say": "Let's roll!",
+        "show": "assets/items/bike.png",
+        "next": "bye",
+        "on_fail_next": "bye",
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "bike",
+              "image": "assets/items/bike.png",
+              "correct": true
+            },
+            {
+              "id": "scooter",
+              "image": "assets/items/scooter.png",
+              "correct": false
+            }
+          ]
+        }
+      },
+      "bye": {
+        "robot_say": "Bye-bye, pump track!",
+        "expect": [
+          "bye",
+          "bye bye",
+          "goodbye",
+          "bye-bye"
+        ],
+        "hint_say": "Say bye!",
+        "success_say": "Beep! Bye-bye!",
+        "show": "assets/items/rider-kid.png",
+        "next": null,
+        "on_fail_next": null,
+        "fallback": {
+          "type": "picture_choice",
+          "options": [
+            {
+              "id": "yes",
+              "image": "assets/items/rider-kid.png",
+              "correct": true
+            },
+            {
+              "id": "no",
+              "image": "assets/items/apple.png",
+              "correct": false
+            }
+          ]
+        }
+      }
+    }
+  }
+}
