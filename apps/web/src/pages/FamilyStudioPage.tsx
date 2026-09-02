@@ -26,6 +26,7 @@ import {
   getLlmApiKey,
   getLlmProvider,
   getPackLevelCount,
+  hydrateFamilyDayImages,
   mergeStoryFromMessages,
   removeDayImage,
   resetMiniLevelScenePrompt,
@@ -148,6 +149,11 @@ export function FamilyStudioPage() {
     setPackTitle(day.pack?.title || '')
     setImages(day.images || [])
     setCompleted(Boolean(day.completed))
+    if (dayHasMiniPack(day)) {
+      void hydrateFamilyDayImages(day).then((hydrated) => {
+        setMiniLevels(hydrated.miniLevels || [])
+      })
+    }
   }
 
   useEffect(() => {
@@ -240,7 +246,7 @@ export function FamilyStudioPage() {
       setStatus(`关卡已保留；请到设置填写${cloudName} Key`)
       return false
     }
-    const targets = levels.filter((m) => !(opts?.onlyMissingBg && m.imageBg))
+    const targets = levels.filter((m) => !(opts?.onlyMissingBg && (m.imageBg || m.imageBgId)))
     if (!targets.length) {
       setStatus('各关背景图已齐')
       return true
@@ -288,7 +294,7 @@ export function FamilyStudioPage() {
           }
           list = Array.isArray(res.data.images) ? (res.data.images as string[]) : []
         }
-        const day = setMiniLevelImages(date, mini.id, {
+        const day = await setMiniLevelImages(date, mini.id, {
           imageBg: list[0] || mini.imageBg,
           itemImages: list.slice(1).filter(Boolean),
         })
@@ -298,7 +304,13 @@ export function FamilyStudioPage() {
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setStatus(`关卡已保留；${cloudName}配图出错（${msg}）`)
+      if (/quota|exceeded/i.test(msg)) {
+        setStatus(
+          `关卡已保留；本机存储已满，配图已改为 IndexedDB 仍失败。请清理旧日记图后重试（${msg.slice(0, 80)}）`,
+        )
+      } else {
+        setStatus(`关卡已保留；${cloudName}配图出错（${msg}）`)
+      }
       return false
     } finally {
       setImaging(false)

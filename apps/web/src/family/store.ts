@@ -1,6 +1,12 @@
 import type { LevelScript } from '../types'
 import { deleteAudioClip, putAudioClip } from './audioDb'
 import {
+  deleteImageBlob,
+  isInlineImageRef,
+  resolveImageRef,
+  storeImageDataUrl,
+} from './imageDb'
+import {
   clampImageSlots,
   firstItemImage,
   imageUrlBySubject,
@@ -38,6 +44,13 @@ export type FamilyMiniLevel = {
   /** 可编辑出图主题；缺省用 level.scene.setting */
   scenePrompt?: string
   itemPrompts?: string[]
+  /** IndexedDB 图 id（持久化） */
+  imageBgId?: string
+  itemImageIds?: string[]
+  /**
+   * 运行时 / 旧数据内联图（data URL 或 blob URL）。
+   * 写入 localStorage 前会剥掉大图，只保留 *Id。
+   */
   imageBg?: string
   itemImages?: string[]
   completed?: boolean
@@ -214,7 +227,16 @@ function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
       ...(Array.isArray(o.itemPrompts)
         ? { itemPrompts: o.itemPrompts.map(String).filter((s) => s.trim()) }
         : {}),
-      ...(typeof o.imageBg === 'string' && o.imageBg ? { imageBg: o.imageBg } : {}),
+      ...(typeof o.imageBgId === 'string' && o.imageBgId ? { imageBgId: o.imageBgId } : {}),
+      ...(Array.isArray(o.itemImageIds)
+        ? { itemImageIds: o.itemImageIds.map(String).filter(Boolean) }
+        : {}),
+      // 仅保留非巨型内联引用；data URL 留给 hydrate / 迁移，不进 normalize 持久化路径
+      ...(typeof o.imageBg === 'string' && o.imageBg && !isInlineImageRef(o.imageBg)
+        ? { imageBg: o.imageBg }
+        : typeof o.imageBg === 'string' && o.imageBg.startsWith('data:image')
+          ? { imageBg: o.imageBg }
+          : {}),
       ...(Array.isArray(o.itemImages)
         ? { itemImages: o.itemImages.map(String).filter(Boolean) }
         : {}),
@@ -222,6 +244,47 @@ function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
     })
   }
   return out
+}
+
+/** localStorage 只留元数据 + 图 id，去掉 data URL 大图 */
+function slimMiniLevelForPersist(m: FamilyMiniLevel): FamilyMiniLevel {
+  const next: FamilyMiniLevel = {
+    id: m.id,
+    level: m.level,
+    completed: Boolean(m.completed),
+  }
+  if (m.scenePrompt?.trim()) next.scenePrompt = m.scenePrompt.trim()
+  if (m.itemPrompts?.length) next.itemPrompts = m.itemPrompts
+  if (m.imageBgId) next.imageBgId = m.imageBgId
+  if (m.itemImageIds?.length) next.itemImageIds = m.itemImageIds
+  // 兼容：尚无 id 的旧短引用可留；data URL 一律丢掉（应已迁入 IDB）
+  if (m.imageBg && !isInlineImageRef(m.imageBg) && !m.imageBgId) next.imageBg = m.imageBg
+  if (m.itemImages?.length && !m.itemImageIds?.length) {
+    const small = m.itemImages.filter((u) => u && !isInlineImageRef(u))
+    if (small.length) next.itemImages = small
+  }
+  return next
+}
+
+function slimDayForPersist(day: FamilyDayRecord): FamilyDayRecord {
+  return {
+    ...day,
+    images: (day.images || []).filter((u) => u && !isInlineImageRef(u)),
+    miniLevels: (day.miniLevels || []).map(slimMiniLevelForPersist),
+    messages: day.messages.map((m) => {
+      if (!m.audioDataUrl) return m
+      const { audioDataUrl: _drop, ...rest } = m
+      return rest.audioId ? rest : { ...rest, audioId: rest.id }
+    }),
+  }
+}
+
+function slimStoreForPersist(store: FamilyStore): FamilyStore {
+  const days: Record<string, FamilyDayRecord> = {}
+  for (const [date, day] of Object.entries(store.days)) {
+    days[date] = slimDayForPersist(day)
+  }
+  return { ...store, days }
 }
 
 function normalizePack(raw: unknown, miniLevels: FamilyMiniLevel[]): FamilyDayPack | null {
@@ -312,22 +375,12 @@ export function loadFamilyStore(): FamilyStore {
 
 /** Drop bulky legacy data-URL audio so metadata still fits in localStorage. */
 function stripLegacyAudioDataUrls(store: FamilyStore): FamilyStore {
-  const days: Record<string, FamilyDayRecord> = {}
-  for (const [date, day] of Object.entries(store.days)) {
-    days[date] = {
-      ...day,
-      messages: day.messages.map((m) => {
-        if (!m.audioDataUrl) return m
-        const { audioDataUrl: _drop, ...rest } = m
-        return rest.audioId ? rest : { ...rest, audioId: rest.id }
-      }),
-    }
-  }
-  return { ...store, days }
+  return slimStoreForPersist(store)
 }
 
 export function saveFamilyStore(store: FamilyStore): void {
-  const raw = JSON.stringify(store)
+  const slim = slimStoreForPersist(store)
+  const raw = JSON.stringify(slim)
   try {
     localStorage.setItem(KEY, raw)
   } catch (err) {
@@ -335,7 +388,7 @@ export function saveFamilyStore(store: FamilyStore): void {
     if (name !== 'QuotaExceededError' && name !== 'NS_ERROR_DOM_QUOTA_REACHED') {
       throw err
     }
-    // Retry without embedded audio payloads (clips live in IndexedDB).
+    // 再剥一遍音频内联（已含在 slim 中）；仍失败则抛出
     localStorage.setItem(KEY, JSON.stringify(stripLegacyAudioDataUrls(store)))
   }
 }
@@ -643,29 +696,162 @@ export function resetMiniLevelScenePrompt(
   return next
 }
 
-export function setMiniLevelImages(
+export async function setMiniLevelImages(
   date: string,
   levelId: string,
   opts: { imageBg?: string; itemImages?: string[] },
-): FamilyDayRecord | null {
+): Promise<FamilyDayRecord | null> {
   const store = loadFamilyStore()
   const prev = store.days[date]
   if (!prev?.miniLevels?.length) return null
-  let found = false
+  const cur = prev.miniLevels.find((m) => m.id === levelId)
+  if (!cur) return null
+
+  let imageBgId = cur.imageBgId
+  let itemImageIds = cur.itemImageIds ? [...cur.itemImageIds] : undefined
+  let imageBgResolved: string | undefined
+  let itemImagesResolved: string[] | undefined
+
+  if (opts.imageBg !== undefined) {
+    if (cur.imageBgId) void deleteImageBlob(cur.imageBgId).catch(() => undefined)
+    if (opts.imageBg) {
+      if (isInlineImageRef(opts.imageBg) || opts.imageBg.startsWith('data:')) {
+        imageBgId = await storeImageDataUrl(opts.imageBg, `bg_${levelId}`)
+        imageBgResolved = opts.imageBg
+      } else {
+        imageBgId = undefined
+        imageBgResolved = opts.imageBg
+      }
+    } else {
+      imageBgId = undefined
+      imageBgResolved = undefined
+    }
+  }
+
+  if (opts.itemImages !== undefined) {
+    for (const oldId of cur.itemImageIds || []) {
+      void deleteImageBlob(oldId).catch(() => undefined)
+    }
+    const incoming = opts.itemImages.filter(Boolean)
+    itemImageIds = []
+    itemImagesResolved = []
+    for (const img of incoming) {
+      if (isInlineImageRef(img) || img.startsWith('data:')) {
+        const id = await storeImageDataUrl(img, `item_${levelId}`)
+        itemImageIds.push(id)
+        itemImagesResolved.push(img)
+      } else {
+        itemImagesResolved.push(img)
+      }
+    }
+  }
+
   const miniLevels = prev.miniLevels.map((m) => {
     if (m.id !== levelId) return m
-    found = true
-    return {
+    const next: FamilyMiniLevel = {
       ...m,
-      ...(opts.imageBg !== undefined ? { imageBg: opts.imageBg } : {}),
-      ...(opts.itemImages !== undefined ? { itemImages: opts.itemImages.filter(Boolean) } : {}),
+      imageBgId,
+      itemImageIds,
+      imageBg: imageBgResolved ?? (opts.imageBg === undefined ? m.imageBg : undefined),
+      itemImages:
+        itemImagesResolved ?? (opts.itemImages === undefined ? m.itemImages : undefined),
     }
+    if (!next.imageBgId) delete next.imageBgId
+    if (!next.itemImageIds?.length) delete next.itemImageIds
+    return next
   })
-  if (!found) return null
+
   const next = { ...prev, miniLevels, updatedAt: Date.now() }
   store.days[date] = next
   saveFamilyStore(store)
-  return next
+  return hydrateFamilyDayImages(next)
+}
+
+/** 把 IDB 图 id（及旧 data URL）解析成可显示的 URL，供 UI / 游玩使用 */
+export async function hydrateFamilyDayImages(day: FamilyDayRecord): Promise<FamilyDayRecord> {
+  const miniLevels = await Promise.all(
+    (day.miniLevels || []).map(async (m) => {
+      let imageBg = m.imageBg
+      let itemImages = m.itemImages ? [...m.itemImages] : undefined
+      let imageBgId = m.imageBgId
+      let itemImageIds = m.itemImageIds ? [...m.itemImageIds] : undefined
+      let dirty = false
+
+      // 旧内联 data URL → 迁入 IDB
+      if (imageBg && isInlineImageRef(imageBg) && !imageBgId) {
+        try {
+          imageBgId = await storeImageDataUrl(imageBg, `bg_${m.id}`)
+          dirty = true
+        } catch {
+          /* keep inline for this session */
+        }
+      }
+      if (itemImages?.some(isInlineImageRef) && !itemImageIds?.length) {
+        try {
+          itemImageIds = []
+          for (const img of itemImages) {
+            if (isInlineImageRef(img)) {
+              itemImageIds.push(await storeImageDataUrl(img, `item_${m.id}`))
+            }
+          }
+          dirty = true
+        } catch {
+          /* keep */
+        }
+      }
+
+      if (imageBgId) {
+        imageBg = (await resolveImageRef(imageBgId)) || imageBg
+      }
+      if (itemImageIds?.length) {
+        const resolved: string[] = []
+        for (const id of itemImageIds) {
+          const url = await resolveImageRef(id)
+          if (url) resolved.push(url)
+        }
+        if (resolved.length) itemImages = resolved
+      }
+
+      const out: FamilyMiniLevel = {
+        ...m,
+        ...(imageBgId ? { imageBgId } : {}),
+        ...(itemImageIds?.length ? { itemImageIds } : {}),
+        ...(imageBg ? { imageBg } : {}),
+        ...(itemImages?.length ? { itemImages } : {}),
+      }
+      if (dirty) {
+        // 回写瘦身后的 id，去掉 data URL
+        const store = loadFamilyStore()
+        const day2 = store.days[day.date]
+        if (day2?.miniLevels) {
+          store.days[day.date] = {
+            ...day2,
+            miniLevels: day2.miniLevels.map((x) =>
+              x.id === m.id
+                ? slimMiniLevelForPersist({
+                    ...x,
+                    imageBgId,
+                    itemImageIds,
+                    imageBg: undefined,
+                    itemImages: undefined,
+                  })
+                : x,
+            ),
+            updatedAt: Date.now(),
+          }
+          try {
+            saveFamilyStore(store)
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      return out
+    }),
+  )
+
+  // legacy day.images：会话内保留；持久化时 slim 会丢掉 data URL
+  return { ...day, miniLevels }
 }
 
 export function markMiniLevelCompleted(

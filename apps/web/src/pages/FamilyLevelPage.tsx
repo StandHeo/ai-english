@@ -5,6 +5,7 @@ import {
   dayHasMiniPack,
   dayHasPlayableContent,
   getDay,
+  hydrateFamilyDayImages,
   markDayCompleted,
   markMiniLevelCompleted,
   materializeLevelForPlay,
@@ -61,33 +62,42 @@ export function FamilyLevelPage({ onProgress }: Props) {
   }, [beatIndex])
 
   useEffect(() => {
-    const day = getDay(date)
-    if (!dayHasPlayableContent(day)) {
-      navigate('/family')
-      return
-    }
-    try {
-      if (levelId && dayHasMiniPack(day)) {
-        setLevel(materializeMiniLevelForPlay(day!, levelId))
-      } else if (day?.level) {
-        setLevel(materializeLevelForPlay(day))
-      } else if (dayHasMiniPack(day)) {
-        navigate(`/family/${date}`, { replace: true })
-        return
-      } else {
+    let cancelled = false
+    ;(async () => {
+      const day = getDay(date)
+      if (!dayHasPlayableContent(day)) {
         navigate('/family')
         return
       }
-    } catch {
-      navigate(`/family/${date}`)
-      return
-    }
-    setBeatIndex(0)
-    setRetries(0)
-    startedAt.current = Date.now()
-    if (!Capacitor.isNativePlatform() && (!isMicAllowedByBrowser() || pageProtocolHint() === 'http')) {
-      setMicTip('当前可能无法开麦克风，可用右下角打字。')
-      setShowDevType(true)
+      try {
+        const hydrated = dayHasMiniPack(day) ? await hydrateFamilyDayImages(day!) : day!
+        if (cancelled) return
+        if (levelId && dayHasMiniPack(hydrated)) {
+          setLevel(materializeMiniLevelForPlay(hydrated, levelId))
+        } else if (hydrated.level) {
+          setLevel(materializeLevelForPlay(hydrated))
+        } else if (dayHasMiniPack(hydrated)) {
+          navigate(`/family/${date}`, { replace: true })
+          return
+        } else {
+          navigate('/family')
+          return
+        }
+      } catch {
+        if (!cancelled) navigate(`/family/${date}`)
+        return
+      }
+      if (cancelled) return
+      setBeatIndex(0)
+      setRetries(0)
+      startedAt.current = Date.now()
+      if (!Capacitor.isNativePlatform() && (!isMicAllowedByBrowser() || pageProtocolHint() === 'http')) {
+        setMicTip('当前可能无法开麦克风，可用右下角打字。')
+        setShowDevType(true)
+      }
+    })()
+    return () => {
+      cancelled = true
     }
   }, [date, levelId, navigate])
 

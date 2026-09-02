@@ -43,9 +43,10 @@ npm run dev:phone
 
 ## 说明
 
-- 数据存在本机浏览器（`localStorage`），清站点数据会丢。
+- 数据存在本机浏览器（`localStorage` 元数据 + **IndexedDB** 存语音/配图），清站点数据会丢。
 - **旧「一天一关」记录仍可玩**；重新生成会写成迷你 pack。
 - 同一天未通关可再次生成覆盖；已通关会先确认。
+- 配图较大时写入 IndexedDB，避免 `localStorage` 配额爆掉。
 - 不会改写官方水果/机器人等 pack。
 - `FAMILY_LLM_PROVIDER=mock` 时不调用云模型，用固定演示迷你 pack，方便冒烟。
 - 浏览器联调请求体带 `llm`（`deepseek` | `agnes`）与 `mode: pack`（默认）。

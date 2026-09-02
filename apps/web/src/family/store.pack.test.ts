@@ -114,7 +114,7 @@ test('markMiniLevelCompleted aggregates day completed', () => {
   assert.equal(day?.completed, true)
 })
 
-test('setMiniLevelScenePrompt and materializeMiniLevelForPlay', () => {
+test('setMiniLevelScenePrompt and materializeMiniLevelForPlay', async () => {
   const date = '2099-01-04'
   saveGeneratedPack(date, {
     title: 'T',
@@ -123,12 +123,13 @@ test('setMiniLevelScenePrompt and materializeMiniLevelForPlay', () => {
   })
   const updated = setMiniLevelScenePrompt(date, 'family-20990104-park', '小区游乐场')
   assert.equal(updated?.miniLevels?.[0]?.scenePrompt, '小区游乐场')
-  setMiniLevelImages(date, 'family-20990104-park', {
-    imageBg: 'data:image/png;base64,abc',
+  // 非 data URL，不走 IndexedDB，便于 node 单测
+  const dayAfter = await setMiniLevelImages(date, 'family-20990104-park', {
+    imageBg: 'https://example.com/park.png',
   })
-  const day = getDay(date)!
+  const day = dayAfter || getDay(date)!
   const play = materializeMiniLevelForPlay(day, 'family-20990104-park')
-  assert.equal(play.scene.image, 'data:image/png;base64,abc')
+  assert.equal(play.scene.image, 'https://example.com/park.png')
 })
 
 test('legacy day without miniLevels still counts as playable', () => {
