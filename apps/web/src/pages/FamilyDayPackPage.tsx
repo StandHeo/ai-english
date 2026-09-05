@@ -102,6 +102,21 @@ export function FamilyDayPackPage() {
             {day.completed ? ' · 已全部通关' : ''}
           </p>
         </div>
+        <button
+          type="button"
+          className="ghost family-day-edit-btn"
+          style={{
+            marginLeft: 'auto',
+            fontSize: 13,
+            padding: '6px 10px',
+            borderRadius: 10,
+            whiteSpace: 'nowrap',
+          }}
+          onClick={() => navigate(`/family/studio?date=${date}`)}
+          aria-label="编辑或重新生成这一天的关卡"
+        >
+          编辑/重生成
+        </button>
       </header>
 
       <div className="map-nodes family-pack-nodes">

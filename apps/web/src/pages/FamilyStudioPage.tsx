@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
@@ -11,6 +11,10 @@ import {
   nativeFamilyCloudReady,
 } from '../family/providers'
 import { miniLevelMissingImageSlots, sceneNeedsTranslation, slotsForMiniLevel } from '../family/imageSlots'
+
+function isValidDateKey(raw: string | null): raw is string {
+  return Boolean(raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) && raw <= todayKey())
+}
 import {
   appendTextMessage,
   appendVoiceMessage,
@@ -57,7 +61,12 @@ import './family-studio.css'
 
 export function FamilyStudioPage() {
   const navigate = useNavigate()
-  const date = todayKey()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // 支持编辑过去日期：/family/studio?date=YYYY-MM-DD；缺省今天
+  const date = isValidDateKey(searchParams.get('date'))
+    ? searchParams.get('date')!
+    : todayKey()
+  const isToday = date === todayKey()
   const [messages, setMessages] = useState<FamilyDiaryMessage[]>([])
   const [draft, setDraft] = useState('')
   const [hints, setHints] = useState<string[]>([])
@@ -439,9 +448,9 @@ export function FamilyStudioPage() {
   }
 
   async function generate(force = false) {
-    const story = storyFromState(messages)
+    const story = storyFromState(messages) || getDay(date)?.story || ''
     if (!story.trim()) {
-      setStatus('请先发几条今日故事（打字或语音）')
+      setStatus(isToday ? '请先发几条今日故事（打字或语音）' : `这一天（${date}）没有日记故事，无法重新生成；可回到今天补记`)
       return
     }
     const llm = getLlmProvider()
@@ -457,7 +466,11 @@ export function FamilyStudioPage() {
       if (!force) {
         const existing = getDay(date)
         if (existing?.completed && dayHasPlayableContent(existing)) {
-          const ok = window.confirm('今天关卡孩子已经通关。确定覆盖并重置通关状态吗？')
+          const ok = window.confirm(
+            isToday
+              ? '今天关卡孩子已经通关。确定覆盖并重置通关状态吗？'
+              : `这一天（${date}）的关卡${existing.completed ? '已通关' : '已存在'}。确定覆盖并重置通关状态吗？`,
+          )
           if (!ok) {
             setStatus('已取消覆盖')
             return
@@ -754,14 +767,30 @@ export function FamilyStudioPage() {
             <h1>家庭日记</h1>
             <p className="muted">{date}</p>
           </div>
-          <button
-            type="button"
-            className="ghost settings-link"
-            onClick={() => navigate('/family/studio/settings')}
-          >
-            设置
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {!isToday && (
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setSearchParams({})}
+              >
+                回到今天
+              </button>
+            )}
+            <button
+              type="button"
+              className="ghost settings-link"
+              onClick={() => navigate(`/family/studio/settings${isToday ? '' : `?date=${date}`}`)}
+            >
+              设置
+            </button>
+          </div>
         </div>
+        {!isToday && (
+          <p className="muted" style={{ marginTop: -4 }}>
+            正在编辑往日关卡：重新生成会覆盖这一天的关卡并重置通关状态
+          </p>
+        )}
       </header>
 
       {asrHint && <p className={`asr-banner ${asrReady ? 'ok' : ''}`}>{asrHint}</p>}
@@ -892,11 +921,11 @@ export function FamilyStudioPage() {
           disabled={busy || imaging || recording || transcribing}
           onClick={() => void generate(false)}
         >
-          {busy ? '生成中…' : imaging ? '配图中…' : '生成关卡'}
+          {busy ? '生成中…' : imaging ? '配图中…' : hasLevel ? '按日记重新生成' : '生成关卡'}
         </button>
         {hasLevel && (
           <p className="muted generate-meta">
-            今日已有迷你关卡包{packTitle ? `「${packTitle}」` : ''}
+            {isToday ? '今日' : `${date} `}已有迷你关卡包{packTitle ? `「${packTitle}」` : ''}
             {miniLevels.length ? ` · ${miniLevels.length} 关` : ''}
             {completed ? '（已全部通关）' : ''}
           </p>
