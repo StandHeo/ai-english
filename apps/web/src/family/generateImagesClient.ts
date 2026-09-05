@@ -29,7 +29,7 @@ export type DirectImagesResult = {
 }
 
 const NEGATIVE =
-  '文字,水印,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
+  '文字,字母,数字,水印,招牌,卡通兔子,兔子,小白兔,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
 
 function extractImageUrls(payload: unknown): string[] {
   const urls: string[] = []

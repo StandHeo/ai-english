@@ -58,12 +58,12 @@ test('compressImageBuffer shrinks large png to jpeg under limit', async () => {
     .toBuffer()
 
   const out = await compressImageBuffer(big)
-  assert.ok(out.length < 400_000)
+  assert.ok(out.length < 550_000)
   assert.ok(out.length < big.length)
   const meta = await sharp(out).metadata()
   assert.equal(meta.format, 'jpeg')
-  assert.ok((meta.width || 0) <= 512)
-  assert.ok((meta.height || 0) <= 512)
+  assert.ok((meta.width || 0) <= 768)
+  assert.ok((meta.height || 0) <= 768)
 })
 
 test('bufferToJpegDataUrl returns jpeg data url', async () => {

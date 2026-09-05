@@ -4,16 +4,17 @@ import type { LevelScript } from '../types'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
-import { generateFamilyPackDirect, llmBusyLabel } from '../family/generateLevelClient'
+import { generateFamilyPackDirect, llmBusyLabel, translateSceneToEnglish } from '../family/generateLevelClient'
 import {
   familyLlmLabel,
   imageCloudLabel,
   nativeFamilyCloudReady,
 } from '../family/providers'
-import { miniLevelMissingImageSlots, slotsForMiniLevel } from '../family/imageSlots'
+import { miniLevelMissingImageSlots, sceneNeedsTranslation, slotsForMiniLevel } from '../family/imageSlots'
 import {
   appendTextMessage,
   appendVoiceMessage,
+  cacheMiniLevelScenePromptEn,
   dayHasMiniPack,
   dayHasPlayableContent,
   deleteMessage,
@@ -272,6 +273,28 @@ export function FamilyStudioPage() {
       setStatus(opts?.onlyMissingBg ? '各关背景与选项图已齐' : '没有需要配图的关卡')
       return true
     }
+
+    // 中文场景词先翻成英文再配图（缓存到 scenePromptEn；失败回退中文）
+    const llmKey = getLlmApiKey()
+    if (llmKey) {
+      const needTl = targets.filter(
+        (m) => !m.scenePromptEn || m.scenePromptEn === effectiveScenePrompt(m),
+      )
+      if (needTl.length) {
+        setStatus(`场景词翻译成英文中（${needTl.length} 关）…`)
+        for (const m of needTl) {
+          const src = effectiveScenePrompt(m)
+          const en = await translateSceneToEnglish({ text: src, apiKey: llmKey, llm: getLlmProvider() }).catch(
+            () => null,
+          )
+          if (en && en !== src) {
+            cacheMiniLevelScenePromptEn(date, m.id, en)
+            m.scenePromptEn = en
+          }
+        }
+      }
+    }
+
     const prefix = (opts?.statusPrefix || '').trim()
     const conc = Math.min(FAMILY_IMAGE_LEVEL_CONCURRENCY, targets.length)
     setImaging(true)
@@ -330,11 +353,12 @@ export function FamilyStudioPage() {
 
       await mapPool(targets, conc, async (mini) => {
         const word = mini.level.target_words?.[0] || 'item'
-        const scenePrompt = effectiveScenePrompt(mini)
+        // 优先英文场景词（配图模型对英文更稳）；无缓存则用原文
+        const scenePrompt = mini.scenePromptEn?.trim() || effectiveScenePrompt(mini)
         const slots = slotsForMiniLevel(
           mini.level as unknown as Record<string, unknown>,
           scenePrompt,
-          4,
+          5,
         )
         try {
           let list: string[]
@@ -610,6 +634,77 @@ export function FamilyStudioPage() {
     }
   }
 
+  /** 手动把某一关的（中文）场景词翻译成英文并缓存；失败回退原文 */
+  async function translateOneScene(levelId: string) {
+    const mini = getDay(date)?.miniLevels?.find((m) => m.id === levelId)
+    if (!mini) return
+    const src = effectiveScenePrompt(mini)
+    const llmKey = getLlmApiKey()
+    if (!llmKey) {
+      setStatus('请先到「设置」填写 LLM API Key 才能翻译')
+      return
+    }
+    setBusy(true)
+    setStatus(`场景词翻译成英文中：${src.slice(0, 24)}…`)
+    try {
+      const en = await translateSceneToEnglish({
+        text: src,
+        apiKey: llmKey,
+        llm: getLlmProvider(),
+      }).catch(() => null)
+      if (en && en !== src) {
+        const day = cacheMiniLevelScenePromptEn(date, levelId, en)
+        if (day) setMiniLevels(day.miniLevels || [])
+        setStatus(`已翻译：${en}`)
+      } else {
+        setStatus(en ? '场景词已是英文，无需翻译' : '翻译失败，请稍后重试')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** 一键翻译所有含中文场景词的关卡 */
+  async function translateAllScenes() {
+    const day = getDay(date)
+    if (!dayHasMiniPack(day)) {
+      setStatus('请先生成迷你关卡包')
+      return
+    }
+    const needTl = (day!.miniLevels || []).filter((m) =>
+      sceneNeedsTranslation(effectiveScenePrompt(m)),
+    )
+    if (!needTl.length) {
+      setStatus('所有场景词都已是英文，无需翻译')
+      return
+    }
+    const llmKey = getLlmApiKey()
+    if (!llmKey) {
+      setStatus('请先到「设置」填写 LLM API Key 才能翻译')
+      return
+    }
+    setBusy(true)
+    let done = 0
+    let okCount = 0
+    for (const m of needTl) {
+      const src = effectiveScenePrompt(m)
+      setStatus(`场景词翻译成英文中（${done + 1}/${needTl.length}）：${src.slice(0, 20)}…`)
+      const en = await translateSceneToEnglish({
+        text: src,
+        apiKey: llmKey,
+        llm: getLlmProvider(),
+      }).catch(() => null)
+      if (en && en !== src) {
+        const updated = cacheMiniLevelScenePromptEn(date, m.id, en)
+        if (updated) setMiniLevels(updated.miniLevels || [])
+        okCount += 1
+      }
+      done += 1
+    }
+    setBusy(false)
+    setStatus(`翻译完成：${okCount}/${needTl.length} 关（配图时优先用英文场景词）`)
+  }
+
   async function imageOneLevel(levelId: string) {
     const day = getDay(date)
     const mini = day?.miniLevels?.find((m) => m.id === levelId)
@@ -840,6 +935,14 @@ export function FamilyStudioPage() {
               >
                 只补缺图
               </button>
+              <button
+                type="button"
+                className="ghost"
+                disabled={busy || imaging || recording || transcribing}
+                onClick={() => void translateAllScenes()}
+              >
+                场景词译英文
+              </button>
               <button type="button" className="ghost" onClick={() => navigate(`/family/${date}`)}>
                 预览关列表
               </button>
@@ -868,8 +971,16 @@ export function FamilyStudioPage() {
                       {m.completed ? ' · 已通关' : ''}
                     </span>
                     <label className="muted" style={{ display: 'block', fontSize: 13 }}>
-                      场景主题（中/英）
+                      场景主题（可中文，配图时自动译成英文）
                     </label>
+                    {m.scenePromptEn?.trim() && (
+                      <span
+                        className="muted"
+                        style={{ display: 'block', fontSize: 12, marginBottom: 4 }}
+                      >
+                        已译英文：{m.scenePromptEn}
+                      </span>
+                    )}
                     <textarea
                       defaultValue={effectiveScenePrompt(m)}
                       key={`${m.id}-${m.scenePrompt || ''}`}
@@ -898,6 +1009,14 @@ export function FamilyStudioPage() {
                         onClick={() => resetScenePrompt(m.id)}
                       >
                         重置场景词
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={busy || imaging}
+                        onClick={() => void translateOneScene(m.id)}
+                      >
+                        翻译成英文
                       </button>
                       <button
                         type="button"

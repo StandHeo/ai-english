@@ -1,5 +1,6 @@
 import { cloudJson, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
+import { sceneNeedsTranslation } from './imageSlots'
 import {
   FAMILY_PACK_SYSTEM_PROMPT,
   buildPackUserContent,
@@ -95,6 +96,52 @@ async function callOnce(
       responsePreview: content.slice(0, 2500),
     },
   }
+}
+
+/**
+ * 把（可能是中文的）场景词翻译成适合图片模型的英文短句。
+ * 失败返回 null，调用方回退原文（通义本身能处理中文）。
+ */
+export async function translateSceneToEnglish(input: {
+  text: string
+  apiKey: string
+  llm: FamilyLlmProvider
+}): Promise<string | null> {
+  const text = input.text.trim()
+  if (!text || !sceneNeedsTranslation(text)) return text || null
+  const { url, model } = chatEndpoint(input.llm)
+  const doRequest = async () =>
+    cloudJson(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${input.apiKey}` },
+      body: {
+        model,
+        temperature: 0.2,
+        max_tokens: 60,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You translate a short children picture-book scene description into English. Reply with ONLY a concise English scene phrase of at most 12 words (e.g. "A sunny outdoor playground"). No quotes, no explanation.',
+          },
+          { role: 'user', content: text },
+        ],
+      },
+      timeoutMs: 60_000,
+    })
+  const res = input.llm === 'agnes' ? await runAgnesCall(doRequest) : await doRequest()
+  if (!res.ok) return null
+  const choices = res.data.choices
+  const content =
+    Array.isArray(choices) && choices[0] && typeof choices[0] === 'object'
+      ? String((choices[0] as { message?: { content?: string } }).message?.content || '')
+      : ''
+  const cleaned = content
+    .trim()
+    .replace(/^["'“”]+|["'“”]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+  return cleaned || null
 }
 
 export async function generateFamilyPackDirect(input: {

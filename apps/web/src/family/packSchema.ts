@@ -21,13 +21,13 @@ CRITICAL beat field names (do NOT invent other names):
   {"type":"introduce","show":"placeholder","npc_say":"Look! park!","hint_say":"park"}
 - introduce and ask beats MUST have "show":"placeholder" (picture of the word).
 - ask beat example:
-  {"type":"ask","show":"placeholder","npc_say":"Say park!","expect":["park"],"hint_say":"Park!","success_say":"Yes!",
+  {"type":"ask","show":"placeholder","npc_say":"I want a park! Say it!","expect":["park","a park"],"hint_say":"Park. Can you say park?","success_say":"Yes! Park!",
    "fallback":{"type":"picture_choice","options":[
      {"id":"park","image":"placeholder","correct":true},
      {"id":"bus","image":"placeholder","correct":false}
    ]}}
 - find beat example:
-  {"type":"find","npc_say":"Find the park!","hint_say":"Park!","success_say":"Yes!",
+  {"type":"find","npc_say":"Find the park!","hint_say":"Park!","success_say":"Yes! Park!",
    "options":[
      {"id":"park","image":"placeholder","correct":true},
      {"id":"cake","image":"placeholder","correct":false}
@@ -65,9 +65,14 @@ Rules:
 - scene.setting MUST be a short PLACE / atmosphere line (Chinese or English OK). Do NOT paste the whole diary into setting.
 - Beat types: "introduce" | "ask" | "find". Keep npc_say simple English (max ~8 words).
 - FIRST beat of every level: introduce with show. Then alternate ask / find beats.
+- Exactly ONE find beat per level (the second beat): "Find the X!" with 2-3 options, ONE correct.
+- After find: one or two ask beats, then end with a short introduce beat (e.g. "Into the basket!").
 - ask beats MUST have expect (array), hint_say, success_say, and fallback.picture_choice with >=2 options.
-- find beats MUST have options with >=2 items and one correct:true.
-- Distractor option ids may reuse other levels' main words or simple nouns (bus, cake, home, tree…).
+- ask expect: the word plus one natural variant, e.g. ["park", "a park"].
+- find beats MUST have options with >=2 items and exactly one correct:true.
+- Distractor option ids: 2-3 DIFFERENT concrete kid nouns per level (bus, cake, home, tree…), NOT the main word, NOT abstract words.
+- npc_say / hint_say / success_say in simple English like the official pack ("Mmm! Yummy fruit!", "Yes! Apple!").
+- reward.sticker: "sticker-<mainword>".
 - Use image:"placeholder" everywhere.
 - Do NOT include beep_talk.
 - Prefer concrete kid nouns from the diary; if the story is thin, invent plausible related nouns so the level count is met.`

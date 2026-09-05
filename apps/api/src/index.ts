@@ -5,6 +5,7 @@ import multer from 'multer'
 import { matchExpect } from './match.js'
 import { recognizeSpeech } from './asr.js'
 import { synthesizeSpeech } from './tts.js'
+import { judgeTranscript } from './voiceJudge.js'
 import { generateFamilyLevel } from './familyGenerate.js'
 import { generateFamilyPack } from './familyPackGenerate.js'
 import {
@@ -42,13 +43,17 @@ app.post('/api/asr', upload.single('audio'), async (req, res) => {
       forcedText,
       expectHint: expect,
     })
-    const matched = matchExpect(asr.text, expect)
+    const strictMatched = matchExpect(asr.text, expect)
+    // 本地严格匹配失败时，用 LLM 模糊判定兜底（孩子发音/离线转写常有偏差）
+    const judge = strictMatched ? null : await judgeTranscript(asr.text, expect)
+    const matched = strictMatched || Boolean(judge?.judged && judge.matched)
     res.json({
       transcript: asr.text,
       matched,
       expect,
       source: asr.source,
       hasAudio: asr.hasAudio,
+      judge: judge?.judged ? { matched: judge.matched, word: judge.word } : undefined,
     })
   } catch (err) {
     console.error(err)
@@ -60,6 +65,18 @@ app.post('/api/match', (req, res) => {
   const transcript = String(req.body.transcript || '')
   const expect = Array.isArray(req.body.expect) ? req.body.expect.map(String) : []
   res.json({ matched: matchExpect(transcript, expect), transcript, expect })
+})
+
+app.post('/api/voice-judge', async (req, res) => {
+  try {
+    const transcript = String(req.body.transcript || '')
+    const expect = Array.isArray(req.body.expect) ? req.body.expect.map(String) : []
+    const judge = await judgeTranscript(transcript, expect)
+    res.json(judge)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ judged: false, matched: false })
+  }
 })
 
 app.post('/api/tts', async (req, res) => {

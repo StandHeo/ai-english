@@ -520,6 +520,7 @@ export function LevelPage({ onProgress }: Props) {
         matched: boolean
         source?: 'browser' | 'openai' | 'none' | 'local'
         hasAudio?: boolean
+        judged?: boolean
       }
       try {
         result = await submitSpeech({
@@ -582,7 +583,7 @@ export function LevelPage({ onProgress }: Props) {
           `识别结果：「${heard}」`,
           sourceLabel,
           result.matched
-            ? `匹配成功（期望：${beat.expect.join(' / ')}）`
+            ? `匹配成功${result.judged ? '（AI 模糊判定：孩子发音不准但说对了）' : `（期望：${beat.expect.join(' / ')}）`}`
             : `未匹配（期望：${beat.expect.join(' / ')}）`,
         ],
       })

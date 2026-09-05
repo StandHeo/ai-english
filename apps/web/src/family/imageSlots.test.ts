@@ -54,7 +54,7 @@ test('buildKidsPrompt differs for scene vs item', () => {
   const item = buildKidsPrompt({ subject: 'slide', role: 'item' })
   assert.match(scene, /全景|环境/)
   assert.match(scene, /小区游乐场/)
-  assert.match(scene, /绘本画风|卡通兔/)
+  assert.match(scene, /儿童绘本|绘本|卡通兔/)
   assert.match(item, /居中/)
   assert.match(item, /slide/)
   assert.doesNotMatch(item, /全景/)
@@ -101,6 +101,46 @@ test('slotsForMiniLevel includes distractor option ids like fork', () => {
   assert.deepEqual(
     slots.filter((s) => s.role === 'item').map((s) => s.subject),
     ['chopsticks', 'fork'],
+  )
+})
+
+test('slotsForMiniLevel defaults to 1 scene + 4 item slots', () => {
+  const slots = slotsForMiniLevel(
+    {
+      target_words: ['park'],
+      scene: { setting: 'A sunny park' },
+      beats: [
+        {
+          type: 'find',
+          npc_say: 'Find the park!',
+          options: [
+            { id: 'park', correct: true },
+            { id: 'bus', correct: false },
+            { id: 'tree', correct: false },
+          ],
+        },
+        {
+          type: 'ask',
+          npc_say: 'Say park!',
+          expect: ['park'],
+          fallback: {
+            type: 'picture_choice',
+            options: [
+              { id: 'park', correct: true },
+              { id: 'kite', correct: false },
+            ],
+          },
+        },
+      ],
+    },
+    'A sunny park',
+  )
+  assert.equal(slots.length, 5)
+  assert.equal(slots[0]?.role, 'scene')
+  // 主词 + 全部干扰项都有独立道具槽，不再有文字占位图
+  assert.deepEqual(
+    slots.filter((s) => s.role === 'item').map((s) => s.subject),
+    ['park', 'bus', 'tree', 'kite'],
   )
 })
 

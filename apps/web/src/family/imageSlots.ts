@@ -3,8 +3,18 @@ export type ImageSlot = {
   role?: 'scene' | 'item'
 }
 
+/** 含 CJK/谚文/假名等非拉丁脚本时需要翻译成英文再喂给图片模型 */
+export function sceneNeedsTranslation(text: string): boolean {
+  const t = text.trim()
+  if (!t) return false
+  // 正向匹配非拉丁文字区段：希腊/西里尔/希伯来/阿拉伯/天城文/泰文/假名/谚文/CJK/全角标点
+  return /[\u0370-\u03ff\u0400-\u04ff\u0590-\u05ff\u0600-\u06ff\u0900-\u097f\u0e00-\u0e7f\u3040-\u30ff\u3130-\u318f\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\uff00-\uffef]/u.test(
+    t,
+  )
+}
+
 const SAFETY_PREFIX =
-  '儿童绘本插画，温暖明亮，简单卡通，统一友好绘本画风，可含一只可爱卡通兔角色氛围，适合4到6岁儿童，无文字水印，无暴力恐怖血腥，正方形构图，'
+  '儿童绘本插画，厚实友好描边，扁平柔和暖色，温暖明亮，画面简洁干净，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，正方形构图，'
 
 export function clampImageSlots(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
@@ -20,9 +30,9 @@ export function slotSubjectKey(subject: string): string {
 export function buildKidsPrompt(slot: ImageSlot): string {
   const subject = slot.subject.trim()
   if (slot.role === 'scene') {
-    return `${SAFETY_PREFIX}作为游戏主场景的环境全景背景，开阔画面，展示地点与氛围，不要把单个巨大道具放在画面正中，主题：${subject}`
+    return `${SAFETY_PREFIX}作为游戏主场景的远景环境背景，开阔画面，展示地点与氛围，道具少量点缀即可，不要出现任何巨大招牌或横幅，主题：${subject}`
   }
-  return `${SAFETY_PREFIX}作为儿童英语游戏中的单个道具或对象，居中，主题：${subject}`
+  return `${SAFETY_PREFIX}画面中心只画一个主体：${subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框`
 }
 
 function sceneSettingOf(level: Record<string, unknown>): string {
@@ -116,11 +126,12 @@ export function missingSlotsForImages(
 /**
  * 迷你关配图槽：场景用可编辑 scenePrompt，道具含目标词 + picture_choice 选项
  *（确保 fork 等干扰项也有独立插画，而不是文字占位）。
+ * 默认 1 背景 + 4 道具：覆盖主词 + find/ask 的全部干扰项。
  */
 export function slotsForMiniLevel(
   level: Record<string, unknown>,
   scenePrompt: string,
-  maxSlots = 4,
+  maxSlots = 5,
 ): ImageSlot[] {
   const max = clampImageSlots(maxSlots)
   const scene = level.scene && typeof level.scene === 'object' ? { ...(level.scene as object) } : {}
@@ -140,7 +151,7 @@ export function miniLevelMissingImageSlots(
   scenePrompt: string,
   imageBg: string | undefined,
   itemImages: string[] | undefined,
-  maxSlots = 4,
+  maxSlots = 5,
 ): ImageSlot[] {
   const slots = slotsForMiniLevel(level, scenePrompt, maxSlots)
   const images = [imageBg, ...(itemImages || [])].map((u) => u || '')

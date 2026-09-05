@@ -42,16 +42,16 @@ export type GenerateFamilyImagesResult = {
 }
 
 const SAFETY_PREFIX =
-  '儿童绘本插画，温暖明亮，简单卡通，统一友好绘本画风，可含一只可爱卡通兔角色氛围，适合4到6岁儿童，无文字水印，无暴力恐怖血腥，正方形构图，'
+  '儿童绘本插画，厚实友好描边，扁平柔和暖色，温暖明亮，画面简洁干净，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，正方形构图，'
 
 const NEGATIVE =
-  '文字,水印,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
+  '文字,字母,数字,乱码,招牌,标志,水印,签名,卡通兔子,兔子,小白兔,暴力,恐怖,血腥,写实照片,成人内容,畸形,低清晰度,复杂背景,杂物堆砌'
 
-/** 压缩后 data URL 上限（约 400KB raw ≈ 550KB base64） */
-const MAX_COMPRESSED_BYTES = 400_000
+/** 压缩后 data URL 上限（约 550KB raw ≈ 750KB base64） */
+const MAX_COMPRESSED_BYTES = 550_000
 const TONGYI_TIMEOUT_MS = 120_000
-const MAX_EDGE = 512
-const JPEG_QUALITY = 80
+const MAX_EDGE = 768
+const JPEG_QUALITY = 85
 
 function envKey(): string {
   return (
@@ -84,9 +84,9 @@ function slotSubjectKey(subject: string): string {
 export function buildKidsPrompt(slot: ImageSlot): string {
   const subject = slot.subject.trim()
   if (slot.role === 'scene') {
-    return `${SAFETY_PREFIX}作为游戏主场景的环境全景背景，开阔画面，展示地点与氛围，不要把单个巨大道具放在画面正中，主题：${subject}`
+    return `${SAFETY_PREFIX}作为游戏主场景的远景环境背景，开阔画面，展示地点与氛围，道具少量点缀即可，不要出现任何巨大招牌或横幅，主题：${subject}`
   }
-  return `${SAFETY_PREFIX}作为儿童英语游戏中的单个道具或对象，居中，主题：${subject}`
+  return `${SAFETY_PREFIX}画面中心只画一个主体：${subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框`
 }
 
 function mockDataUrl(label: string): string {
@@ -139,7 +139,7 @@ function isTimeoutError(err: unknown): boolean {
 }
 
 /**
- * 将原始图片 buffer 缩到最长边 512，输出 JPEG（控制 localStorage 体积）。
+ * 将原始图片 buffer 缩到最长边 768，输出 JPEG（控制存储体积）。
  */
 export async function compressImageBuffer(buf: Buffer): Promise<Buffer> {
   let quality = JPEG_QUALITY

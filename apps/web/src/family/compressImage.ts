@@ -1,5 +1,5 @@
-const MAX_EDGE = 512
-const MAX_CHARS = 550_000
+const MAX_EDGE = 768
+const MAX_CHARS = 750_000
 
 function canvasJpeg(bitmap: ImageBitmap, quality: number): string {
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height, 1))
@@ -15,7 +15,7 @@ function canvasJpeg(bitmap: ImageBitmap, quality: number): string {
 export async function compressImageBlob(blob: Blob): Promise<string> {
   const bitmap = await createImageBitmap(blob)
   try {
-    let quality = 0.8
+    let quality = 0.85
     let url = canvasJpeg(bitmap, quality)
     while (url.length > MAX_CHARS && quality > 0.4) {
       quality -= 0.15

@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
 import { apiUrl } from '../api/base'
 import { matchExpect } from './match'
+import { judgeTranscriptWithLlm } from './llmJudge'
 import { ensurePiperReady, speakPiper, stopPiper } from './piperTts'
 import {
   loadVoicePrefs,
@@ -158,16 +159,29 @@ export async function submitSpeech(opts: {
   matched: boolean
   source?: 'browser' | 'openai' | 'none' | 'local'
   hasAudio?: boolean
+  judged?: boolean
 }> {
   const text = opts.text?.trim() || ''
 
   // 已有识别文字（Vosk / 浏览器 / 打字）：本地匹配，App 无需电脑 API
   if (text) {
+    const matched = matchExpect(text, opts.expect)
+    if (matched) {
+      return {
+        transcript: text,
+        matched,
+        source: 'local',
+        hasAudio: Boolean(opts.blob),
+      }
+    }
+    // 严格匹配失败：孩子发音/离线转写常有偏差，LLM 模糊判定兜底
+    const judge = await judgeTranscriptWithLlm(text, opts.expect)
     return {
       transcript: text,
-      matched: matchExpect(text, opts.expect),
+      matched: Boolean(judge?.matched),
       source: 'local',
       hasAudio: Boolean(opts.blob),
+      judged: Boolean(judge?.judged),
     }
   }
 

@@ -45,6 +45,8 @@ export type FamilyMiniLevel = {
   level: LevelScript
   /** 可编辑出图主题；缺省用 level.scene.setting */
   scenePrompt?: string
+  /** scenePrompt 的英文译文缓存（配图用）；场景词变化时清空 */
+  scenePromptEn?: string
   itemPrompts?: string[]
   /** IndexedDB 图 id（持久化） */
   imageBgId?: string
@@ -226,6 +228,9 @@ function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
       ...(typeof o.scenePrompt === 'string' && o.scenePrompt.trim()
         ? { scenePrompt: o.scenePrompt.trim() }
         : {}),
+      ...(typeof o.scenePromptEn === 'string' && o.scenePromptEn.trim()
+        ? { scenePromptEn: o.scenePromptEn.trim() }
+        : {}),
       ...(Array.isArray(o.itemPrompts)
         ? { itemPrompts: o.itemPrompts.map(String).filter((s) => s.trim()) }
         : {}),
@@ -256,6 +261,7 @@ function slimMiniLevelForPersist(m: FamilyMiniLevel): FamilyMiniLevel {
     completed: Boolean(m.completed),
   }
   if (m.scenePrompt?.trim()) next.scenePrompt = m.scenePrompt.trim()
+  if (m.scenePromptEn?.trim()) next.scenePromptEn = m.scenePromptEn.trim()
   if (m.itemPrompts?.length) next.itemPrompts = m.itemPrompts
   if (m.imageBgId) next.imageBgId = m.imageBgId
   if (m.itemImageIds?.length) next.itemImageIds = m.itemImageIds
@@ -669,11 +675,35 @@ export function setMiniLevelScenePrompt(
   if (!prev?.miniLevels?.length) return null
   const prompt = scenePrompt.trim()
   if (!prompt) return null
-  const miniLevels = prev.miniLevels.map((m) =>
-    m.id === levelId ? { ...m, scenePrompt: prompt } : m,
-  )
+  const miniLevels = prev.miniLevels.map((m) => {
+    if (m.id !== levelId) return m
+    const next: FamilyMiniLevel = { ...m, scenePrompt: prompt }
+    // 场景词变了，英文缓存失效
+    if (next.scenePromptEn) delete next.scenePromptEn
+    return next
+  })
   if (!miniLevels.some((m) => m.id === levelId)) return null
   const next = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
+/** 缓存场景词英文译文（配图前调用；场景词本身不变） */
+export function cacheMiniLevelScenePromptEn(
+  date: string,
+  levelId: string,
+  scenePromptEn: string,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  const cur = prev?.miniLevels?.find((m) => m.id === levelId)
+  const promptEn = scenePromptEn.trim()
+  if (!cur || !promptEn || effectiveScenePrompt(cur) === promptEn) return null
+  const miniLevels = prev!.miniLevels!.map((m) =>
+    m.id === levelId ? { ...m, scenePromptEn: promptEn } : m,
+  )
+  const next = { ...prev!, miniLevels, updatedAt: Date.now() }
   store.days[date] = next
   saveFamilyStore(store)
   return next
@@ -689,7 +719,9 @@ export function resetMiniLevelScenePrompt(
   const miniLevels = prev.miniLevels.map((m) => {
     if (m.id !== levelId) return m
     const setting = String(m.level.scene?.setting || m.level.target_words?.[0] || 'playground')
-    return { ...m, scenePrompt: setting }
+    const next: FamilyMiniLevel = { ...m, scenePrompt: setting }
+    if (next.scenePromptEn) delete next.scenePromptEn
+    return next
   })
   if (!miniLevels.some((m) => m.id === levelId)) return null
   const next = { ...prev, miniLevels, updatedAt: Date.now() }
@@ -1118,7 +1150,7 @@ export function materializeMiniLevelForPlay(
   const level = structuredClone(mini.level)
   const mainWord = level.target_words[0] || 'fun'
   const scenePrompt = effectiveScenePrompt(mini)
-  const slots = slotsForMiniLevel(level as unknown as Record<string, unknown>, scenePrompt, 4)
+  const slots = slotsForMiniLevel(level as unknown as Record<string, unknown>, scenePrompt, 5)
   const images = [mini.imageBg || '', ...(mini.itemImages || [])]
   const bg = images[0] || svgPlaceholder(mainWord)
   level.scene.image = bg
