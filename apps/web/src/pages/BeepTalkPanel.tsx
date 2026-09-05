@@ -262,7 +262,10 @@ export function BeepTalkPanel({ talk, onComplete }: Props) {
       )}
 
       {phase === 'fallback' && node.fallback?.options && (
-        <div className="choice-row">
+        <div
+          className="choice-row"
+          style={{ ['--choice-count']: node.fallback.options.length } as CSSProperties}
+        >
           {node.fallback.options.map((opt) => (
             <button
               key={opt.id}

@@ -2,6 +2,7 @@
  * 家庭迷你 pack：一次生成 3–5 关，每关约一词一景（对齐官方 fruit 单关结构）。
  */
 import {
+  ensureIntroShowBeat,
   extractJson,
   normalizeFamilyLevel,
   validateFamilyLevel,
@@ -16,8 +17,11 @@ The pack is like the official "fruit forest" pack: several short levels, each fo
 
 CRITICAL beat field names (do NOT invent other names):
 - Every beat MUST have "type" and "npc_say" (never use "question" instead of npc_say).
+- The FIRST beat of EVERY level MUST be an introduce beat with show (main word picture):
+  {"type":"introduce","show":"placeholder","npc_say":"Look! park!","hint_say":"park"}
+- introduce and ask beats MUST have "show":"placeholder" (picture of the word).
 - ask beat example:
-  {"type":"ask","npc_say":"Say park!","expect":["park"],"hint_say":"Park!","success_say":"Yes!",
+  {"type":"ask","show":"placeholder","npc_say":"Say park!","expect":["park"],"hint_say":"Park!","success_say":"Yes!",
    "fallback":{"type":"picture_choice","options":[
      {"id":"park","image":"placeholder","correct":true},
      {"id":"bus","image":"placeholder","correct":false}
@@ -60,6 +64,7 @@ Rules:
 - Each level MUST focus on a DIFFERENT main word in target_words[0].
 - scene.setting MUST be a short PLACE / atmosphere line (Chinese or English OK). Do NOT paste the whole diary into setting.
 - Beat types: "introduce" | "ask" | "find". Keep npc_say simple English (max ~8 words).
+- FIRST beat of every level: introduce with show. Then alternate ask / find beats.
 - ask beats MUST have expect (array), hint_say, success_say, and fallback.picture_choice with >=2 options.
 - find beats MUST have options with >=2 items and one correct:true.
 - Distractor option ids may reuse other levels' main words or simple nouns (bus, cake, home, tree…).
@@ -133,6 +138,7 @@ export function parseValidatedFamilyPack(
     const entry = raw as { level?: unknown; photoHints?: unknown }
     let level = (entry.level || raw) as Record<string, unknown>
     level = normalizeFamilyLevel(level)
+    ensureIntroShowBeat(level)
     const err = validateFamilyLevel(level)
     if (err) throw new Error(`invalid_level:${err}`)
 

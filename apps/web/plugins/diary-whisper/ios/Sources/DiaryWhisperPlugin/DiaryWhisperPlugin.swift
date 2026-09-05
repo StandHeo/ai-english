@@ -194,26 +194,51 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
         return nil
     }
 
-    private func bundleModelURL(_ fileName: String) -> URL? {
-        if let url = Bundle.main.url(forResource: fileName, withExtension: nil, subdirectory: resourceRoot) {
-            return url
-        }
-        if let bundleUrl = Bundle.main.url(forResource: "DiaryWhisper", withExtension: "bundle"),
-           let rb = Bundle(url: bundleUrl)
-        {
-            if let url = rb.url(forResource: fileName, withExtension: nil, subdirectory: resourceRoot)
-                ?? rb.url(forResource: fileName, withExtension: nil)
+    /// SPM 资源在 `Bundle.module`（如 DiaryWhisper_DiaryWhisperPlugin.bundle）；CocoaPods 可能在主 Bundle。
+    private func resourceBundles() -> [Bundle] {
+        var bundles: [Bundle] = []
+        #if SWIFT_PACKAGE
+        bundles.append(Bundle.module)
+        #endif
+        let names = [
+            "DiaryWhisper_DiaryWhisperPlugin",
+            "DiaryWhisperPlugin",
+            "DiaryWhisper",
+        ]
+        for name in names {
+            if let url = Bundle.main.url(forResource: name, withExtension: "bundle"),
+               let b = Bundle(url: url)
             {
-                return url
+                bundles.append(b)
             }
-            let direct = rb.bundleURL.appendingPathComponent("\(resourceRoot)/\(fileName)")
-            if FileManager.default.fileExists(atPath: direct.path) { return direct }
         }
-        let candidates = [
-            Bundle.main.bundleURL.appendingPathComponent("\(resourceRoot)/\(fileName)"),
-            Bundle.main.resourceURL?.appendingPathComponent("\(resourceRoot)/\(fileName)"),
-        ].compactMap { $0 }
-        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+        bundles.append(.main)
+        var seen = Set<String>()
+        return bundles.filter { seen.insert($0.bundlePath).inserted }
+    }
+
+    private func bundleModelURL(_ fileName: String) -> URL? {
+        let relative = "\(resourceRoot)/\(fileName)"
+        for bundle in resourceBundles() {
+            if let url = bundle.url(forResource: fileName, withExtension: nil, subdirectory: resourceRoot)
+                ?? bundle.url(forResource: fileName, withExtension: nil)
+            {
+                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                if size > 1024 { return url }
+            }
+            let candidates = [
+                bundle.bundleURL.appendingPathComponent(relative),
+                bundle.resourceURL?.appendingPathComponent(relative),
+            ].compactMap { $0 }
+            if let hit = candidates.first(where: {
+                guard FileManager.default.fileExists(atPath: $0.path) else { return false }
+                let size = (try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                return size > 1024
+            }) {
+                return hit
+            }
+        }
+        return nil
     }
 
     @discardableResult

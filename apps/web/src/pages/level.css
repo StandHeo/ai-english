@@ -283,8 +283,9 @@ button.focus-item img {
 }
 
 .choice-row {
+  --choice-count: 2;
   display: flex;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
   max-width: 100%;
   justify-content: center;
@@ -295,15 +296,20 @@ button.focus-item img {
 }
 
 .choice-tile {
-  width: min(42vw, 36vh, 170px);
-  max-width: min(42vw, 36vh, 170px);
+  /* 按选项数量均分行宽：3 张以上也能整排放下，不再被屏幕边缘裁掉 */
+  width: min(
+    calc((100% - (var(--choice-count) - 1) * 14px) / var(--choice-count)),
+    36vh,
+    170px
+  );
   aspect-ratio: 1;
   border: 0;
   border-radius: 24px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .choice-tile img {
@@ -951,12 +957,15 @@ button.focus-item img {
   }
 
   .choice-row {
-    gap: 12px;
+    gap: 10px;
   }
 
   .choice-tile {
-    width: min(28vh, 22vw, 110px);
-    max-width: min(28vh, 22vw, 110px);
+    width: min(
+      calc((100% - (var(--choice-count) - 1) * 10px) / var(--choice-count)),
+      28vh,
+      110px
+    );
     padding: 6px;
     border-radius: 16px;
   }

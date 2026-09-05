@@ -14,6 +14,7 @@ apps/web/.vosk-cache/
 .idea/
 .vscode/
 apps/web/plugins/diary-whisper/android/build/
+apps/web/plugins/diary-whisper/android/src/main/assets/diary-whisper/*.bin
 apps/web/plugins/diary-whisper/ios/Frameworks/*.xcframework/
 apps/web/plugins/diary-whisper/ios/Resources/diary-whisper/*.bin
 apps/web/plugins/piper-tts/android/build/
@@ -23,4 +24,5 @@ apps/web/plugins/piper-tts/android/src/main/assets/piper-tts/*.tar.bz2
 apps/web/plugins/piper-tts/ios/Frameworks/*.xcframework/
 apps/web/plugins/piper-tts/ios/Resources/piper-tts/vits-*/
 apps/web/plugins/piper-tts/ios/Resources/piper-tts/*.tar.bz2
+apps/web/plugins/*/.swiftpm/
 .whisper-build/

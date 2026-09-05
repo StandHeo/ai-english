@@ -25,9 +25,15 @@ let package = Package(
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 "whisper",
             ],
-            path: "ios/Sources/DiaryWhisperPlugin",
+            // path 设为 ios/，资源必须在 target 路径内，否则会 SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE
+            path: "ios",
+            exclude: [
+                "Frameworks",
+                "Resources/diary-whisper/README.md",
+            ],
+            sources: ["Sources/DiaryWhisperPlugin"],
             resources: [
-                .copy("../../Resources/diary-whisper")
+                .copy("Resources/diary-whisper")
             ],
             linkerSettings: [
                 .linkedLibrary("c++"),

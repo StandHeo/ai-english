@@ -7,6 +7,7 @@ import {
   loadApprovedLevels,
   loadLevel,
 } from '../content/loader'
+import { shuffleLevelOptions } from '../content/shuffleLevelOptions'
 import { addPlaySeconds, completeLevel, isDailyLimitReached, loadProgress } from '../progress/store'
 import { cancelSpeak, requestTts, submitSpeech } from '../voice/client'
 import { isMicAllowedByBrowser, pageProtocolHint } from '../voice/secureContext'
@@ -187,7 +188,8 @@ export function LevelPage({ onProgress }: Props) {
       hinted ? Promise.resolve(hinted) : findPackIdForLevel(levelId),
     ])
       .then(([script, pid]) => {
-        setLevel(script)
+        // 正确答案位置随机化：内容源几乎总把 correct 放第一，重排防背位置
+        setLevel(shuffleLevelOptions(script))
         setPackId(pid)
         if (!script.scene.video) setSceneReady(true)
       })
@@ -844,7 +846,10 @@ export function LevelPage({ onProgress }: Props) {
           )}
 
           {(phase === 'find' || phase === 'fallback') && findOptions && (
-            <div className="choice-row">
+            <div
+              className="choice-row"
+              style={{ ['--choice-count']: findOptions.length } as CSSProperties}
+            >
               {findOptions.map((opt) => (
                 <button
                   key={opt.id}

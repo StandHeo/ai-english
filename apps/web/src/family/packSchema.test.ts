@@ -58,8 +58,60 @@ test('parseValidatedFamilyPack accepts 3 levels', () => {
   assert.deepEqual(parsed.mainWords, ['park', 'slide', 'ball'])
 })
 
-test('parseValidatedFamilyPack rejects fewer than 3 levels', () => {
+test('parseValidatedFamilyPack guarantees an intro show beat first', () => {
+  const findFirst = (word: string) => ({
+    level: {
+      id: `family-20260902-${word}`,
+      approved: true,
+      title: `${word} Day`,
+      target_words: [word],
+      scene: { setting: `A sunny ${word} place`, image: 'placeholder', character: 'bunny' },
+      beats: [
+        {
+          type: 'find',
+          npc_say: `Find ${word}`,
+          hint_say: word,
+          success_say: 'Yes!',
+          options: [
+            { id: word, image: 'placeholder', correct: true },
+            { id: 'cake', image: 'placeholder', correct: false },
+          ],
+        },
+        {
+          type: 'ask',
+          npc_say: `Say ${word}`,
+          expect: [word],
+          hint_say: word,
+          success_say: 'Yes!',
+          fallback: {
+            type: 'picture_choice',
+            options: [
+              { id: word, image: 'placeholder', correct: true },
+              { id: 'bus', image: 'placeholder', correct: false },
+            ],
+          },
+        },
+        { type: 'introduce', npc_say: 'Bye!' },
+      ],
+      reward: { sticker: `s-${word}`, stickerImage: 'placeholder', stars: 1 },
+    },
+  })
   const content = JSON.stringify({
+    pack: { title: 'Fun' },
+    levels: [findFirst('park'), findFirst('slide'), findFirst('ball')],
+  })
+  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 3)
+  assert.equal(parsed.levels.length, 3)
+  for (const { level } of parsed.levels) {
+    const beats = level.beats as Record<string, unknown>[]
+    assert.equal(beats[0]?.type, 'introduce')
+    assert.equal(beats[0]?.show, 'placeholder')
+    // 拍数上限 6：插入 intro 后不能超
+    assert.ok(beats.length <= 6)
+  }
+})
+
+test('parseValidatedFamilyPack rejects fewer than 3 levels', () => {  const content = JSON.stringify({
     pack: { title: 'X' },
     levels: [oneLevel('park'), oneLevel('slide')],
   })

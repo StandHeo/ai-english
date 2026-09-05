@@ -114,11 +114,12 @@ export function FamilyCalendarPage() {
         className="play-today"
         onClick={() => {
           const day = getDay(today)
-          if (!day?.level) {
+          if (!dayHasPlayableContent(day)) {
             window.alert('今天还没有家庭关卡。请让家长先做「家庭日记」并生成关卡。')
             return
           }
-          navigate(`/family/${today}/play`)
+          // 迷你 pack → 当日关卡地图；旧单关也会由 DayPack 页转到 /play
+          navigate(`/family/${today}`)
         }}
       >
         玩今天

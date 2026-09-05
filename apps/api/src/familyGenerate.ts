@@ -194,6 +194,22 @@ export function normalizeFamilyLevel(level: Record<string, unknown>): Record<str
   return { ...level, beats }
 }
 
+/** 与 apps/web levelSchema.ensureIntroShowBeat 对齐 */
+export function ensureIntroShowBeat(level: Record<string, unknown>): void {
+  const beats = Array.isArray(level.beats) ? (level.beats as Record<string, unknown>[]) : []
+  const first = beats[0]
+  if (first && first.type === 'introduce') {
+    if (!String(first.show || '').trim()) first.show = 'placeholder'
+    return
+  }
+  const words = Array.isArray(level.target_words) ? level.target_words.map(String) : []
+  const word = (words[0] || '').trim() || 'fun'
+  level.beats = [
+    { type: 'introduce', show: 'placeholder', npc_say: `Look! ${word}!`, hint_say: word },
+    ...beats,
+  ].slice(0, 6)
+}
+
 export function validateFamilyLevel(level: unknown): string | null {
   if (!level || typeof level !== 'object') return 'level_not_object'
   const L = level as Record<string, unknown>
@@ -491,6 +507,7 @@ Return JSON only.`
       iconColors?: unknown
     }
     const level = parsed.level || parsed
+    ensureIntroShowBeat(level as Record<string, unknown>)
     const err = validateFamilyLevel(level)
     if (err) throw new Error(`invalid_level:${err}`)
     const hints = Array.isArray(parsed.photoHints)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import {
@@ -44,8 +44,6 @@ export function FamilyLevelPage({ onProgress }: Props) {
   )
   const [retries, setRetries] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [showDevType, setShowDevType] = useState(false)
-  const [devText, setDevText] = useState('')
   const [micTip, setMicTip] = useState<string | null>(null)
   const [celeb, setCeleb] = useState<{
     variant: CelebrateVariant
@@ -95,8 +93,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
       finishingRef.current = false
       startedAt.current = Date.now()
       if (!Capacitor.isNativePlatform() && (!isMicAllowedByBrowser() || pageProtocolHint() === 'http')) {
-        setMicTip('当前可能无法开麦克风，可用右下角打字。')
-        setShowDevType(true)
+        setMicTip('当前可能无法开麦克风，请检查权限～')
       }
     })()
     return () => {
@@ -221,7 +218,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
       if (demo) await requestTts(demo)
       setBusy(false)
       setPhase('listen')
-      setMicTip('再试一次，或点右下角打字')
+      setMicTip('再试一次，大声说～')
       return
     }
     setBusy(false)
@@ -237,19 +234,16 @@ export function FamilyLevelPage({ onProgress }: Props) {
     try {
       if (capture.error === 'denied') {
         setMicTip('请允许麦克风权限')
-        setShowDevType(true)
         setPhase('listen')
         return
       }
       if (capture.error === 'insecure') {
-        setMicTip('当前环境无法开麦，请用打字')
-        setShowDevType(true)
+        setMicTip('当前环境无法开麦，改用点图继续')
         setPhase('fallback')
         return
       }
       if (!capture.transcript && !capture.blob) {
-        setShowDevType(true)
-        setMicTip('没有听到，请再说或打字')
+        setMicTip('没有听到，请再说一次')
         setPhase('listen')
         return
       }
@@ -260,8 +254,7 @@ export function FamilyLevelPage({ onProgress }: Props) {
       })
       await onOralResult(result.matched)
     } catch {
-      setMicTip('识别出错，可打字再试')
-      setShowDevType(true)
+      setMicTip('识别出错，请再试一次')
       setPhase('listen')
     } finally {
       setBusy(false)
@@ -279,7 +272,6 @@ export function FamilyLevelPage({ onProgress }: Props) {
     )
     if (result === 'started') {
       setMicTip('listening')
-      setShowDevType(false)
       return
     }
     cancelAutoStop()
@@ -334,7 +326,10 @@ export function FamilyLevelPage({ onProgress }: Props) {
         />
       )}
       {(phase === 'find' || phase === 'fallback') && findOptions && (
-        <div className="choice-row">
+        <div
+          className="choice-row"
+          style={{ ['--choice-count']: findOptions.length } as CSSProperties}
+        >
           {findOptions.map((opt) => (
             <button
               key={opt.id}
@@ -352,24 +347,6 @@ export function FamilyLevelPage({ onProgress }: Props) {
       ) : phase === 'celebrate' ? (
         <div className="burst" />
       ) : null}
-      <button className="dev-toggle" type="button" onClick={() => setShowDevType((v) => !v)}>
-        ·
-      </button>
-      {showDevType && (phase === 'listen' || phase === 'fallback') && (
-        <div className="dev-type">
-          <input value={devText} onChange={(e) => setDevText(e.target.value)} placeholder="park" />
-          <button
-            type="button"
-            onClick={() => {
-              void submitSpeech({ text: devText, expect: beat?.expect || [] }).then((r) =>
-                onOralResult(r.matched),
-              )
-            }}
-          >
-            OK
-          </button>
-        </div>
-      )}
     </div>
   )
 }

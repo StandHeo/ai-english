@@ -184,6 +184,25 @@ export function normalizeFamilyLevel(level: Record<string, unknown>): Record<str
   return { ...level, beats }
 }
 
+/**
+ * 对齐官方包节奏：第一拍必须是带 show 大图的 introduce（先看图再开口/点选）。
+ * LLM 生成的关卡常直接以 find/ask 开头，孩子没看过目标词图，不知道该说什么。
+ */
+export function ensureIntroShowBeat(level: Record<string, unknown>): void {
+  const beats = Array.isArray(level.beats) ? (level.beats as Record<string, unknown>[]) : []
+  const first = beats[0]
+  if (first && first.type === 'introduce') {
+    if (!String(first.show || '').trim()) first.show = 'placeholder'
+    return
+  }
+  const words = Array.isArray(level.target_words) ? level.target_words.map(String) : []
+  const word = (words[0] || '').trim() || 'fun'
+  level.beats = [
+    { type: 'introduce', show: 'placeholder', npc_say: `Look! ${word}!`, hint_say: word },
+    ...beats,
+  ].slice(0, 6)
+}
+
 export function validateFamilyLevel(level: unknown): string | null {
   if (!level || typeof level !== 'object') return 'level_not_object'
   const L = level as Record<string, unknown>

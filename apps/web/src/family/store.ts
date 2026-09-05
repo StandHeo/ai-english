@@ -1,4 +1,5 @@
 import type { LevelScript } from '../types'
+import { shuffleLevelOptions } from '../content/shuffleLevelOptions'
 import { deleteAudioClip, putAudioClip } from './audioDb'
 import {
   deleteImageBlob,
@@ -1036,9 +1037,28 @@ function svgPlaceholder(word: string): string {
     `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
       <rect width="100%" height="100%" fill="#ffe8c8"/>
       <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-        font-family="sans-serif" font-size="48" fill="#5a3d1b">${safe}</text>
+        font-family="sans-serif" font-size="88" fill="#5a3d1b">${safe}</text>
     </svg>`,
   )}`
+}
+
+/**
+ * 对齐官方包节奏：每关第一拍必须是带大图的 introduce（先看图再开口/点选）。
+ * LLM 生成的关卡常直接以 find/ask 开头，孩子没看过目标词图片，不知道该说什么。
+ */
+function ensureIntroBeatFirst(level: LevelScript): void {
+  const first = level.beats[0]
+  if (first && first.type === 'introduce') {
+    if (!first.show) first.show = 'placeholder'
+    return
+  }
+  const word = level.target_words[0] || 'fun'
+  level.beats.unshift({
+    type: 'introduce',
+    show: 'placeholder',
+    npc_say: `Look! ${word}!`,
+    hint_say: word,
+  })
 }
 
 /** Apply album/placeholder images onto a copy of the level for play (legacy day) */
@@ -1065,9 +1085,12 @@ export function materializeLevelForPlay(day: FamilyDayRecord): LevelScript {
     return placeholder(word || 'fun')
   }
 
+  ensureIntroBeatFirst(level)
   level.beats = level.beats.map((beat, bi) => {
     const word = beat.expect?.[0] || level.target_words[bi % level.target_words.length] || 'fun'
-    const show = beat.show ? resolveWordImage(word) : beat.show
+    // introduce / ask 拍必须有图（对齐官方包）：孩子先看图，才知道要说什么
+    const showRef = beat.show || (beat.type !== 'find' ? 'placeholder' : undefined)
+    const show = showRef ? resolveWordImage(beat.expect?.[0] || word) : undefined
     const mapOpts = (opts?: { id: string; image: string; correct: boolean }[]) =>
       opts?.map((o) => ({
         ...o,
@@ -1082,7 +1105,7 @@ export function materializeLevelForPlay(day: FamilyDayRecord): LevelScript {
         : beat.fallback,
     }
   })
-  return level
+  return shuffleLevelOptions(level)
 }
 
 /** Materialize one mini-pack level for play */
@@ -1108,6 +1131,8 @@ export function materializeMiniLevelForPlay(
     if (w === mainWord.toLowerCase()) {
       const item = firstItemImage(slots, images)
       if (item) return item
+      // 没生成道具图时退回背景图：场景里通常画着目标物，好过文字占位
+      if (images[0]) return images[0]
     }
     // 其它关同词可复用（同日迷你包）
     const other = day.miniLevels?.find(
@@ -1120,9 +1145,12 @@ export function materializeMiniLevelForPlay(
     return svgPlaceholder(word || 'fun')
   }
 
+  ensureIntroBeatFirst(level)
   level.beats = level.beats.map((beat, bi) => {
     const word = beat.expect?.[0] || level.target_words[bi % level.target_words.length] || 'fun'
-    const show = beat.show ? resolveWordImage(word) : beat.show
+    // introduce / ask 拍必须有图（对齐官方包）：孩子先看图，才知道要说什么
+    const showRef = beat.show || (beat.type !== 'find' ? 'placeholder' : undefined)
+    const show = showRef ? resolveWordImage(beat.expect?.[0] || word) : undefined
     const mapOpts = (opts?: { id: string; image: string; correct: boolean }[]) =>
       opts?.map((o) => ({
         ...o,
@@ -1137,7 +1165,7 @@ export function materializeMiniLevelForPlay(
         : beat.fallback,
     }
   })
-  return level
+  return shuffleLevelOptions(level)
 }
 
 export function effectiveScenePrompt(mini: FamilyMiniLevel): string {
