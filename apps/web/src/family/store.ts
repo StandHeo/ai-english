@@ -417,6 +417,74 @@ export function listDaysWithVoice(): string[] {
     .map((d) => d.date)
 }
 
+export type FamilyDaySearchHit = {
+  date: string
+  title: string
+  /** 命中的字段名（故事 / 日记 / 关卡 / 主词 / 场景词 / 提示词…） */
+  fields: string[]
+  /** 命中片段预览（最多 2 条） */
+  snippets: string[]
+  completed: boolean
+  levelCount: number
+}
+
+function snippetOf(text: string, max = 60): string {
+  const t = text.replace(/\s+/g, ' ').trim()
+  return t.length > max ? `${t.slice(0, max)}…` : t
+}
+
+/** 在单天的日记与关卡内容里匹配关键词（大小写不敏感），返回命中字段与片段 */
+export function searchOneFamilyDay(
+  day: FamilyDayRecord,
+  query: string,
+): FamilyDaySearchHit | null {
+  const q = query.trim().toLowerCase()
+  if (!q) return null
+  const hits: { field: string; text: string }[] = []
+  const push = (field: string, text: unknown) => {
+    const t = String(text ?? '').trim()
+    if (t && t.toLowerCase().includes(q)) hits.push({ field, text: t })
+  }
+
+  push('故事', day.story)
+  for (const m of day.messages) push('日记', m.text)
+  if (day.pack?.title) push('包名', day.pack.title)
+  for (const m of day.miniLevels || []) {
+    push('关卡', m.level.title)
+    for (const w of m.level.target_words || []) push('主词', w)
+    push('场景词', effectiveScenePrompt(m))
+    push('场景英文', m.scenePromptEn)
+    for (const b of m.level.beats || []) {
+      push('台词', b.npc_say)
+      push('台词', b.hint_say)
+      push('台词', b.success_say)
+    }
+  }
+  for (const h of day.photoHints || []) push('提示词', h)
+
+  if (!hits.length) return null
+  const levels = day.miniLevels || []
+  const mainWord = levels[0]?.level.target_words?.[0]
+  return {
+    date: day.date,
+    title: day.pack?.title || (mainWord ? `${mainWord}…` : '家庭日记'),
+    fields: [...new Set(hits.map((h) => h.field))],
+    snippets: hits.slice(0, 2).map((h) => `【${h.field}】${snippetOf(h.text)}`),
+    completed: Boolean(day.completed),
+    levelCount: levels.length,
+  }
+}
+
+/** 跨日期搜索：日期 / 故事 / 日记 / 关卡标题 / 主词 / 场景词 / 台词 / 提示词 */
+export function searchFamilyDays(query: string): FamilyDaySearchHit[] {
+  const q = query.trim()
+  if (!q) return []
+  return Object.values(loadFamilyStore().days)
+    .map((d) => searchOneFamilyDay(d, q))
+    .filter((h): h is FamilyDaySearchHit => h !== null)
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
 /** Migrate legacy story-only days into a single text message. */
 export function ensureMessagesMigrated(date: string): FamilyDayRecord {
   const store = loadFamilyStore()

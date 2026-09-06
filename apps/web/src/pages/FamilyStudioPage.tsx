@@ -84,6 +84,7 @@ export function FamilyStudioPage() {
   const [transcribing, setTranscribing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [levelFilter, setLevelFilter] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const savingVoiceRef = useRef(false)
@@ -937,6 +938,17 @@ export function FamilyStudioPage() {
             <p className="muted">
               每关一词一景。可中英文编辑场景主题后再「云端配图」；道具词尽量保留英文主词，以免点图对不上。
             </p>
+            {miniLevels.length > 3 && (
+              <input
+                type="search"
+                className="family-search-box"
+                placeholder="按主词 / 标题 / 场景词过滤本包关卡…"
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+                aria-label="过滤本包关卡"
+                style={{ width: '100%', marginBottom: 10 }}
+              />
+            )}
             {hints.length > 0 && (
               <>
                 <p className="muted">相册搜图提示：</p>
@@ -980,7 +992,22 @@ export function FamilyStudioPage() {
               点「全部配图」会按关排队生成（慢属正常），不用一关关点。
             </p>
             <ul className="mini-level-edit" style={{ listStyle: 'none', padding: 0 }}>
-              {miniLevels.map((m, i) => {
+              {miniLevels
+                .filter((m) => {
+                  const q = levelFilter.trim().toLowerCase()
+                  if (!q) return true
+                  const word = (m.level.target_words?.[0] || '').toLowerCase()
+                  const hay = [
+                    word,
+                    m.level.title || '',
+                    effectiveScenePrompt(m),
+                    m.scenePromptEn || '',
+                  ]
+                    .join(' ')
+                    .toLowerCase()
+                  return hay.includes(q)
+                })
+                .map((m, i) => {
                 const word = m.level.target_words?.[0] || m.id
                 return (
                   <li

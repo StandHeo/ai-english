@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { dayHasPlayableContent, getDay, listDaysWithLevels, listDaysWithVoice, todayKey } from '../family/store'
+import {
+  dayHasPlayableContent,
+  getDay,
+  listDaysWithLevels,
+  listDaysWithVoice,
+  searchFamilyDays,
+  todayKey,
+} from '../family/store'
 import './family-calendar.css'
 
 function monthMatrix(year: number, month: number) {
@@ -19,8 +26,11 @@ export function FamilyCalendarPage() {
   const today = todayKey()
   const now = new Date()
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() })
+  const [query, setQuery] = useState('')
   const daysWith = useMemo(() => new Set(listDaysWithLevels().map((d) => d.date)), [])
   const daysVoice = useMemo(() => new Set(listDaysWithVoice()), [])
+  const searchHits = useMemo(() => searchFamilyDays(query), [query])
+  const searching = query.trim().length > 0
 
   const cells = monthMatrix(cursor.y, cursor.m)
 
@@ -52,7 +62,54 @@ export function FamilyCalendarPage() {
         <h1>家庭日历</h1>
       </header>
 
-      <div className="month-nav">
+      <input
+        type="search"
+        className="family-search-box"
+        placeholder="搜索日记 / 关卡词 / 场景 / 提示词…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="搜索家庭日记与关卡"
+      />
+
+      {searching && (
+        <div className="family-search-results">
+          {searchHits.length === 0 ? (
+            <p className="muted">没有匹配的日记或关卡</p>
+          ) : (
+            searchHits.map((hit) => (
+              <div key={hit.date} className="family-search-hit">
+                <div className="family-search-hit-head">
+                  <strong>{hit.date}</strong>
+                  <span className="muted">
+                    {hit.title}
+                    {hit.levelCount ? ` · ${hit.levelCount} 关` : ''}
+                    {hit.completed ? ' · 已通关' : ''}
+                  </span>
+                </div>
+                {hit.snippets.map((s, i) => (
+                  <p key={i} className="family-search-snippet">
+                    {s}
+                  </p>
+                ))}
+                <div className="family-search-actions">
+                  <button type="button" onClick={() => navigate(`/family/${hit.date}`)}>
+                    打开关卡
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => navigate(`/family/studio?date=${hit.date}`)}
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <div className="month-nav" style={searching ? { display: 'none' } : undefined}>
         <button
           type="button"
           onClick={() =>
@@ -80,12 +137,12 @@ export function FamilyCalendarPage() {
         </button>
       </div>
 
-      <div className="dow">
+      <div className="dow" style={searching ? { display: 'none' } : undefined}>
         {['日', '一', '二', '三', '四', '五', '六'].map((x) => (
           <span key={x}>{x}</span>
         ))}
       </div>
-      <div className="grid">
+      <div className="grid" style={searching ? { display: 'none' } : undefined}>
         {cells.map((day, i) => {
           if (day == null) return <span key={`e-${i}`} className="cell empty" />
           const key = dateOf(day)
@@ -108,10 +165,13 @@ export function FamilyCalendarPage() {
         })}
       </div>
 
-      <p className="legend">有颜色的日子表示已生成关卡 · 小圆点表示有日记语音</p>
+      <p className="legend" style={searching ? { display: 'none' } : undefined}>
+        有颜色的日子表示已生成关卡 · 小圆点表示有日记语音
+      </p>
       <button
         type="button"
         className="play-today"
+        style={searching ? { display: 'none' } : undefined}
         onClick={() => {
           const day = getDay(today)
           if (!dayHasPlayableContent(day)) {
