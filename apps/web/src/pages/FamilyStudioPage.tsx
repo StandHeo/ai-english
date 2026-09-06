@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { LevelScript } from '../types'
+import type { FamilyDayRecord } from '../family/store'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
@@ -10,7 +11,13 @@ import {
   imageCloudLabel,
   nativeFamilyCloudReady,
 } from '../family/providers'
-import { miniLevelMissingImageSlots, sceneNeedsTranslation, slotsForMiniLevel } from '../family/imageSlots'
+import {
+  buildKidsPrompt,
+  miniLevelMissingImageSlots,
+  sceneNeedsTranslation,
+  slotRoleLabel,
+  slotsForMiniLevel,
+} from '../family/imageSlots'
 
 function isValidDateKey(raw: string | null): raw is string {
   return Boolean(raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) && raw <= todayKey())
@@ -39,7 +46,9 @@ import {
   saveGeneratedPack,
   setDayImages,
   setMiniLevelImages,
+  setMiniLevelItemPrompt,
   setMiniLevelScenePrompt,
+  setMiniLevelSlotImage,
   todayKey,
   updateMessageText,
   type FamilyDiaryMessage,
@@ -58,6 +67,46 @@ import {
 } from '../voice/useDiaryRecorder'
 import { blobToWav16kBase64 } from '../voice/wavEncode'
 import './family-studio.css'
+
+type ImageSlotLike = { subject: string; role?: 'scene' | 'item' }
+
+/** 一组槽位 → 一组图（App 直连云或走电脑 API），供整关/单张配图共用 */
+async function fetchSlotImages(
+  slots: ImageSlotLike[],
+  opts: {
+    date: string
+    cloud: string
+    cloudKey: string
+    useDirect: boolean
+  },
+): Promise<string[]> {
+  if (opts.useDirect) {
+    const payload = await generateFamilyImagesDirect({
+      slots,
+      apiKey: opts.cloudKey,
+      provider: opts.cloud as 'tongyi' | 'agnes',
+      maxSlots: Math.max(slots.length, 3),
+    })
+    return payload.images
+  }
+  const res = await apiJson('/api/family/generate-images', {
+    method: 'POST',
+    headers: {
+      ...(opts.cloudKey && opts.cloud === 'tongyi' ? { 'x-tongyi-key': opts.cloudKey } : {}),
+      ...(opts.cloudKey && opts.cloud === 'agnes' ? { 'x-agnes-key': opts.cloudKey } : {}),
+    },
+    body: {
+      date: opts.date,
+      maxSlots: Math.max(slots.length, 3),
+      imageProvider: opts.cloud,
+      slots,
+      apiKey: opts.cloudKey || undefined,
+    },
+    timeoutMs: 300_000,
+  })
+  if (!res.ok) throw new Error(res.error || String(res.status))
+  return Array.isArray(res.data.images) ? (res.data.images as string[]) : []
+}
 
 export function FamilyStudioPage() {
   const navigate = useNavigate()
@@ -84,6 +133,7 @@ export function FamilyStudioPage() {
   const [transcribing, setTranscribing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [levelFilter, setLevelFilter] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -332,34 +382,8 @@ export function FamilyStudioPage() {
         return p
       }
 
-      const fetchSlots = async (slots: { subject: string; role?: 'scene' | 'item' }[]) => {
-        if (useDirect) {
-          const payload = await generateFamilyImagesDirect({
-            slots,
-            apiKey: cloudKey,
-            provider: cloud,
-            maxSlots: Math.max(slots.length, 3),
-          })
-          return payload.images
-        }
-        const res = await apiJson('/api/family/generate-images', {
-          method: 'POST',
-          headers: {
-            ...(cloudKey && cloud === 'tongyi' ? { 'x-tongyi-key': cloudKey } : {}),
-            ...(cloudKey && cloud === 'agnes' ? { 'x-agnes-key': cloudKey } : {}),
-          },
-          body: {
-            date,
-            maxSlots: Math.max(slots.length, 3),
-            imageProvider: cloud,
-            slots,
-            apiKey: cloudKey || undefined,
-          },
-          timeoutMs: 300_000,
-        })
-        if (!res.ok) throw new Error(res.error || String(res.status))
-        return Array.isArray(res.data.images) ? (res.data.images as string[]) : []
-      }
+      const fetchSlots = async (slots: ImageSlotLike[]) =>
+        fetchSlotImages(slots, { date, cloud, cloudKey, useDirect })
 
       await mapPool(targets, conc, async (mini) => {
         const word = mini.level.target_words?.[0] || 'item'
@@ -369,6 +393,7 @@ export function FamilyStudioPage() {
           mini.level as unknown as Record<string, unknown>,
           scenePrompt,
           5,
+          mini.itemPrompts,
         )
         try {
           let list: string[]
@@ -630,23 +655,33 @@ export function FamilyStudioPage() {
     await requestMiniLevelImages(day!.miniLevels || [], { onlyMissingBg: true })
   }
 
+  async function refreshMiniLevels(day: FamilyDayRecord | null, statusText: string) {
+    if (!day) return
+    const hydrated = await hydrateFamilyDayImages(day)
+    setMiniLevels(hydrated.miniLevels || [])
+    setStatus(statusText)
+  }
+
   function saveScenePrompt(levelId: string, value: string) {
     const day = setMiniLevelScenePrompt(date, levelId, value)
     if (day) {
-      setMiniLevels(day.miniLevels || [])
-      setStatus('已保存场景词')
+      void refreshMiniLevels(day, '已保存场景词')
     } else {
       setStatus('场景词不能为空')
     }
   }
 
   function resetScenePrompt(levelId: string) {
+    // 先让 textarea 失焦提交未保存的编辑（onBlur 保存是同步写盘），
+    // 再执行重置，避免两次写入竞态；同时键盘先收起，减少 WebView resize 抖动
+    const active = document.activeElement as HTMLElement | null
+    if (active && active !== document.body) active.blur()
     const day = resetMiniLevelScenePrompt(date, levelId)
     if (day) {
-      setMiniLevels(day.miniLevels || [])
-      setStatus('已重置为关卡默认场景')
+      void refreshMiniLevels(day, '已重置为关卡默认场景')
     }
   }
+
 
   /** 手动把某一关的（中文）场景词翻译成英文并缓存；失败回退原文 */
   async function translateOneScene(levelId: string) {
@@ -724,6 +759,53 @@ export function FamilyStudioPage() {
     const mini = day?.miniLevels?.find((m) => m.id === levelId)
     if (!mini) return
     await requestMiniLevelImages([mini])
+  }
+
+  /** 单张重画：只重新生成该槽，不动其它图 */
+  async function redrawOneSlot(mini: FamilyMiniLevel, slotIndex: number) {
+    const day = getDay(date)
+    const cur = day?.miniLevels?.find((m) => m.id === mini.id)
+    if (!cur) return
+    const cloud = getImageCloudProvider()
+    const cloudName = imageCloudLabel(cloud)
+    const cloudKey = getImageCloudApiKey()
+    const useDirect = isNativeApp() && Boolean(cloudKey)
+    if (isNativeApp() && !nativeFamilyCloudReady(Boolean(cloudKey), getApiBase())) {
+      setStatus(`请到设置填写${cloudName} Key`)
+      return
+    }
+    const sceneFinal = cur.scenePromptEn?.trim() || effectiveScenePrompt(cur)
+    const slots = slotsForMiniLevel(
+      cur.level as unknown as Record<string, unknown>,
+      sceneFinal,
+      5,
+      cur.itemPrompts,
+    )
+    const slot = slots[slotIndex]
+    if (!slot) return
+    setRedrawSlot({ levelId: cur.id, slotIndex })
+    setStatus(`${cloudName}重画第 ${slotIndex + 1} 张（${slot.subject}）…`)
+    try {
+      const images = await fetchSlotImages([slot], {
+        date,
+        cloud,
+        cloudKey,
+        useDirect,
+      })
+      const img = images[0]
+      if (!img) throw new Error('生成结果为空')
+      const updated = await setMiniLevelSlotImage(date, cur.id, slotIndex, img)
+      if (updated) {
+        const hydrated = await hydrateFamilyDayImages(updated)
+        setMiniLevels(hydrated.miniLevels || [])
+        setStatus(`已重画第 ${slotIndex + 1} 张（${slot.subject}）`)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setStatus(`${cloudName}重画失败（${msg.slice(0, 80)}），可再试一次`)
+    } finally {
+      setRedrawSlot(null)
+    }
   }
 
   async function onPickFiles(files: FileList | null) {
@@ -966,7 +1048,7 @@ export function FamilyStudioPage() {
                 disabled={busy || imaging || recording || transcribing}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '全部配图中…' : '全部配图'}
+                {imaging ? '配图中…' : '全部配图'}
               </button>
               <button
                 type="button"
@@ -1008,8 +1090,8 @@ export function FamilyStudioPage() {
                   return hay.includes(q)
                 })
                 .map((m, i) => {
-                const word = m.level.target_words?.[0] || m.id
-                return (
+                  const word = m.level.target_words?.[0] || m.id
+                  return (
                   <li
                     key={m.id}
                     style={{
@@ -1039,11 +1121,18 @@ export function FamilyStudioPage() {
                     )}
                     <textarea
                       defaultValue={effectiveScenePrompt(m)}
-                      key={`${m.id}-${m.scenePrompt || ''}`}
+                      key={`${m.id}-${effectiveScenePrompt(m)}`}
                       rows={3}
+                      onFocus={(e) => e.currentTarget.dataset.editing = '1'}
+                      onChange={(e) => {
+                        // 输入中标记，避免重渲染时被 defaultValue 重置
+                        e.currentTarget.dataset.editing = '1'
+                      }}
                       onBlur={(e) => {
-                        if (e.target.value.trim() !== effectiveScenePrompt(m)) {
-                          saveScenePrompt(m.id, e.target.value)
+                        e.currentTarget.dataset.editing = '0'
+                        const next = e.target.value.trim()
+                        if (next && next !== effectiveScenePrompt(m)) {
+                          saveScenePrompt(m.id, next)
                         }
                       }}
                       style={{
@@ -1064,7 +1153,7 @@ export function FamilyStudioPage() {
                         disabled={busy || imaging}
                         onClick={() => resetScenePrompt(m.id)}
                       >
-                        重置场景词
+                        恢复默认场景
                       </button>
                       <button
                         type="button"
@@ -1082,29 +1171,82 @@ export function FamilyStudioPage() {
                         配图本关
                       </button>
                     </div>
-                    {m.imageBg && (
-                      <div className="photo-thumbs" style={{ marginTop: 8 }}>
-                        <button
-                          type="button"
-                          className="photo-thumb photo-thumb-btn"
-                          onClick={() => setPreviewSrc(m.imageBg!)}
-                          aria-label={`${word} 背景放大查看`}
-                        >
-                          <img src={m.imageBg} alt={`${word} 背景`} />
-                        </button>
-                        {(m.itemImages || []).map((src, j) => (
-                          <button
-                            type="button"
-                            key={j}
-                            className="photo-thumb photo-thumb-btn"
-                            onClick={() => setPreviewSrc(src)}
-                            aria-label={`${word} 道具 ${j + 1} 放大查看`}
-                          >
-                            <img src={src} alt={`${word} 道具 ${j + 1}`} />
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const slots = slotsForMiniLevel(
+                        m.level as unknown as Record<string, unknown>,
+                        effectiveScenePrompt(m),
+                        5,
+                        m.itemPrompts,
+                      )
+                      const slotImages = [m.imageBg || '', ...(m.itemImages || [])]
+                      return (
+                        <div className="slot-grid" style={{ marginTop: 8 }}>
+                          {slots.map((slot, si) => {
+                            const finalPrompt = buildKidsPrompt(slot)
+                            const subject = slot.subject
+                            const img = slotImages[si] || ''
+                            const redrawing = redrawSlot?.levelId === m.id && redrawSlot.slotIndex === si
+                            return (
+                              <div key={si} className="slot-card">
+                                <div className="slot-head">
+                                  <span className="slot-role">{slotRoleLabel(slots, si)}</span>
+                                  {redrawing && <span className="slot-redrawing">重画中…</span>}
+                                </div>
+                                {img ? (
+                                  <button
+                                    type="button"
+                                    className="photo-thumb photo-thumb-btn"
+                                    onClick={() => setPreviewSrc(img)}
+                                    aria-label={`${slotRoleLabel(slots, si)}放大查看`}
+                                  >
+                                    <img src={img} alt="" />
+                                  </button>
+                                ) : (
+                                  <div className="photo-thumb slot-empty" aria-hidden>
+                                    缺图
+                                  </div>
+                                )}
+                                <details className="slot-prompt-box">
+                                  <summary>画图提示词</summary>
+                                  <p className="slot-prompt-full">{finalPrompt}</p>
+                                  <label className="muted" style={{ fontSize: 12 }}>
+                                    主体（可改：如把 cake 换成 birthday cake）
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={subject}
+                                    key={`${m.id}-${si}-${subject}`}
+                                    onBlur={(e) => {
+                                      const v = e.target.value.trim()
+                                      if (si > 0 && v !== subject) {
+                                        const day = setMiniLevelItemPrompt(date, m.id, si, v)
+                                        if (day) void refreshMiniLevels(day, '已保存主体词，可点重画更新这张图')
+                                      }
+                                    }}
+                                    disabled={si === 0}
+                                    style={{ width: '100%', fontSize: 14, padding: '8px 10px', boxSizing: 'border-box' }}
+                                  />
+                                  {si === 0 && (
+                                    <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                                      背景主体在上方「场景主题」里编辑
+                                    </p>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="ghost"
+                                    disabled={busy || imaging || redrawing}
+                                    onClick={() => void redrawOneSlot(m, si)}
+                                    style={{ marginTop: 6, width: '100%' }}
+                                  >
+                                    {img ? '重画这张' : '补画这张'}
+                                  </button>
+                                </details>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </li>
                 )
               })}
@@ -1116,7 +1258,7 @@ export function FamilyStudioPage() {
                 disabled={busy || imaging || recording || transcribing}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '全部配图中…' : '全部配图'}
+                {imaging ? '配图中…' : '全部配图'}
               </button>
             </div>
           </div>

@@ -29,10 +29,13 @@ import {
   saveGeneratedPack,
   searchFamilyDays,
   setMiniLevelImages,
+  setMiniLevelItemPrompt,
   setMiniLevelScenePrompt,
+  setMiniLevelSlotImage,
   setMinLevelKeywords,
   type FamilyDayRecord,
 } from './store.ts'
+import { buildKidsPrompt, slotRoleLabel, slotsForMiniLevel } from './imageSlots.ts'
 
 const sampleLevel = (id: string, word: string): LevelScript => ({
   id,
@@ -176,6 +179,85 @@ test('setMiniLevelScenePrompt and materializeMiniLevelForPlay', async () => {
   assert.equal(parkOpt?.image, 'https://example.com/park-item.png')
   assert.equal(busOpt?.image, 'https://example.com/bus.png')
   assert.notEqual(busOpt?.image, play.scene.image)
+})
+
+test('setMiniLevelItemPrompt overrides item subject in slots and persists', () => {
+  const date = '2099-02-06'
+  saveGeneratedPack(date, {
+    title: 'T',
+    levels: [sampleLevel('family-20990206-dad', 'dad')],
+    force: true,
+  })
+  const level = getDay(date)!.miniLevels![0]
+  // 默认：主词 dad + 干扰 bus/cake
+  const base = slotsForMiniLevel(
+    level.level as unknown as Record<string, unknown>,
+    'A warm home living room with dad sitting on a sofa',
+    5,
+  )
+  // sampleLevel 只有 bus/cake 两个干扰项 → 1 背景 + 主词 + 2 干扰 = 4 槽
+  assert.equal(base.length, 4)
+  assert.equal(base[1]?.subject, 'dad')
+  assert.equal(base[2]?.subject, 'bus')
+
+  // 覆盖第 2 个道具槽（bus → school bus）
+  const updated = setMiniLevelItemPrompt(date, 'family-20990206-dad', 2, 'school bus')
+  assert.equal(updated?.miniLevels?.[0]?.itemPrompts?.[1], 'school bus')
+  const overridden = slotsForMiniLevel(
+    (updated || getDay(date)!).miniLevels![0].level as unknown as Record<string, unknown>,
+    'A warm home living room with dad sitting on a sofa',
+    5,
+    (updated || getDay(date)!).miniLevels![0].itemPrompts,
+  )
+  assert.equal(overridden[2]?.subject, 'school bus')
+  // 未覆盖的槽不受影响
+  assert.equal(overridden[1]?.subject, 'dad')
+
+  // 清空覆盖恢复默认
+  const restored = setMiniLevelItemPrompt(date, 'family-20990206-dad', 2, '')
+  assert.equal(restored?.miniLevels?.[0]?.itemPrompts?.[1], undefined)
+})
+
+test('buildKidsPrompt composes final prompt and slotRoleLabel names slots', () => {
+  const slots = slotsForMiniLevel(
+    sampleLevel('x', 'dad') as unknown as Record<string, unknown>,
+    'A warm home living room',
+    5,
+  )
+  const scenePrompt = buildKidsPrompt(slots[0]!)
+  const itemPrompt = buildKidsPrompt(slots[2]!)
+  assert.match(scenePrompt, /背景/)
+  assert.match(scenePrompt, /A warm home living room/)
+  assert.match(itemPrompt, /只画一个主体/)
+  assert.match(itemPrompt, /bus/)
+  assert.equal(slotRoleLabel(slots, 0), '背景图')
+  assert.equal(slotRoleLabel(slots, 1), '主词图')
+  assert.equal(slotRoleLabel(slots, 2), '干扰图')
+})
+
+test('setMiniLevelSlotImage replaces only the target slot', async () => {
+  const date = '2099-02-07'
+  saveGeneratedPack(date, {
+    title: 'T',
+    levels: [sampleLevel('family-20990207-park', 'park')],
+    force: true,
+  })
+  // 先放三张占位（http 引用不走 IDB，node 可测）
+  await setMiniLevelImages(date, 'family-20990207-park', {
+    imageBg: 'https://example.com/bg.png',
+    itemImages: ['https://example.com/a.png', 'https://example.com/b.png'],
+  })
+  // 单槽替换第 2 个道具
+  const day = await setMiniLevelSlotImage(
+    date,
+    'family-20990207-park',
+    2,
+    'https://example.com/b2.png',
+  )
+  const mini = day!.miniLevels![0]
+  assert.equal(mini.imageBg, 'https://example.com/bg.png')
+  assert.equal(mini.itemImages?.[0], 'https://example.com/a.png')
+  assert.equal(mini.itemImages?.[1], 'https://example.com/b2.png')
 })
 
 test('legacy day without miniLevels still counts as playable', () => {

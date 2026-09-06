@@ -83,6 +83,7 @@
 .family-studio button.linkish {
   background: transparent;
   color: #3d7ea6;
+  border: 1px solid #d7e4ef;
 }
 
 .family-studio .voice-btn.hot {
@@ -393,7 +394,106 @@
 }
 
 .photo-actions {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photo-actions button {
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 8px;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.slot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid #e8dcc8;
+  border-radius: 12px;
+  background: #fffdf8;
+}
+
+.slot-card .photo-thumb {
+  width: 84px;
+  height: 84px;
+}
+
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed #d8c8a8;
+  border-radius: 12px;
+  color: #a89468;
+  font-size: 13px;
+  background: #fffaf0;
+}
+
+.slot-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-role {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5a4326;
+  background: #ffedca;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.slot-redrawing {
+  font-size: 12px;
+  color: #b06a00;
+}
+
+.slot-card details {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
+
+.slot-card summary {
+  cursor: pointer;
+  color: #3d7ea6;
+  user-select: none;
+}
+
+.slot-prompt-full {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: #f6f1e4;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4a3a22;
+  word-break: break-all;
+}
+
+.slot-card input[type='text'] {
+  width: 100%;
+  border: 1.5px solid #e8dcc8;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.slot-card .ghost {
+  width: 100%;
+  padding: 8px 10px;
+  white-space: normal;
 }
 
 .family-studio .toggle-row {
@@ -414,6 +514,88 @@
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* 配图槽位卡片：背景/主词/干扰图逐张展示 prompt、编辑主体、单张重画 */
+.slot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-card {
+  border: 1px solid #efe4d2;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fffdf8;
+}
+
+.slot-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.slot-role {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7a5b33;
+  background: #fff1da;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.slot-redrawing {
+  font-size: 12px;
+  color: #b06a00;
+}
+
+.slot-card .photo-thumb {
+  width: 88px;
+  height: 88px;
+}
+
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #a08a6a;
+  border: 1.5px dashed #d9c9a8;
+  border-radius: 12px;
+  background: #fdf6ea;
+  box-sizing: border-box;
+}
+
+.slot-prompt-box {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.slot-prompt-box summary {
+  cursor: pointer;
+  color: #3d7ea6;
+  font-weight: 600;
+  user-select: none;
+}
+
+.slot-prompt-full {
+  margin: 8px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4a3b28;
+  background: #f7f1e4;
+  border-radius: 8px;
+  padding: 8px 10px;
+  word-break: break-all;
+}
+
+.slot-prompt-box input[type='text'] {
+  margin-top: 4px;
+  border: 1.5px solid #e8dcc8;
+  border-radius: 10px;
 }
 
 .photo-thumb {

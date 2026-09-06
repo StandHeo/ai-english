@@ -798,6 +798,34 @@ export function resetMiniLevelScenePrompt(
   return next
 }
 
+/**
+ * 设置第 slotIndex 个道具槽（1 起，0 是背景）的主体词。
+ * slotIndex-1 对应 itemPrompts 数组下标；传空串恢复默认主体。
+ */
+export function setMiniLevelItemPrompt(
+  date: string,
+  levelId: string,
+  slotIndex: number,
+  subject: string,
+): FamilyDayRecord | null {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  const cur = prev.miniLevels.find((m) => m.id === levelId)
+  if (!cur) return null
+  const overrides = [...(cur.itemPrompts || [])]
+  const trimmed = subject.trim()
+  if (trimmed) overrides[slotIndex - 1] = trimmed
+  else delete overrides[slotIndex - 1]
+  const miniLevels = prev.miniLevels.map((m) =>
+    m.id === levelId ? { ...m, itemPrompts: overrides.some((s) => s?.trim()) ? overrides : [] } : m,
+  )
+  const next = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = next
+  saveFamilyStore(store)
+  return next
+}
+
 export async function setMiniLevelImages(
   date: string,
   levelId: string,
@@ -867,6 +895,59 @@ export async function setMiniLevelImages(
   store.days[date] = next
   saveFamilyStore(store)
   return hydrateFamilyDayImages(next)
+}
+
+/**
+ * 只替换某一槽的图（0=背景，1..=道具），其它槽的图与 id 原样保留。
+ * dataUrl 为新生成的 data URL；写入 IDB 并更新该槽 id。
+ */
+export async function setMiniLevelSlotImage(
+  date: string,
+  levelId: string,
+  slotIndex: number,
+  dataUrl: string,
+): Promise<FamilyDayRecord | null> {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  const cur = prev.miniLevels.find((m) => m.id === levelId)
+  if (!cur || !dataUrl) return null
+
+  const next: FamilyMiniLevel = { ...cur }
+  if (slotIndex === 0) {
+    if (cur.imageBgId) void deleteImageBlob(cur.imageBgId).catch(() => undefined)
+    if (isInlineImageRef(dataUrl) || dataUrl.startsWith('data:')) {
+      next.imageBgId = await storeImageDataUrl(dataUrl, `bg_${levelId}`)
+      next.imageBg = dataUrl
+    } else {
+      delete next.imageBgId
+      next.imageBg = dataUrl
+    }
+  } else {
+    const itemIndex = slotIndex - 1
+    const ids = [...(cur.itemImageIds || [])]
+    const urls = [...(cur.itemImages || [])]
+    const len = Math.max(itemIndex + 1, ids.length, urls.length)
+    while (ids.length < len) ids.push('')
+    while (urls.length < len) urls.push('')
+    const oldId = ids[itemIndex]
+    if (oldId) void deleteImageBlob(oldId).catch(() => undefined)
+    if (isInlineImageRef(dataUrl) || dataUrl.startsWith('data:')) {
+      ids[itemIndex] = await storeImageDataUrl(dataUrl, `item_${levelId}_${itemIndex}`)
+      urls[itemIndex] = dataUrl
+    } else {
+      ids[itemIndex] = ''
+      urls[itemIndex] = dataUrl
+    }
+    next.itemImageIds = ids
+    next.itemImages = urls
+  }
+
+  const miniLevels = prev.miniLevels.map((m) => (m.id === levelId ? next : m))
+  const updated = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = updated
+  saveFamilyStore(store)
+  return hydrateFamilyDayImages(updated)
 }
 
 /** 把 IDB 图 id（及旧 data URL）解析成可显示的 URL，供 UI / 游玩使用 */

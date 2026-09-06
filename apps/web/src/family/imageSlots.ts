@@ -126,23 +126,39 @@ export function missingSlotsForImages(
 /**
  * 迷你关配图槽：场景用可编辑 scenePrompt，道具含目标词 + picture_choice 选项
  *（确保 fork 等干扰项也有独立插画，而不是文字占位）。
- * 默认 1 背景 + 4 道具：覆盖主词 + find/ask 的全部干扰项。
+ * itemPromptOverrides[i] 覆盖第 i 个道具槽的主体词（家长在制作台编辑）。
  */
 export function slotsForMiniLevel(
   level: Record<string, unknown>,
   scenePrompt: string,
   maxSlots = 5,
+  itemPromptOverrides?: string[],
 ): ImageSlot[] {
   const max = clampImageSlots(maxSlots)
   const scene = level.scene && typeof level.scene === 'object' ? { ...(level.scene as object) } : {}
   const setting = scenePrompt.trim() || String((scene as { setting?: unknown }).setting || '')
-  return slotsFromLevel(
+  const slots = slotsFromLevel(
     {
       ...level,
       scene: { ...scene, setting: setting || 'playground' },
     },
     max,
   )
+  if (itemPromptOverrides?.length) {
+    for (let i = 1; i < slots.length; i++) {
+      const ov = itemPromptOverrides[i - 1]?.trim()
+      if (ov) slots[i] = { ...slots[i], subject: ov }
+    }
+  }
+  return slots
+}
+
+/** 槽位展示标签：背景图 / 主词图 / 干扰图 */
+export function slotRoleLabel(slots: ImageSlot[], index: number): string {
+  const slot = slots[index]
+  if (!slot) return ''
+  if (slot.role === 'scene') return '背景图'
+  return index === 1 ? '主词图' : '干扰图'
 }
 
 /** 迷你关是否还缺背景或任一选项道具图 */
