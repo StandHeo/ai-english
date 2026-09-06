@@ -28,6 +28,70 @@
   font-size: 20px;
 }
 
+.family-search-box {
+  width: 100%;
+  padding: 10px 14px;
+  margin: 12px 0 4px;
+  border: 1.5px solid #e8dcc8;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.family-search-results {
+  margin: 8px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.family-search-hit {
+  background: #fff;
+  border: 1px solid #e8dcc8;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.family-search-hit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.family-search-snippet {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #6b5a44;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.family-search-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.family-search-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: #ffb64d;
+  color: #4a2c0a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.family-search-actions button.ghost {
+  background: #fff4e2;
+  border: 1px solid #e8dcc8;
+  font-weight: 500;
+}
+
 .month-nav {
   display: flex;
   justify-content: space-between;

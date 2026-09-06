@@ -19,16 +19,18 @@ const mem = new Map<string, string>()
 }
 
 import {
+  appendTextMessage,
   dayHasMiniPack,
   dayHasPlayableContent,
   getPackLevelCount,
+  getDay,
   markMiniLevelCompleted,
   materializeMiniLevelForPlay,
   saveGeneratedPack,
+  searchFamilyDays,
   setMiniLevelImages,
   setMiniLevelScenePrompt,
   setMinLevelKeywords,
-  getDay,
   type FamilyDayRecord,
 } from './store.ts'
 
@@ -94,6 +96,42 @@ test('saveGeneratedPack writes miniLevels and clears legacy level', () => {
   assert.equal(saved.day.pack?.title, 'Park Pack')
   assert.equal(dayHasMiniPack(saved.day), true)
   assert.equal(dayHasPlayableContent(saved.day), true)
+})
+
+test('searchFamilyDays matches diary text, main word, scene and hint', () => {
+  localStorage.clear()
+  saveGeneratedPack('2099-03-04', {
+    title: 'Slide Pack',
+    levels: [sampleLevel('family-20990304-slide', 'slide')],
+    force: true,
+  })
+  saveGeneratedPack('2099-03-05', {
+    title: 'Park Pack',
+    levels: [sampleLevel('family-20990305-park', 'park')],
+    force: true,
+  })
+  // 日记文本命中
+  appendTextMessage('2099-03-04', '今天去了小区的滑梯')
+
+  const byDiary = searchFamilyDays('滑梯')
+  assert.equal(byDiary.length, 1)
+  assert.equal(byDiary[0]?.date, '2099-03-04')
+  assert.ok(byDiary[0]?.fields.includes('日记'))
+
+  // 主词命中
+  const byWord = searchFamilyDays('park')
+  assert.equal(byWord.length, 1)
+  assert.equal(byWord[0]?.date, '2099-03-05')
+  assert.ok(byWord[0]?.fields.includes('主词'))
+
+  // 场景词命中
+  const byScene = searchFamilyDays('slide place')
+  assert.ok(byScene.some((h) => h.date === '2099-03-04'))
+
+  // 无命中返回空
+  assert.deepEqual(searchFamilyDays('zzz-no-such'), [])
+  // 空查询返回空
+  assert.deepEqual(searchFamilyDays('  '), [])
 })
 
 test('markMiniLevelCompleted aggregates day completed', () => {

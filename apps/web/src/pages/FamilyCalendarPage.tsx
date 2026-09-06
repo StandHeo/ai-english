@@ -27,9 +27,13 @@ export function FamilyCalendarPage() {
   const now = new Date()
   const [cursor, setCursor] = useState({ y: now.getFullYear(), m: now.getMonth() })
   const [query, setQuery] = useState('')
+  const trimmedQuery = query.trim()
+  const searchHits = useMemo(
+    () => (trimmedQuery ? searchFamilyDays(trimmedQuery) : []),
+    [trimmedQuery],
+  )
   const daysWith = useMemo(() => new Set(listDaysWithLevels().map((d) => d.date)), [])
   const daysVoice = useMemo(() => new Set(listDaysWithVoice()), [])
-  const searchHits = useMemo(() => searchFamilyDays(query), [query])
   const searching = query.trim().length > 0
 
   const cells = monthMatrix(cursor.y, cursor.m)
