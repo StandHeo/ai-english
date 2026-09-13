@@ -5,6 +5,8 @@
 > 方法：对照本仓库定位与实现（`README.md`、`openspec/changes/kids-story-oral-english-mvp/`、家庭日记相关变更），叠加公开产品介绍与行业材料。  
 > 说明：本文是产品策略参考，不是付费用户访谈或商店抓取排行；竞品功能以公开宣称为主，个别细节可能已迭代。
 
+文中「明确不做商业化」作为产品方向，已被 [`docs/monetization.md`](monetization.md) 取代。
+
 ---
 
 ## 摘要
