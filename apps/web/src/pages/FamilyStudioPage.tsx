@@ -544,7 +544,7 @@ export function FamilyStudioPage() {
 
   async function autoFillImagesAfterGenerate(levels: FamilyMiniLevel[]) {
     if (!getAutoTongyiImages()) {
-      showToast('生成成功！可开「自动云端配图」，或按关编辑场景词后点配图')
+      showToast('生成成功！可开「自动云端配图」，或按关编辑场景词后点「云端配图」')
       return
     }
     clearJobNow()
@@ -576,7 +576,6 @@ export function FamilyStudioPage() {
       showToast(`请到「设置」填写 ${familyLlmLabel(llm)} 的 API Key（App 可直连，不必填电脑地址）`)
       return
     }
-    startJob('generate', llmBusyLabel(llm))
     try {
       if (!force) {
         const existing = getDay(date)
@@ -587,13 +586,13 @@ export function FamilyStudioPage() {
               : `这一天（${date}）的关卡${existing.completed ? '已通关' : '已存在'}。确定覆盖并重置通关状态吗？`,
           )
           if (!ok) {
-            clearJobNow()
             showToast('已取消覆盖')
             return
           }
           force = true
         }
       }
+      startJob('generate', llmBusyLabel(llm))
       const levelCount = getPackLevelCount()
       let levels: LevelScript[] = []
       let title = 'My Day'
