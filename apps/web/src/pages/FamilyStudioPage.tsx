@@ -70,6 +70,16 @@ import './family-studio.css'
 
 type ImageSlotLike = { subject: string; role?: 'scene' | 'item' }
 
+type StudioJobKind = 'image' | 'generate' | 'translate'
+type StudioJob = {
+  kind: StudioJobKind
+  label: string
+  phase: 'running' | 'done' | 'error'
+}
+
+const TOAST_MS = 2000
+const JOB_DONE_HOLD_MS = 2000
+
 /** 一组槽位 → 一组图（App 直连云或走电脑 API），供整关/单张配图共用 */
 async function fetchSlotImages(
   slots: ImageSlotLike[],
@@ -119,9 +129,10 @@ export function FamilyStudioPage() {
   const [messages, setMessages] = useState<FamilyDiaryMessage[]>([])
   const [draft, setDraft] = useState('')
   const [hints, setHints] = useState<string[]>([])
-  const [status, setStatus] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [imaging, setImaging] = useState(false)
+  const [activeJob, setActiveJob] = useState<StudioJob | null>(null)
+  const [transcribePending, setTranscribePending] = useState(0)
+  const [pendingAsrIds, setPendingAsrIds] = useState<Record<string, true>>({})
+  const [toast, setToast] = useState<string | null>(null)
   const [hasLevel, setHasLevel] = useState(false)
   const [miniLevels, setMiniLevels] = useState<FamilyMiniLevel[]>([])
   const [packTitle, setPackTitle] = useState('')
@@ -130,70 +141,134 @@ export function FamilyStudioPage() {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [asrHint, setAsrHint] = useState('')
   const [asrReady, setAsrReady] = useState(false)
-  const [transcribing, setTranscribing] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [levelFilter, setLevelFilter] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const savingVoiceRef = useRef(false)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const jobDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const generating = activeJob?.kind === 'generate' && activeJob.phase === 'running'
+  const imaging = activeJob?.kind === 'image'
+  const imagingRunning = activeJob?.kind === 'image' && activeJob.phase === 'running'
+  const translating = activeJob?.kind === 'translate' && activeJob.phase === 'running'
+  const sceneLocked = Boolean(
+    (activeJob?.kind === 'image') ||
+      (activeJob?.kind === 'translate' && activeJob.phase === 'running'),
+  )
+  const imageOpsLocked = imaging || translating || generating || Boolean(redrawSlot)
+  const showJobBanner = Boolean(activeJob) || transcribePending > 0
+
+  function clearToastTimer() {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current)
+      toastTimerRef.current = null
+    }
+  }
+
+  function clearJobDoneTimer() {
+    if (jobDoneTimerRef.current) {
+      clearTimeout(jobDoneTimerRef.current)
+      jobDoneTimerRef.current = null
+    }
+  }
+
+  function showToast(msg: string) {
+    setToast(msg)
+    clearToastTimer()
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null)
+      toastTimerRef.current = null
+    }, TOAST_MS)
+  }
+
+  function startJob(kind: StudioJobKind, label: string) {
+    clearJobDoneTimer()
+    setActiveJob({ kind, label, phase: 'running' })
+  }
+
+  function updateJobLabel(label: string) {
+    setActiveJob((prev) => (prev && prev.phase === 'running' ? { ...prev, label } : prev))
+  }
+
+  function finishJob(label: string, phase: 'done' | 'error' = 'done', holdMs = JOB_DONE_HOLD_MS) {
+    setActiveJob((prev) => (prev ? { ...prev, label, phase } : null))
+    clearJobDoneTimer()
+    jobDoneTimerRef.current = setTimeout(() => {
+      setActiveJob(null)
+      jobDoneTimerRef.current = null
+    }, holdMs)
+  }
+
+  function clearJobNow() {
+    clearJobDoneTimer()
+    setActiveJob(null)
+  }
+
+  useEffect(() => {
+    return () => {
+      clearToastTimer()
+      clearJobDoneTimer()
+    }
+  }, [])
 
   async function persistVoiceCapture(result: DiaryRecordCapture) {
-    if (savingVoiceRef.current) return
     if (result.error === 'insecure') {
-      setStatus('需要 https 才能录音，请用打字，或 npm run dev:phone')
+      showToast('需要 https 才能录音，请用打字，或 npm run dev:phone')
       return
     }
     if (result.error === 'denied') {
-      setStatus('请允许麦克风权限')
+      showToast('请允许麦克风权限')
       return
     }
     if (result.error === 'empty' || !result.blob) {
-      setStatus('没有录到声音，请再试或改用打字')
+      showToast('没有录到声音，请再试或改用打字')
       return
     }
     if (result.error === 'too_long' || result.hitLimit) {
-      setStatus(
-        `已录满 ${formatClock(DIARY_MAX_RECORD_MS)}，已自动结束并保存，正在转写…`,
-      )
+      showToast(`已录满 ${formatClock(DIARY_MAX_RECORD_MS)}，已自动结束并保存`)
     }
 
-    savingVoiceRef.current = true
     const modelId = getDiaryWhisperModelId()
-    setBusy(true)
-    setTranscribing(true)
-    if (result.error !== 'too_long' && !result.hitLimit) {
-      setStatus(`正在转写（${diaryWhisperModelLabel(modelId)}）…`)
+    const blob = result.blob
+    let messageId = ''
+    try {
+      const day = await appendVoiceMessage(date, { text: '', blob })
+      const last = day.messages[day.messages.length - 1]
+      messageId = last?.id || ''
+      setMessages(day.messages)
+      if (!messageId) return
+      setPendingAsrIds((prev) => ({ ...prev, [messageId]: true }))
+      setTranscribePending((n) => n + 1)
+    } catch {
+      showToast('保存语音失败（存储空间可能不足，可删旧图或旧语音后重试）')
+      return
     }
-    await new Promise<void>((r) => requestAnimationFrame(() => r()))
 
     try {
-      let text = ''
-      try {
-        const wavBase64 = await blobToWav16kBase64(result.blob)
-        const asr = await transcribeDiaryAudio(wavBase64, 'zh', modelId)
-        if (asr.ok) {
-          text = asr.text
-          setAsrReady(true)
-          setAsrHint('')
-          setStatus(
-            `语音已转写（${diaryWhisperModelLabel(asr.modelId)}），可点「改字」微调`,
-          )
-        } else {
-          setStatus(`${asr.message}（已保留录音，请点气泡改字）`)
-        }
-      } catch {
-        setStatus('转写准备失败，已保留录音，请手改文字')
+      await new Promise<void>((r) => requestAnimationFrame(() => r()))
+      const wavBase64 = await blobToWav16kBase64(blob)
+      const asr = await transcribeDiaryAudio(wavBase64, 'zh', modelId)
+      if (asr.ok) {
+        const updated = updateMessageText(date, messageId, asr.text)
+        if (updated) setMessages(updated.messages)
+        setAsrReady(true)
+        setAsrHint('')
+        showToast(`语音已转写（${diaryWhisperModelLabel(asr.modelId)}），可点「改字」微调`)
+      } else {
+        showToast(`${asr.message}（已保留录音，请点气泡改字）`)
       }
-      const day = await appendVoiceMessage(date, { text, blob: result.blob })
-      setMessages(day.messages)
     } catch {
-      setStatus('保存语音失败（存储空间可能不足，可删旧图或旧语音后重试）')
+      showToast('转写准备失败，已保留录音，请手改文字')
     } finally {
-      setTranscribing(false)
-      setBusy(false)
-      savingVoiceRef.current = false
+      setPendingAsrIds((prev) => {
+        const next = { ...prev }
+        delete next[messageId]
+        return next
+      })
+      setTranscribePending((n) => Math.max(0, n - 1))
     }
   }
 
@@ -252,20 +327,17 @@ export function FamilyStudioPage() {
   }
 
   function sendText() {
-    if (!draft.trim()) return
+    if (!draft.trim() || generating || recording) return
     const day = appendTextMessage(date, draft)
     setMessages(day.messages)
     setDraft('')
-    setStatus('已发送')
+    showToast('已发送')
   }
 
   async function onVoiceToggle() {
-    if (busy || transcribing || savingVoiceRef.current) return
+    if (generating) return
     const result = await toggle()
-    if (result === 'started') {
-      setStatus(`正在录音… 最长 ${formatClock(maxMs)}，说完点「结束录音」`)
-      return
-    }
+    if (result === 'started') return
     await persistVoiceCapture(result)
   }
 
@@ -280,7 +352,7 @@ export function FamilyStudioPage() {
     if (day) setMessages(day.messages)
     setEditingId(null)
     setEditText('')
-    setStatus('已更新文字')
+    showToast('已更新文字')
   }
 
   function removeMessage(m: FamilyDiaryMessage) {
@@ -293,7 +365,15 @@ export function FamilyStudioPage() {
         setEditingId(null)
         setEditText('')
       }
-      setStatus('已删除')
+      if (pendingAsrIds[m.id]) {
+        setPendingAsrIds((prev) => {
+          const next = { ...prev }
+          delete next[m.id]
+          return next
+        })
+        setTranscribePending((n) => Math.max(0, n - 1))
+      }
+      showToast('已删除')
     }
   }
 
@@ -302,7 +382,7 @@ export function FamilyStudioPage() {
     const day = removeDayImage(date, index)
     if (day) {
       setImages(day.images)
-      setStatus('已删除照片')
+      showToast('已删除照片')
     }
   }
 
@@ -310,12 +390,16 @@ export function FamilyStudioPage() {
     levels: FamilyMiniLevel[],
     opts?: { onlyMissingBg?: boolean; statusPrefix?: string },
   ): Promise<boolean> {
+    if (imaging || translating || generating || Boolean(redrawSlot)) {
+      showToast('请等待当前任务完成后再配图')
+      return false
+    }
     const cloud = getImageCloudProvider()
     const cloudName = imageCloudLabel(cloud)
     const cloudKey = getImageCloudApiKey()
     const useDirect = isNativeApp() && Boolean(cloudKey)
     if (isNativeApp() && !nativeFamilyCloudReady(Boolean(cloudKey), getApiBase())) {
-      setStatus(`关卡已保留；请到设置填写${cloudName} Key`)
+      showToast(`关卡已保留；请到设置填写${cloudName} Key`)
       return false
     }
     const targets = levels.filter((m) => {
@@ -330,7 +414,7 @@ export function FamilyStudioPage() {
       )
     })
     if (!targets.length) {
-      setStatus(opts?.onlyMissingBg ? '各关背景与选项图已齐' : '没有需要配图的关卡')
+      showToast(opts?.onlyMissingBg ? '各关背景与选项图已齐' : '没有需要配图的关卡')
       return true
     }
 
@@ -341,7 +425,7 @@ export function FamilyStudioPage() {
         (m) => !m.scenePromptEn || m.scenePromptEn === effectiveScenePrompt(m),
       )
       if (needTl.length) {
-        setStatus(`场景词翻译成英文中（${needTl.length} 关）…`)
+        startJob('image', `场景词翻译成英文中（${needTl.length} 关）…`)
         for (const m of needTl) {
           const src = effectiveScenePrompt(m)
           const en = await translateSceneToEnglish({ text: src, apiKey: llmKey, llm: getLlmProvider() }).catch(
@@ -357,10 +441,9 @@ export function FamilyStudioPage() {
 
     const prefix = (opts?.statusPrefix || '').trim()
     const conc = Math.min(FAMILY_IMAGE_LEVEL_CONCURRENCY, targets.length)
-    setImaging(true)
-    setStatus(
-      `${prefix}${cloudName}并行配图：共 ${targets.length} 关（同时 ${conc} 关，含选项图）…`.trim(),
-    )
+    const startLabel =
+      `${prefix}${cloudName}并行配图：共 ${targets.length} 关（同时 ${conc} 关，含选项图）…`.trim()
+    startJob('image', startLabel)
     try {
       let done = 0
       let failCount = 0
@@ -420,7 +503,7 @@ export function FamilyStudioPage() {
           }
           await persistImages(mini, list)
           done += 1
-          setStatus(
+          updateJobLabel(
             `${prefix}${cloudName}配图 ${done}/${targets.length}：${word}（${slots.length} 张）`.trim(),
           )
         } catch (err) {
@@ -428,7 +511,7 @@ export function FamilyStudioPage() {
           done += 1
           const em = err instanceof Error ? err.message : String(err)
           const netAbort = /connection abort|SocketException|llm_timeout|ETIMEDOUT|abort/i.test(em)
-          setStatus(
+          updateJobLabel(
             netAbort
               ? `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 网络中断（继续并行，勿切 App）`.trim()
               : `${prefix}${cloudName}配图 ${done}/${targets.length}：${word} 出错（继续并行）`.trim(),
@@ -438,56 +521,62 @@ export function FamilyStudioPage() {
 
       await persistTail
       if (failCount > 0) {
-        setStatus(
-          `配图结束（${cloudName}）：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}。配图时勿切 App；Clash 请开 TUN 并把本 App 纳入代理`,
+        finishJob(
+          `配图结束：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}`,
+          'error',
         )
         return failCount < targets.length
       }
-      setStatus(`配图完成（${cloudName}，并行 ${targets.length} 关，含选项图）`)
+      finishJob('配图完成', 'done')
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (/quota|exceeded/i.test(msg)) {
-        setStatus(
-          `关卡已保留；本机存储已满，配图已改为 IndexedDB 仍失败。请清理旧日记图后重试（${msg.slice(0, 80)}）`,
-        )
+        finishJob(`配图失败：存储已满（${msg.slice(0, 40)}）`, 'error')
       } else if (/connection abort|SocketException|llm_timeout|ETIMEDOUT|abort/i.test(msg)) {
-        setStatus(
-          `关卡已保留；${cloudName}网络中断（${msg.slice(0, 80)}）。Clash 请开 TUN 并勿切 App，可重试配图`,
-        )
+        finishJob(`配图失败：网络中断（${msg.slice(0, 40)}）`, 'error')
       } else {
-        setStatus(`关卡已保留；${cloudName}配图出错（${msg}）`)
+        finishJob(`配图出错（${msg.slice(0, 60)}）`, 'error')
       }
       return false
-    } finally {
-      setImaging(false)
     }
   }
 
   async function autoFillImagesAfterGenerate(levels: FamilyMiniLevel[]) {
     if (!getAutoTongyiImages()) {
-      setStatus('生成成功！可开「自动云端配图」，或按关编辑场景词后点「云端配图」')
+      showToast('生成成功！可开「自动云端配图」，或按关编辑场景词后点配图')
       return
     }
-    setBusy(false)
+    clearJobNow()
     await requestMiniLevelImages(levels, { onlyMissingBg: true })
   }
 
   async function generate(force = false) {
+    if (transcribePending > 0) {
+      showToast('还有语音正在转成文字，转完后再生成关卡')
+      return
+    }
+    if (generating || imagingRunning || translating) {
+      showToast('请等待当前任务完成后再生成')
+      return
+    }
     const story = storyFromState(messages) || getDay(date)?.story || ''
     if (!story.trim()) {
-      setStatus(isToday ? '请先发几条今日故事（打字或语音）' : `这一天（${date}）没有日记故事，无法重新生成；可回到今天补记`)
+      showToast(
+        isToday
+          ? '请先发几条今日故事（打字或语音）'
+          : `这一天（${date}）没有日记故事，无法重新生成；可回到今天补记`,
+      )
       return
     }
     const llm = getLlmProvider()
     const key = getLlmApiKey()
     const useDirect = isNativeApp() && Boolean(key)
     if (isNativeApp() && !nativeFamilyCloudReady(Boolean(key), getApiBase())) {
-      setStatus(`请到「设置」填写 ${familyLlmLabel(llm)} 的 API Key（App 可直连，不必填电脑地址）`)
+      showToast(`请到「设置」填写 ${familyLlmLabel(llm)} 的 API Key（App 可直连，不必填电脑地址）`)
       return
     }
-    setBusy(true)
-    setStatus(llmBusyLabel(llm))
+    startJob('generate', llmBusyLabel(llm))
     try {
       if (!force) {
         const existing = getDay(date)
@@ -498,7 +587,8 @@ export function FamilyStudioPage() {
               : `这一天（${date}）的关卡${existing.completed ? '已通关' : '已存在'}。确定覆盖并重置通关状态吗？`,
           )
           if (!ok) {
-            setStatus('已取消覆盖')
+            clearJobNow()
+            showToast('已取消覆盖')
             return
           }
           force = true
@@ -561,19 +651,19 @@ export function FamilyStudioPage() {
         )
         if (!res.ok) {
           if (data.error === 'pack_levels_insufficient') {
-            setStatus(
-              `迷你关卡包关数不足。请再追加几句今日故事，或把设置里「今日关数」调低后重试。`,
-            )
+            clearJobNow()
+            showToast('迷你关卡包关数不足。请再追加几句今日故事，或把设置里「今日关数」调低后重试。')
             return
           }
           const err = String(data.error || res.error || res.status)
+          clearJobNow()
           if (/timeout|deepseek_timeout|llm_timeout|Socket closed|SocketTimeout/i.test(err)) {
-            setStatus(
+            showToast(
               `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把「今日关数」调低。`,
             )
             return
           }
-          setStatus(
+          showToast(
             err === 'api_key_required' || err === 'missing_api_base'
               ? `请先到「设置」填写 ${familyLlmLabel(llm)} API Key`
               : `生成失败：${err}`,
@@ -593,7 +683,8 @@ export function FamilyStudioPage() {
         force,
       })
       if (!saved.ok) {
-        setStatus('需要确认覆盖已通关内容')
+        clearJobNow()
+        showToast('需要确认覆盖已通关内容')
         return
       }
       setHints(photoHints)
@@ -602,44 +693,47 @@ export function FamilyStudioPage() {
       setPackTitle(saved.day.pack?.title || title)
       setImages([])
       setCompleted(false)
-      setStatus(
+      showToast(
         `生成成功（${familyLlmLabel(llm)}，${levels.length} 关：${mainWords.join(', ') || '…'}）`,
       )
       await autoFillImagesAfterGenerate(saved.day.miniLevels || [])
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
+      clearJobNow()
       if (msg.startsWith('pack_levels_insufficient:')) {
-        setStatus('迷你关卡包关数不足。请再追加几句今日故事后重试。')
+        showToast('迷你关卡包关数不足。请再追加几句今日故事后重试。')
         return
       }
       if (msg.startsWith('invalid_level')) {
-        setStatus(`生成失败：模型返回的关卡不合格（${msg}）。可换一家模型再试。`)
+        showToast(`生成失败：模型返回的关卡不合格（${msg}）。可换一家模型再试。`)
         return
       }
       if (/timeout|llm_timeout|Socket closed|SocketTimeout/i.test(msg)) {
-        setStatus(
+        showToast(
           `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把今日关数调低。`,
         )
         return
       }
       if (msg === 'api_key_required') {
-        setStatus(`请到「设置」填写 ${familyLlmLabel(llm)} API Key`)
+        showToast(`请到「设置」填写 ${familyLlmLabel(llm)} API Key`)
         return
       }
-      setStatus(
+      showToast(
         useDirect
           ? `直连 ${familyLlmLabel(llm)} 失败（${msg}）。请检查手机网络与 Key`
           : `网络错误（${msg}）：电脑浏览器请确认 apps/api 已启动`,
       )
     } finally {
-      setBusy(false)
+      setActiveJob((prev) =>
+        prev?.kind === 'generate' && prev.phase === 'running' ? null : prev,
+      )
     }
   }
 
   async function regenerateImages() {
     const day = getDay(date)
     if (!dayHasMiniPack(day)) {
-      setStatus('请先生成迷你关卡包')
+      showToast('请先生成迷你关卡包')
       return
     }
     // 一次跑完全部关（不跳过已有图，便于改场景词后重画）
@@ -649,7 +743,7 @@ export function FamilyStudioPage() {
   async function regenerateMissingImages() {
     const day = getDay(date)
     if (!dayHasMiniPack(day)) {
-      setStatus('请先生成迷你关卡包')
+      showToast('请先生成迷你关卡包')
       return
     }
     await requestMiniLevelImages(day!.miniLevels || [], { onlyMissingBg: true })
@@ -659,19 +753,21 @@ export function FamilyStudioPage() {
     if (!day) return
     const hydrated = await hydrateFamilyDayImages(day)
     setMiniLevels(hydrated.miniLevels || [])
-    setStatus(statusText)
+    showToast(statusText)
   }
 
   function saveScenePrompt(levelId: string, value: string) {
+    if (sceneLocked) return
     const day = setMiniLevelScenePrompt(date, levelId, value)
     if (day) {
       void refreshMiniLevels(day, '已保存场景词')
     } else {
-      setStatus('场景词不能为空')
+      showToast('场景词不能为空')
     }
   }
 
   function resetScenePrompt(levelId: string) {
+    if (sceneLocked) return
     // 先让 textarea 失焦提交未保存的编辑（onBlur 保存是同步写盘），
     // 再执行重置，避免两次写入竞态；同时键盘先收起，减少 WebView resize 抖动
     const active = document.activeElement as HTMLElement | null
@@ -685,16 +781,19 @@ export function FamilyStudioPage() {
 
   /** 手动把某一关的（中文）场景词翻译成英文并缓存；失败回退原文 */
   async function translateOneScene(levelId: string) {
+    if (imageOpsLocked) {
+      showToast('请等待当前任务完成后再翻译')
+      return
+    }
     const mini = getDay(date)?.miniLevels?.find((m) => m.id === levelId)
     if (!mini) return
     const src = effectiveScenePrompt(mini)
     const llmKey = getLlmApiKey()
     if (!llmKey) {
-      setStatus('请先到「设置」填写 LLM API Key 才能翻译')
+      showToast('请先到「设置」填写 LLM API Key 才能翻译')
       return
     }
-    setBusy(true)
-    setStatus(`场景词翻译成英文中：${src.slice(0, 24)}…`)
+    startJob('translate', `场景词翻译成英文中：${src.slice(0, 24)}…`)
     try {
       const en = await translateSceneToEnglish({
         text: src,
@@ -704,40 +803,45 @@ export function FamilyStudioPage() {
       if (en && en !== src) {
         const day = cacheMiniLevelScenePromptEn(date, levelId, en)
         if (day) setMiniLevels(day.miniLevels || [])
-        setStatus(`已翻译：${en}`)
+        finishJob(`已翻译：${en.slice(0, 40)}${en.length > 40 ? '…' : ''}`, 'done')
       } else {
-        setStatus(en ? '场景词已是英文，无需翻译' : '翻译失败，请稍后重试')
+        clearJobNow()
+        showToast(en ? '场景词已是英文，无需翻译' : '翻译失败，请稍后重试')
       }
     } finally {
-      setBusy(false)
+      /* finishJob / clearJobNow 已处理 */
     }
   }
 
   /** 一键翻译所有含中文场景词的关卡 */
   async function translateAllScenes() {
+    if (imageOpsLocked) {
+      showToast('请等待当前任务完成后再翻译')
+      return
+    }
     const day = getDay(date)
     if (!dayHasMiniPack(day)) {
-      setStatus('请先生成迷你关卡包')
+      showToast('请先生成迷你关卡包')
       return
     }
     const needTl = (day!.miniLevels || []).filter((m) =>
       sceneNeedsTranslation(effectiveScenePrompt(m)),
     )
     if (!needTl.length) {
-      setStatus('所有场景词都已是英文，无需翻译')
+      showToast('所有场景词都已是英文，无需翻译')
       return
     }
     const llmKey = getLlmApiKey()
     if (!llmKey) {
-      setStatus('请先到「设置」填写 LLM API Key 才能翻译')
+      showToast('请先到「设置」填写 LLM API Key 才能翻译')
       return
     }
-    setBusy(true)
+    startJob('translate', `场景词翻译成英文中（1/${needTl.length}）…`)
     let done = 0
     let okCount = 0
     for (const m of needTl) {
       const src = effectiveScenePrompt(m)
-      setStatus(`场景词翻译成英文中（${done + 1}/${needTl.length}）：${src.slice(0, 20)}…`)
+      updateJobLabel(`场景词翻译成英文中（${done + 1}/${needTl.length}）：${src.slice(0, 20)}…`)
       const en = await translateSceneToEnglish({
         text: src,
         apiKey: llmKey,
@@ -750,8 +854,7 @@ export function FamilyStudioPage() {
       }
       done += 1
     }
-    setBusy(false)
-    setStatus(`翻译完成：${okCount}/${needTl.length} 关（配图时优先用英文场景词）`)
+    finishJob(`翻译完成：${okCount}/${needTl.length} 关`, 'done')
   }
 
   async function imageOneLevel(levelId: string) {
@@ -763,6 +866,10 @@ export function FamilyStudioPage() {
 
   /** 单张重画：只重新生成该槽，不动其它图 */
   async function redrawOneSlot(mini: FamilyMiniLevel, slotIndex: number) {
+    if (imageOpsLocked) {
+      showToast('请等待当前任务完成后再重画')
+      return
+    }
     const day = getDay(date)
     const cur = day?.miniLevels?.find((m) => m.id === mini.id)
     if (!cur) return
@@ -771,7 +878,7 @@ export function FamilyStudioPage() {
     const cloudKey = getImageCloudApiKey()
     const useDirect = isNativeApp() && Boolean(cloudKey)
     if (isNativeApp() && !nativeFamilyCloudReady(Boolean(cloudKey), getApiBase())) {
-      setStatus(`请到设置填写${cloudName} Key`)
+      showToast(`请到设置填写${cloudName} Key`)
       return
     }
     const sceneFinal = cur.scenePromptEn?.trim() || effectiveScenePrompt(cur)
@@ -784,7 +891,7 @@ export function FamilyStudioPage() {
     const slot = slots[slotIndex]
     if (!slot) return
     setRedrawSlot({ levelId: cur.id, slotIndex })
-    setStatus(`${cloudName}重画第 ${slotIndex + 1} 张（${slot.subject}）…`)
+    startJob('image', `${cloudName}重画第 ${slotIndex + 1} 张（${slot.subject}）…`)
     try {
       const images = await fetchSlotImages([slot], {
         date,
@@ -798,11 +905,13 @@ export function FamilyStudioPage() {
       if (updated) {
         const hydrated = await hydrateFamilyDayImages(updated)
         setMiniLevels(hydrated.miniLevels || [])
-        setStatus(`已重画第 ${slotIndex + 1} 张（${slot.subject}）`)
+        finishJob('配图完成', 'done')
+      } else {
+        clearJobNow()
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setStatus(`${cloudName}重画失败（${msg.slice(0, 80)}），可再试一次`)
+      finishJob(`${cloudName}重画失败（${msg.slice(0, 40)}）`, 'error')
     } finally {
       setRedrawSlot(null)
     }
@@ -814,7 +923,7 @@ export function FamilyStudioPage() {
     const existing = getDay(date)?.images || []
     const room = Math.max(0, maxSlots - existing.length)
     if (!room) {
-      setStatus(`已满 ${maxSlots} 张（与设置里最少关键词数一致），请先删掉再选`)
+      showToast(`已满 ${maxSlots} 张（与设置里最少关键词数一致），请先删掉再选`)
       return
     }
     const reads = await Promise.all(
@@ -833,14 +942,65 @@ export function FamilyStudioPage() {
     const day = setDayImages(date, [...existing, ...reads].slice(0, maxSlots))
     if (day) {
       setImages(day.images)
-      setStatus(`已挂上 ${day.images.length} 张照片（上限 ${maxSlots}）`)
+      showToast(`已挂上 ${day.images.length} 张照片（上限 ${maxSlots}）`)
     } else {
-      setStatus('请先生成关卡再选图')
+      showToast('请先生成关卡再选图')
     }
   }
 
+  const bannerKind =
+    activeJob?.phase === 'done'
+      ? 'done'
+      : activeJob?.phase === 'error'
+        ? 'error'
+        : activeJob
+          ? activeJob.kind
+          : 'transcribe'
+  const bannerTitle =
+    activeJob?.phase === 'done' && activeJob.kind === 'image'
+      ? '配图完成'
+      : activeJob?.phase === 'done'
+        ? activeJob.label
+        : activeJob?.phase === 'error'
+          ? activeJob.label
+          : activeJob?.kind === 'generate'
+            ? '生成关卡中…'
+            : activeJob?.kind === 'image'
+              ? '配图进行中'
+              : activeJob?.kind === 'translate'
+                ? '翻译场景词中…'
+                : '语音转文字中…'
+  const bannerDetail =
+    activeJob?.phase === 'running'
+      ? activeJob.label
+      : activeJob?.phase === 'done' && activeJob.kind === 'image'
+        ? '即将关闭…'
+        : activeJob?.phase === 'done' || activeJob?.phase === 'error'
+          ? activeJob.label
+          : '请稍候，可继续录音或滑动查看'
+
   return (
-    <div className="family-studio chat-mode">
+    <div className={`family-studio chat-mode${showJobBanner ? ' has-job-banner' : ''}`}>
+      {showJobBanner && (
+        <div
+          className={`studio-job-banner kind-${bannerKind}`}
+          role="status"
+          aria-live="polite"
+        >
+          {activeJob?.phase === 'running' || (!activeJob && transcribePending > 0) ? (
+            <span className="transcribe-spinner" aria-hidden />
+          ) : null}
+          <div className="recording-copy">
+            <strong>{bannerTitle}</strong>
+            <span>{bannerDetail}</span>
+          </div>
+        </div>
+      )}
+      {toast && (
+        <div className="studio-toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      )}
       <header>
         <button type="button" className="linkish" onClick={() => navigate('/parent')}>
           ← 家长中心
@@ -899,18 +1059,6 @@ export function FamilyStudioPage() {
             </div>
           </div>
         )}
-        {transcribing && !recording && (
-          <div className="transcribe-banner" role="status" aria-live="polite">
-            <span className="transcribe-spinner" aria-hidden />
-            <div className="recording-copy">
-              <strong>正在转写成文字</strong>
-              <span>
-                使用 {diaryWhisperModelLabel(getDiaryWhisperModelId())}
-                ，请稍候（Small 可能要十几秒）
-              </span>
-            </div>
-          </div>
-        )}
         <div className="chat-list" ref={listRef}>
           {messages.length === 0 && (
             <p className="chat-empty muted">今天还没有消息。打字或点语音说说孩子今天做了什么。</p>
@@ -941,7 +1089,14 @@ export function FamilyStudioPage() {
                 </div>
               ) : (
                 <>
-                  <p className="bubble-text">{m.text || (m.audioId || m.audioDataUrl ? '（待填写文字）' : '')}</p>
+                  <p className="bubble-text">
+                    {m.text ||
+                      (m.audioId || m.audioDataUrl
+                        ? pendingAsrIds[m.id]
+                          ? '（转写中…）'
+                          : '（待填写文字）'
+                        : '')}
+                  </p>
                   <div className="bubble-actions">
                     <button type="button" className="bubble-edit" onClick={() => startEdit(m)}>
                       改字
@@ -960,13 +1115,13 @@ export function FamilyStudioPage() {
           ))}
         </div>
 
-        <div className={`composer ${recording ? 'is-recording' : ''} ${transcribing ? 'is-transcribing' : ''}`}>
+        <div className={`composer ${recording ? 'is-recording' : ''}`}>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
             placeholder="输入今日故事…"
-            disabled={recording || busy || transcribing}
+            disabled={recording || generating}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -978,20 +1133,19 @@ export function FamilyStudioPage() {
             <button
               type="button"
               className="primary send"
-              disabled={busy || recording || transcribing}
+              disabled={generating || recording}
               onClick={sendText}
             >
               发送
             </button>
             <button
               type="button"
-              className={`voice-btn ${recording ? 'hot' : ''} ${transcribing ? 'busy' : ''}`}
-              disabled={busy || transcribing}
+              className={`voice-btn ${recording ? 'hot' : ''}`}
+              disabled={generating}
               onClick={() => void onVoiceToggle()}
               aria-pressed={recording}
-              aria-busy={transcribing}
             >
-              {recording ? '结束录音' : transcribing ? '转写中…' : '语音输入'}
+              {recording ? '结束录音' : '语音输入'}
             </button>
           </div>
         </div>
@@ -1000,11 +1154,11 @@ export function FamilyStudioPage() {
       <section className="generate-panel">
         <button
           type="button"
-          className="primary generate-btn"
-          disabled={busy || imaging || recording || transcribing}
+          className={`primary generate-btn${generating ? ' is-working' : ''}`}
+          disabled={generating || imagingRunning || translating || recording}
           onClick={() => void generate(false)}
         >
-          {busy ? '生成中…' : imaging ? '配图中…' : hasLevel ? '按日记重新生成' : '生成关卡'}
+          {generating ? '生成中…' : imagingRunning ? '配图中…' : hasLevel ? '按日记重新生成' : '生成关卡'}
         </button>
         {hasLevel && (
           <p className="muted generate-meta">
@@ -1044,16 +1198,16 @@ export function FamilyStudioPage() {
             <div className="row photo-actions">
               <button
                 type="button"
-                className="primary"
-                disabled={busy || imaging || recording || transcribing}
+                className={`primary${imagingRunning ? ' is-working' : ''}`}
+                disabled={imageOpsLocked || recording}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '配图中…' : '全部配图'}
+                {imagingRunning ? '配图中…' : '全部配图'}
               </button>
               <button
                 type="button"
                 className="ghost"
-                disabled={busy || imaging || recording || transcribing}
+                disabled={imageOpsLocked || recording}
                 onClick={() => void regenerateMissingImages()}
               >
                 只补缺图
@@ -1061,7 +1215,7 @@ export function FamilyStudioPage() {
               <button
                 type="button"
                 className="ghost"
-                disabled={busy || imaging || recording || transcribing}
+                disabled={imageOpsLocked || recording}
                 onClick={() => void translateAllScenes()}
               >
                 场景词译英文
@@ -1123,6 +1277,7 @@ export function FamilyStudioPage() {
                       defaultValue={effectiveScenePrompt(m)}
                       key={`${m.id}-${effectiveScenePrompt(m)}`}
                       rows={3}
+                      disabled={sceneLocked}
                       onFocus={(e) => e.currentTarget.dataset.editing = '1'}
                       onChange={(e) => {
                         // 输入中标记，避免重渲染时被 defaultValue 重置
@@ -1130,6 +1285,7 @@ export function FamilyStudioPage() {
                       }}
                       onBlur={(e) => {
                         e.currentTarget.dataset.editing = '0'
+                        if (sceneLocked) return
                         const next = e.target.value.trim()
                         if (next && next !== effectiveScenePrompt(m)) {
                           saveScenePrompt(m.id, next)
@@ -1150,7 +1306,7 @@ export function FamilyStudioPage() {
                       <button
                         type="button"
                         className="ghost"
-                        disabled={busy || imaging}
+                        disabled={sceneLocked || imageOpsLocked}
                         onClick={() => resetScenePrompt(m.id)}
                       >
                         恢复默认场景
@@ -1158,14 +1314,14 @@ export function FamilyStudioPage() {
                       <button
                         type="button"
                         className="ghost"
-                        disabled={busy || imaging}
+                        disabled={sceneLocked || imageOpsLocked}
                         onClick={() => void translateOneScene(m.id)}
                       >
                         翻译成英文
                       </button>
                       <button
                         type="button"
-                        disabled={busy || imaging}
+                        disabled={imageOpsLocked}
                         onClick={() => void imageOneLevel(m.id)}
                       >
                         配图本关
@@ -1217,13 +1373,14 @@ export function FamilyStudioPage() {
                                     defaultValue={subject}
                                     key={`${m.id}-${si}-${subject}`}
                                     onBlur={(e) => {
+                                      if (sceneLocked) return
                                       const v = e.target.value.trim()
                                       if (si > 0 && v !== subject) {
                                         const day = setMiniLevelItemPrompt(date, m.id, si, v)
                                         if (day) void refreshMiniLevels(day, '已保存主体词，可点重画更新这张图')
                                       }
                                     }}
-                                    disabled={si === 0}
+                                    disabled={si === 0 || sceneLocked}
                                     style={{ width: '100%', fontSize: 14, padding: '8px 10px', boxSizing: 'border-box' }}
                                   />
                                   {si === 0 && (
@@ -1234,7 +1391,7 @@ export function FamilyStudioPage() {
                                   <button
                                     type="button"
                                     className="ghost"
-                                    disabled={busy || imaging || redrawing}
+                                    disabled={imageOpsLocked || redrawing}
                                     onClick={() => void redrawOneSlot(m, si)}
                                     style={{ marginTop: 6, width: '100%' }}
                                   >
@@ -1254,11 +1411,11 @@ export function FamilyStudioPage() {
             <div className="row photo-actions" style={{ marginTop: 8 }}>
               <button
                 type="button"
-                className="primary"
-                disabled={busy || imaging || recording || transcribing}
+                className={`primary${imagingRunning ? ' is-working' : ''}`}
+                disabled={imageOpsLocked || recording}
                 onClick={() => void regenerateImages()}
               >
-                {imaging ? '配图中…' : '全部配图'}
+                {imagingRunning ? '配图中…' : '全部配图'}
               </button>
             </div>
           </div>
@@ -1277,7 +1434,7 @@ export function FamilyStudioPage() {
               onChange={(e) => void onPickFiles(e.target.files)}
             />
             <div className="row photo-actions">
-              <button type="button" disabled={busy || imaging} onClick={() => fileRef.current?.click()}>
+              <button type="button" disabled={imageOpsLocked} onClick={() => fileRef.current?.click()}>
                 从相册选图
               </button>
             </div>
@@ -1308,8 +1465,6 @@ export function FamilyStudioPage() {
           </div>
         )}
       </section>
-
-      {status && <p className="status">{status}</p>}
 
       <div className="footer-actions">
         <button type="button" onClick={() => navigate('/family')}>

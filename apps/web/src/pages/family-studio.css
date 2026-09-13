@@ -51,6 +51,22 @@
   flex-wrap: nowrap;
 }
 
+/* 顶部四个操作按钮：2×2 网格，避免挤压竖排文字 */
+.family-studio .row.photo-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.family-studio .row.photo-actions button {
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  white-space: normal;
+  line-height: 1.25;
+  font-size: 15px;
+}
+
 .family-studio button {
   border: 0;
   border-radius: 12px;
@@ -58,12 +74,51 @@
   background: #3d7ea6;
   color: #fff;
   font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 rgba(30, 70, 95, 0.32),
+    0 4px 10px rgba(40, 30, 20, 0.08);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease,
+    filter 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.family-studio button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.family-studio button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 0 0 rgba(30, 70, 95, 0.32),
+    0 2px 6px rgba(40, 30, 20, 0.08);
+}
+
+.family-studio button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  filter: none;
 }
 
 .family-studio button.primary {
   background: #d4553a;
   font-size: 17px;
   padding: 12px 14px;
+  box-shadow:
+    0 2px 0 rgba(140, 50, 30, 0.38),
+    0 4px 10px rgba(40, 30, 20, 0.1);
+}
+
+.family-studio button.primary:active:not(:disabled) {
+  box-shadow:
+    0 0 0 rgba(140, 50, 30, 0.38),
+    0 2px 6px rgba(40, 30, 20, 0.08);
 }
 
 .family-studio button.primary.send,
@@ -79,11 +134,53 @@
   background: #3d7ea6;
 }
 
-.family-studio button.ghost,
+.family-studio button.ghost {
+  background: #fff;
+  color: #3d7ea6;
+  border: 1.5px solid #b8d0e0;
+  box-shadow:
+    0 2px 0 #a8c4d8,
+    0 3px 8px rgba(40, 30, 20, 0.06);
+}
+
+.family-studio button.ghost:hover:not(:disabled) {
+  background: #f5fafd;
+  filter: none;
+}
+
+.family-studio button.ghost:active:not(:disabled) {
+  background: #e8f2fa;
+  box-shadow:
+    0 0 0 #a8c4d8,
+    0 1px 4px rgba(40, 30, 20, 0.06);
+}
+
 .family-studio button.linkish {
   background: transparent;
   color: #3d7ea6;
-  border: 1px solid #d7e4ef;
+  border: 0;
+  box-shadow: none;
+  font-weight: 500;
+  padding: 6px 8px;
+}
+
+.family-studio button.linkish:hover:not(:disabled),
+.family-studio button.linkish:active:not(:disabled) {
+  filter: none;
+  transform: none;
+  box-shadow: none;
+  background: rgba(61, 126, 166, 0.08);
+}
+
+/* 配图进行中：主操作按钮保持醒目 */
+.family-studio button.is-working,
+.family-studio button.is-working:disabled {
+  opacity: 1;
+  cursor: wait;
+  box-shadow:
+    0 2px 0 rgba(140, 50, 30, 0.38),
+    0 4px 10px rgba(40, 30, 20, 0.1);
+  animation: button-working-pulse 1.4s ease-in-out infinite;
 }
 
 .family-studio .voice-btn.hot {
@@ -100,6 +197,116 @@
   background: #fff3d6;
   padding: 10px 12px;
   border-radius: 12px;
+}
+
+/* 长任务进度：固定在视口顶部，滚动不消失 */
+.studio-job-banner,
+.imaging-sticky-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  width: min(100%, 520px);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, #ffe4d0, #fff3e6);
+  border-bottom: 1px solid rgba(212, 85, 58, 0.28);
+  box-shadow: 0 6px 18px rgba(40, 30, 20, 0.14);
+}
+
+.studio-job-banner.kind-transcribe {
+  background: linear-gradient(90deg, #dceefc, #eef6ff);
+  border-bottom-color: rgba(61, 126, 166, 0.22);
+}
+
+.studio-job-banner.kind-transcribe .recording-copy strong {
+  color: #245a7a;
+}
+
+.studio-job-banner.kind-done {
+  background: linear-gradient(90deg, #e5f6ea, #f3faf5);
+  border-bottom-color: rgba(47, 107, 58, 0.22);
+}
+
+.studio-job-banner.kind-done .recording-copy strong {
+  color: #2f6b3a;
+}
+
+.studio-job-banner.kind-error {
+  background: linear-gradient(90deg, #ffe4d8, #fff0e8);
+  border-bottom-color: rgba(196, 59, 42, 0.22);
+}
+
+.studio-job-banner.kind-error .recording-copy strong {
+  color: #8a2e22;
+}
+
+.studio-job-banner .recording-copy strong,
+.imaging-sticky-banner .recording-copy strong {
+  color: #a33a22;
+}
+
+.studio-job-banner .transcribe-spinner,
+.imaging-sticky-banner .transcribe-spinner {
+  border-color: rgba(212, 85, 58, 0.28);
+  border-top-color: #d4553a;
+}
+
+.studio-job-banner.kind-transcribe .transcribe-spinner {
+  border-color: rgba(61, 126, 166, 0.25);
+  border-top-color: #3d7ea6;
+}
+
+.family-studio.has-job-banner,
+.family-studio.is-imaging {
+  padding-top: calc(16px + 64px + env(safe-area-inset-top, 0px));
+}
+
+/* 页面底部轻 toast（瞬时反馈） */
+.studio-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 75;
+  max-width: min(92vw, 480px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(44, 36, 24, 0.88);
+  color: #fff8ef;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(40, 30, 20, 0.2);
+  pointer-events: none;
+  animation: studio-toast-in 0.18s ease-out;
+}
+
+@keyframes studio-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes button-working-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
 }
 
 .family-studio .ok {
@@ -393,18 +600,20 @@
   margin-top: 0;
 }
 
-.photo-actions {
+/* 每关操作行（恢复默认场景/翻译成英文/配图本关）：三按钮平分一行 */
+.family-studio .mini-level-edit .row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.photo-actions button {
+.family-studio .mini-level-edit .row button {
   width: 100%;
-  min-height: 58px;
-  padding: 10px 8px;
+  min-height: 52px;
+  padding: 8px 6px;
   white-space: normal;
-  line-height: 1.2;
+  line-height: 1.25;
+  font-size: 14px;
 }
 
 .slot-grid {
@@ -617,6 +826,15 @@
   font: inherit;
   color: inherit;
   background: #eee;
+  box-shadow: none;
+  font-weight: inherit;
+}
+
+.photo-thumb-btn:hover:not(:disabled),
+.photo-thumb-btn:active:not(:disabled) {
+  filter: none;
+  transform: none;
+  box-shadow: none;
 }
 
 .photo-thumb-fill {
