@@ -40,4 +40,13 @@ describe('parent plus copy', () => {
     assert.match(membershipSrc, /priceFen: 14800/)
     assert.match(membershipSrc, /¥\$\{/)
   })
+
+  it('can fetch sms captcha config for parent login', () => {
+    assert.match(membershipSrc, /\/api\/auth\/sms\/config/)
+    assert.match(membershipSrc, /\/api\/auth\/captcha/)
+    assert.match(membershipSrc, /captchaId/)
+    const src = readFileSync(join(pages, 'ParentPage.tsx'), 'utf8')
+    assert.match(src, /图形验证码/)
+    assert.match(src, /sms_ip_rate_limited/)
+  })
 })

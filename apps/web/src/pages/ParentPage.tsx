@@ -29,6 +29,8 @@ import {
   deleteParentAccount,
   fetchBillingPlans,
   fetchMe,
+  fetchSmsAuthConfig,
+  fetchSmsCaptcha,
   formatFen,
   logoutParent,
   sendParentSms,
@@ -59,6 +61,10 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [plans, setPlans] = useState<BillingPlans | null>(null)
   const [loginPhone, setLoginPhone] = useState('')
   const [loginCode, setLoginCode] = useState('')
+  const [captchaOn, setCaptchaOn] = useState(false)
+  const [captchaId, setCaptchaId] = useState('')
+  const [captchaImage, setCaptchaImage] = useState('')
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
   const [accountMsg, setAccountMsg] = useState('')
   const [accountBusy, setAccountBusy] = useState(false)
   const plusActive = Boolean(me?.plus)
@@ -75,6 +81,26 @@ export function ParentPage({ progress, onProgress }: Props) {
     void fetchMe().then(setMe)
     void fetchBillingPlans().then(setPlans)
   }, [gated])
+
+  async function loadCaptcha() {
+    const challenge = await fetchSmsCaptcha()
+    setCaptchaId(challenge?.id || '')
+    setCaptchaImage(challenge?.image || '')
+    setCaptchaAnswer('')
+  }
+
+  useEffect(() => {
+    if (!gated || me) return
+    let cancelled = false
+    void fetchSmsAuthConfig().then(async (cfg) => {
+      if (cancelled) return
+      setCaptchaOn(cfg.captcha)
+      if (cfg.captcha) await loadCaptcha()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [gated, me])
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
@@ -114,7 +140,16 @@ export function ParentPage({ progress, onProgress }: Props) {
   async function onSendSms() {
     setAccountBusy(true)
     setAccountMsg('')
-    const res = await sendParentSms(loginPhone)
+    const res = await sendParentSms(
+      loginPhone,
+      captchaOn || captchaId ? { captchaId, captchaAnswer } : undefined,
+    )
+    if (res.error === 'captcha_required' || res.error === 'captcha_invalid') {
+      setCaptchaOn(true)
+      await loadCaptcha()
+    } else if (res.ok && captchaOn) {
+      await loadCaptcha()
+    }
     setAccountBusy(false)
     setAccountMsg(
       res.ok
@@ -123,9 +158,15 @@ export function ParentPage({ progress, onProgress }: Props) {
           : '验证码已发送'
         : res.error === 'sms_rate_limited'
           ? '发送太频繁，请稍后再试'
-          : res.error === 'invalid_phone'
-            ? '请填写 11 位大陆手机号'
-            : `发送失败：${res.error || res.status}`,
+          : res.error === 'sms_ip_rate_limited'
+            ? '该网络发送过于频繁，请稍后再试'
+            : res.error === 'invalid_phone'
+              ? '请填写 11 位大陆手机号'
+              : res.error === 'captcha_required'
+                ? '请先完成图形验证'
+                : res.error === 'captcha_invalid'
+                  ? '图形验证码错误，请重试'
+                  : `发送失败：${res.error || res.status}`,
     )
   }
 
@@ -253,6 +294,28 @@ export function ParentPage({ progress, onProgress }: Props) {
                 placeholder="11 位大陆手机号"
               />
             </label>
+            {captchaOn && (
+              <div className="plus-captcha">
+                {captchaImage ? (
+                  <img src={captchaImage} alt="图形验证码" width={140} height={48} />
+                ) : (
+                  <span className="muted">验证码加载中…</span>
+                )}
+                <button type="button" className="linkish" disabled={accountBusy} onClick={() => void loadCaptcha()}>
+                  换一张
+                </button>
+                <label>
+                  图形验证码
+                  <input
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="图片中的数字"
+                  />
+                </label>
+              </div>
+            )}
             <div className="row-actions">
               <button type="button" disabled={accountBusy} onClick={() => void onSendSms()}>
                 发送验证码

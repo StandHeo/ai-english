@@ -30,6 +30,8 @@ import {
 } from './membership.js'
 import { maskPhone, normalizePhone } from './phone.js'
 import { issueSmsCode, smsProvider, tencentSmsConfigured, verifySmsCode } from './sms.js'
+import { consumeSmsCaptcha, createSmsCaptcha, smsCaptchaEnabled } from './smsCaptcha.js'
+import { clientIp, consumeSmsIpLimit, trustProxySetting } from './smsIpLimit.js'
 import { timingSafeEqualStr } from './cryptoUtil.js'
 import {
   createWechatPrepay,
@@ -87,6 +89,8 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
   const db = openDatabase(options.databasePath)
   const app = express()
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5_000_000 } })
+  const trustProxy = trustProxySetting()
+  if (trustProxy !== undefined) app.set('trust proxy', trustProxy)
 
   app.use(cors())
   app.use(
@@ -350,11 +354,40 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     }
   })
 
+  app.get('/api/auth/sms/config', (_req, res) => {
+    res.json({ captcha: smsCaptchaEnabled() })
+  })
+
+  app.get('/api/auth/captcha', (_req, res) => {
+    if (!smsCaptchaEnabled()) {
+      res.status(404).json({ error: 'captcha_disabled' })
+      return
+    }
+    const challenge = createSmsCaptcha()
+    res.json(challenge)
+  })
+
   app.post('/api/auth/sms/send', async (req, res) => {
+    if (consumeSmsIpLimit(clientIp(req), 'send') === 'limited') {
+      res.status(429).json({ error: 'sms_ip_rate_limited' })
+      return
+    }
     const phone = normalizePhone(req.body?.phone)
     if (!phone) {
       res.status(400).json({ error: 'invalid_phone' })
       return
+    }
+    if (smsCaptchaEnabled()) {
+      const captchaId = String(req.body?.captchaId || '').trim()
+      const captchaAnswer = String(req.body?.captchaAnswer || '').trim()
+      if (!captchaId || !captchaAnswer) {
+        res.status(400).json({ error: 'captcha_required' })
+        return
+      }
+      if (!consumeSmsCaptcha(captchaId, captchaAnswer)) {
+        res.status(400).json({ error: 'captcha_invalid' })
+        return
+      }
     }
     if (smsProvider() === 'tencent' && !tencentSmsConfigured()) {
       res.status(503).json({ error: 'sms_tencent_not_configured' })
@@ -383,6 +416,10 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
   })
 
   app.post('/api/auth/sms/verify', (req, res) => {
+    if (consumeSmsIpLimit(clientIp(req), 'verify') === 'limited') {
+      res.status(429).json({ error: 'sms_ip_rate_limited' })
+      return
+    }
     const phone = normalizePhone(req.body?.phone)
     const code = String(req.body?.code || '').trim()
     if (!phone || !code) {

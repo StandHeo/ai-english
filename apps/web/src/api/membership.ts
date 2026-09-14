@@ -58,8 +58,30 @@ async function membershipFetch(
   }
 }
 
-export async function sendParentSms(phone: string) {
-  return membershipFetch('/api/auth/sms/send', { body: { phone } })
+export async function fetchSmsAuthConfig(): Promise<{ captcha: boolean }> {
+  const res = await membershipFetch('/api/auth/sms/config')
+  return { captcha: Boolean(res.ok && res.data.captcha) }
+}
+
+export async function fetchSmsCaptcha(): Promise<{ id: string; image: string } | null> {
+  const res = await membershipFetch('/api/auth/captcha')
+  const id = typeof res.data.id === 'string' ? res.data.id : ''
+  const image = typeof res.data.image === 'string' ? res.data.image : ''
+  if (!res.ok || !id || !image) return null
+  return { id, image }
+}
+
+export async function sendParentSms(
+  phone: string,
+  captcha?: { captchaId?: string; captchaAnswer?: string },
+) {
+  return membershipFetch('/api/auth/sms/send', {
+    body: {
+      phone,
+      ...(captcha?.captchaId ? { captchaId: captcha.captchaId } : {}),
+      ...(captcha?.captchaAnswer ? { captchaAnswer: captcha.captchaAnswer } : {}),
+    },
+  })
 }
 
 export async function verifyParentSms(phone: string, code: string) {
