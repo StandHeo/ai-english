@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import type { FamilyDayRecord } from '../family/store'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
+import { fetchMe } from '../api/membership'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
 import { generateFamilyPackDirect, llmBusyLabel, translateSceneToEnglish } from '../family/generateLevelClient'
@@ -145,6 +146,8 @@ export function FamilyStudioPage() {
   const [editText, setEditText] = useState('')
   const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [levelFilter, setLevelFilter] = useState('')
+  const [plusActive, setPlusActive] = useState(false)
+  const [plusChecked, setPlusChecked] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -158,7 +161,7 @@ export function FamilyStudioPage() {
     (activeJob?.kind === 'image') ||
       (activeJob?.kind === 'translate' && activeJob.phase === 'running'),
   )
-  const imageOpsLocked = imaging || translating || generating || Boolean(redrawSlot)
+  const imageOpsLocked = imaging || translating || generating || Boolean(redrawSlot) || !plusActive
   const showJobBanner = Boolean(activeJob) || transcribePending > 0
 
   function clearToastTimer() {
@@ -213,6 +216,10 @@ export function FamilyStudioPage() {
       clearJobDoneTimer()
     }
   }, [])
+
+  function plusLockedToast() {
+    showToast('需要 Plus 才能生成新关。请到家长中心开通（Plus 不含第三方模型费）')
+  }
 
   async function persistVoiceCapture(result: DiaryRecordCapture) {
     if (result.error === 'insecure') {
@@ -296,6 +303,10 @@ export function FamilyStudioPage() {
 
   useEffect(() => {
     reloadDay()
+    void fetchMe().then((me) => {
+      setPlusActive(Boolean(me?.plus))
+      setPlusChecked(true)
+    })
     const modelId = getDiaryWhisperModelId()
     void getDiaryAsrStatus(modelId).then((s) => {
       setAsrReady(s.available && s.modelReady)
@@ -390,6 +401,10 @@ export function FamilyStudioPage() {
     levels: FamilyMiniLevel[],
     opts?: { onlyMissingBg?: boolean; statusPrefix?: string },
   ): Promise<boolean> {
+    if (!plusActive) {
+      plusLockedToast()
+      return false
+    }
     if (imaging || translating || generating || Boolean(redrawSlot)) {
       showToast('请等待当前任务完成后再配图')
       return false
@@ -552,6 +567,10 @@ export function FamilyStudioPage() {
   }
 
   async function generate(force = false) {
+    if (!plusActive) {
+      plusLockedToast()
+      return
+    }
     if (transcribePending > 0) {
       showToast('还有语音正在转成文字，转完后再生成关卡')
       return
@@ -1033,6 +1052,14 @@ export function FamilyStudioPage() {
             正在编辑往日关卡：重新生成会覆盖这一天的关卡并重置通关状态
           </p>
         )}
+        {plusChecked && !plusActive && (
+          <p className="plus-lock-banner">
+            工作室生成已锁定。请到家长中心登录并开通 Plus（不含第三方模型调用费）。已有关卡仍可在家庭日历游玩。
+            <button type="button" className="ghost" onClick={() => navigate('/parent')}>
+              去开通
+            </button>
+          </p>
+        )}
       </header>
 
       {asrHint && <p className={`asr-banner ${asrReady ? 'ok' : ''}`}>{asrHint}</p>}
@@ -1154,7 +1181,7 @@ export function FamilyStudioPage() {
         <button
           type="button"
           className={`primary generate-btn${generating ? ' is-working' : ''}`}
-          disabled={generating || imagingRunning || translating || recording}
+          disabled={generating || imagingRunning || translating || recording || !plusActive}
           onClick={() => void generate(false)}
         >
           {generating ? '生成中…' : imagingRunning ? '配图中…' : hasLevel ? '按日记重新生成' : '生成关卡'}

@@ -332,6 +332,23 @@
   color: #2f6b3a;
 }
 
+.plus-lock-banner {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff4e5;
+  color: #6a4a20;
+  font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.plus-lock-banner button {
+  margin: 0;
+}
+
 .chat-shell {
   flex: 1;
   display: flex;

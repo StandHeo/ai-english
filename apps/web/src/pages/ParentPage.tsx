@@ -24,6 +24,18 @@ import { Capacitor } from '@capacitor/core'
 import { requestTts } from '../voice/client'
 import { ensurePiperReady } from '../voice/piperTts'
 import type { ContentPack, ProgressState } from '../types'
+import {
+  createBillingOrder,
+  deleteParentAccount,
+  fetchBillingPlans,
+  fetchMe,
+  formatFen,
+  logoutParent,
+  sendParentSms,
+  verifyParentSms,
+  type BillingPlans,
+  type MeResponse,
+} from '../api/membership'
 import './parent.css'
 
 type Props = {
@@ -43,6 +55,13 @@ export function ParentPage({ progress, onProgress }: Props) {
   )
   const [voicePrefs, setVoicePrefs] = useState<VoicePrefs>(() => loadVoicePrefs())
   const [voiceSaved, setVoiceSaved] = useState('')
+  const [me, setMe] = useState<MeResponse | null>(null)
+  const [plans, setPlans] = useState<BillingPlans | null>(null)
+  const [loginPhone, setLoginPhone] = useState('')
+  const [loginCode, setLoginCode] = useState('')
+  const [accountMsg, setAccountMsg] = useState('')
+  const [accountBusy, setAccountBusy] = useState(false)
+  const plusActive = Boolean(me?.plus)
 
   useEffect(() => {
     listPackIds()
@@ -50,6 +69,12 @@ export function ParentPage({ progress, onProgress }: Props) {
       .then(setPacks)
       .catch(() => setPacks([]))
   }, [])
+
+  useEffect(() => {
+    if (!gated) return
+    void fetchMe().then(setMe)
+    void fetchBillingPlans().then(setPlans)
+  }, [gated])
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
@@ -84,6 +109,78 @@ export function ParentPage({ progress, onProgress }: Props) {
     setVoicePrefs(next)
     saveVoicePrefs(next)
     setVoiceSaved('已保存，关卡里马上生效')
+  }
+
+  async function onSendSms() {
+    setAccountBusy(true)
+    setAccountMsg('')
+    const res = await sendParentSms(loginPhone)
+    setAccountBusy(false)
+    setAccountMsg(
+      res.ok
+        ? res.data.mock
+          ? '验证码已写入本机 API 日志（mock 默认 123456）'
+          : '验证码已发送'
+        : res.error === 'sms_rate_limited'
+          ? '发送太频繁，请稍后再试'
+          : res.error === 'invalid_phone'
+            ? '请填写 11 位大陆手机号'
+            : `发送失败：${res.error || res.status}`,
+    )
+  }
+
+  async function onVerifySms() {
+    setAccountBusy(true)
+    setAccountMsg('')
+    const res = await verifyParentSms(loginPhone, loginCode)
+    setAccountBusy(false)
+    if (!res.ok) {
+      setAccountMsg(res.error === 'invalid_code' ? '验证码错误或已过期' : `登录失败：${res.error || res.status}`)
+      return
+    }
+    const next = await fetchMe()
+    setMe(next)
+    setAccountMsg('已登录')
+  }
+
+  async function onLogout() {
+    await logoutParent()
+    setMe(null)
+    setAccountMsg('已退出')
+  }
+
+  async function onDeleteAccount() {
+    if (
+      !window.confirm(
+        '确定注销账号？会员资格无法恢复。本机日记与供应商 Key 仍留在这台设备，不会当作云端备份删除。',
+      )
+    ) {
+      return
+    }
+    const res = await deleteParentAccount()
+    setMe(null)
+    setAccountMsg(res.ok ? '账号已注销' : `注销失败：${res.error}`)
+  }
+
+  async function onBuy(plan: 'month' | 'year') {
+    if (plans?.provider !== 'wechat') return
+    setAccountBusy(true)
+    const res = await createBillingOrder(plan)
+    setAccountBusy(false)
+    if (!res.ok) {
+      setAccountMsg(res.error === 'unauthorized' ? '请先登录' : `下单失败：${res.error}`)
+      return
+    }
+    const pay = res.data.pay as { unavailable?: boolean; prepay?: { codeUrl?: string } } | undefined
+    if (pay?.unavailable) {
+      setAccountMsg('微信支付商户尚未配置完成')
+      return
+    }
+    if (pay?.prepay?.codeUrl) {
+      setAccountMsg(`请用微信扫码支付：${pay.prepay.codeUrl}`)
+      return
+    }
+    setAccountMsg('已创建订单，请在微信中完成支付')
   }
 
   async function previewVoice() {
@@ -123,16 +220,94 @@ export function ParentPage({ progress, onProgress }: Props) {
         </div>
       </header>
 
+      <section className="parent-plus">
+        <h2>家长账号与 Plus</h2>
+        <p className="muted">
+          Plus 只解锁家庭日记 / 每日关卡工作室，不含第三方模型调用费。日记生成需家长在本机自备供应商
+          Key。
+        </p>
+        {me ? (
+          <div className="plus-status">
+            <p>
+              已登录 {me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
+              {me.expiresAt ? ` · 到期 ${me.expiresAt.slice(0, 10)}` : ''}
+            </p>
+            <div className="row-actions">
+              <button type="button" className="linkish" onClick={() => void onLogout()}>
+                退出登录
+              </button>
+              <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
+                注销账号
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="plus-login">
+            <label>
+              手机号
+              <input
+                value={loginPhone}
+                onChange={(e) => setLoginPhone(e.target.value)}
+                inputMode="numeric"
+                autoComplete="tel"
+                placeholder="11 位大陆手机号"
+              />
+            </label>
+            <div className="row-actions">
+              <button type="button" disabled={accountBusy} onClick={() => void onSendSms()}>
+                发送验证码
+              </button>
+            </div>
+            <label>
+              验证码
+              <input
+                value={loginCode}
+                onChange={(e) => setLoginCode(e.target.value)}
+                inputMode="numeric"
+                placeholder="6 位验证码"
+              />
+            </label>
+            <button type="button" disabled={accountBusy} onClick={() => void onVerifySms()}>
+              登录
+            </button>
+          </div>
+        )}
+        <div className="plus-plans">
+          {(plans?.plans || [
+            { id: 'month' as const, priceFen: 1800, days: 30 },
+            { id: 'year' as const, priceFen: 14800, days: 365 },
+          ]).map((p) => (
+            <div key={p.id} className="plus-plan-card">
+              <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
+              <span>
+                {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
+              </span>
+              {plans?.provider === 'wechat' && me ? (
+                <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
+                  开通
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        {plans?.provider !== 'wechat' && (
+          <p className="muted">在线支付尚未开放。开通请联系管理员按手机号开通 Plus，请勿在儿童路径操作。</p>
+        )}
+        {accountMsg && <p className="muted">{accountMsg}</p>}
+      </section>
+
       <div className="parent-card-grid">
         <button
           type="button"
-          className="parent-feature-card"
+          className={`parent-feature-card${plusActive ? '' : ' locked'}`}
           onClick={() => navigate('/family/studio')}
         >
           <img src={assetUrl('assets/scenes/friend-park.png')} alt="" />
           <span className="card-label">
             <strong>家庭日记</strong>
-            <small>聊今天 · 生成英语小关</small>
+            <small>
+              {plusActive ? '聊今天 · 生成英语小关' : '需 Plus 才能生成新关'}
+            </small>
           </span>
         </button>
         <button
