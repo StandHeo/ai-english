@@ -10,5 +10,5 @@
 
 ## 3. 测试与文档
 
-- [ ] 3.1 补充 mock 短信、IP 超限、验证码开关测试；更新 `.env.example` 与 `docs/lite-host.md`
-- [ ] 3.2 跑相关测试
+- [x] 3.1 补充 mock 短信、IP 超限、验证码开关测试；更新 `.env.example` 与 `docs/lite-host.md`
+- [x] 3.2 跑相关测试
