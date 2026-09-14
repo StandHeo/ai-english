@@ -18,6 +18,7 @@ location /api/ {
   proxy_pass http://127.0.0.1:8787;
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $remote_addr;
 }
 location /health {
   proxy_pass http://127.0.0.1:8787;
@@ -25,6 +26,8 @@ location /health {
 ```
 
 Web 静态资源另配站点根；开发期 Vite 仍把 `/api` 代理到 `:8787`。
+
+Express 默认 `trust proxy` 为一跳（可用 `TRUST_PROXY` 覆盖；直连公网设 `0`）。短信发送始终按客户端 IP 滑动窗口限流（默认 60 秒 10 次，可选 `SMS_IP_DAILY_MAX` 日限额），超限返回 `sms_ip_rate_limited`，与按号 `sms_rate_limited` 不同。生产可设 `SMS_CAPTCHA=on` 打开内置图形验证码；未设置时 mock 开发流程不变。Nginx 必须覆盖 `X-Real-IP` / `X-Forwarded-For`，不要把客户端自带的转发头原样传给 API。
 
 ## 备份
 

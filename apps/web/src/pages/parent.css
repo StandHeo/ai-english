@@ -110,6 +110,26 @@
   margin-top: 8px;
 }
 
+.plus-captcha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.plus-captcha img {
+  height: 48px;
+  width: 140px;
+  border-radius: 8px;
+  background: #f6efe6;
+}
+
+.plus-captcha label {
+  flex: 1 1 140px;
+  margin-top: 0;
+}
+
 .plus-status p {
   margin: 8px 0 0;
 }
