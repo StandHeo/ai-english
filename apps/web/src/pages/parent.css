@@ -82,6 +82,42 @@
   display: block;
 }
 
+.parent-feature-card.locked img {
+  filter: grayscale(0.35) brightness(0.85);
+}
+
+.plus-plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.plus-plan-card {
+  background: #f7f2ea;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plus-plan-card strong {
+  font-size: 15px;
+}
+
+.plus-login label {
+  margin-top: 8px;
+}
+
+.plus-status p {
+  margin: 8px 0 0;
+}
+
+.parent-plus .row-actions button {
+  margin-top: 0;
+}
+
 .parent-feature-card .card-label {
   position: absolute;
   left: 0;
