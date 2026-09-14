@@ -666,6 +666,22 @@
   background: #fffaf0;
 }
 
+.slot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.slot-actions button {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 14px;
+  white-space: normal;
+  line-height: 1.25;
+}
+
 .slot-head {
   grid-column: 1 / -1;
   display: flex;
@@ -797,6 +813,7 @@
 .slot-prompt-box {
   margin-top: 8px;
   font-size: 13px;
+  grid-column: 1 / -1;
 }
 
 .slot-prompt-box summary {

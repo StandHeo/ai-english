@@ -12,6 +12,7 @@ import {
   imageCloudLabel,
   nativeFamilyCloudReady,
 } from '../family/providers'
+import { pickAlbumImage, processAlbumImage } from '../family/albumImage'
 import {
   buildKidsPrompt,
   miniLevelMissingImageSlots,
@@ -145,6 +146,7 @@ export function FamilyStudioPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
+  const [pickingSlot, setPickingSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [levelFilter, setLevelFilter] = useState('')
   const [plusActive, setPlusActive] = useState(false)
   const [plusChecked, setPlusChecked] = useState(false)
@@ -161,7 +163,8 @@ export function FamilyStudioPage() {
     (activeJob?.kind === 'image') ||
       (activeJob?.kind === 'translate' && activeJob.phase === 'running'),
   )
-  const imageOpsLocked = imaging || translating || generating || Boolean(redrawSlot) || !plusActive
+  const imageOpsLocked =
+    imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot) || !plusActive
   const showJobBanner = Boolean(activeJob) || transcribePending > 0
 
   function clearToastTimer() {
@@ -405,7 +408,7 @@ export function FamilyStudioPage() {
       plusLockedToast()
       return false
     }
-    if (imaging || translating || generating || Boolean(redrawSlot)) {
+    if (imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot)) {
       showToast('请等待当前任务完成后再配图')
       return false
     }
@@ -575,7 +578,7 @@ export function FamilyStudioPage() {
       showToast('还有语音正在转成文字，转完后再生成关卡')
       return
     }
-    if (generating || imagingRunning || translating) {
+    if (generating || imagingRunning || translating || Boolean(pickingSlot)) {
       showToast('请等待当前任务完成后再生成')
       return
     }
@@ -935,6 +938,45 @@ export function FamilyStudioPage() {
     }
   }
 
+  async function pickSlotFromAlbum(
+    mini: FamilyMiniLevel,
+    slotIndex: number,
+    role: 'scene' | 'item',
+  ) {
+    if (!plusActive) {
+      plusLockedToast()
+      return
+    }
+    if (imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot)) {
+      showToast('请等待当前任务完成后再选图')
+      return
+    }
+    setPickingSlot({ levelId: mini.id, slotIndex })
+    let started = false
+    try {
+      const blob = await pickAlbumImage({ allowEditing: role === 'item' })
+      if (!blob) return
+      startJob('image', '处理照片中…')
+      started = true
+      const dataUrl = await processAlbumImage(blob, role)
+      const updated = await setMiniLevelSlotImage(date, mini.id, slotIndex, dataUrl)
+      if (updated) {
+        const hydrated = await hydrateFamilyDayImages(updated)
+        setMiniLevels(hydrated.miniLevels || [])
+        finishJob('已从相册挂上这张图', 'done')
+      } else {
+        clearJobNow()
+        showToast('请先生成关卡再选图')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (started) finishJob(`这张图无法使用（${msg.slice(0, 40)}）`, 'error')
+      else showToast(`这张图无法使用（${msg.slice(0, 40)}）`)
+    } finally {
+      setPickingSlot(null)
+    }
+  }
+
   async function onPickFiles(files: FileList | null) {
     if (!files?.length) return
     const maxSlots = getImageSlotMax()
@@ -1181,7 +1223,7 @@ export function FamilyStudioPage() {
         <button
           type="button"
           className={`primary generate-btn${generating ? ' is-working' : ''}`}
-          disabled={generating || imagingRunning || translating || recording || !plusActive}
+          disabled={generating || imagingRunning || translating || recording || Boolean(pickingSlot) || !plusActive}
           onClick={() => void generate(false)}
         >
           {generating ? '生成中…' : imagingRunning ? '配图中…' : hasLevel ? '按日记重新生成' : '生成关卡'}
@@ -1198,7 +1240,7 @@ export function FamilyStudioPage() {
           <div className="photo-block">
             <h2>迷你关卡包 · 配图</h2>
             <p className="muted">
-              每关一词一景。可中英文编辑场景主题后再「云端配图」；道具词尽量保留英文主词，以免点图对不上。
+              每关一词一景。可中英文编辑场景主题后再配图；每个槽可「云端配图」或「相册选图」，能混用（例如真实背景 + AI 道具）。道具词尽量保留英文主词，以免点图对不上。
             </p>
             {miniLevels.length > 3 && (
               <input
@@ -1368,11 +1410,14 @@ export function FamilyStudioPage() {
                             const subject = slot.subject
                             const img = slotImages[si] || ''
                             const redrawing = redrawSlot?.levelId === m.id && redrawSlot.slotIndex === si
+                            const picking = pickingSlot?.levelId === m.id && pickingSlot.slotIndex === si
+                            const slotRole = slot.role === 'scene' ? 'scene' : 'item'
                             return (
                               <div key={si} className="slot-card">
                                 <div className="slot-head">
                                   <span className="slot-role">{slotRoleLabel(slots, si)}</span>
                                   {redrawing && <span className="slot-redrawing">重画中…</span>}
+                                  {picking && <span className="slot-redrawing">选图中…</span>}
                                 </div>
                                 {img ? (
                                   <button
@@ -1388,6 +1433,24 @@ export function FamilyStudioPage() {
                                     缺图
                                   </div>
                                 )}
+                                <div className="slot-actions">
+                                  <button
+                                    type="button"
+                                    className="ghost"
+                                    disabled={imageOpsLocked || redrawing || picking}
+                                    onClick={() => void redrawOneSlot(m, si)}
+                                  >
+                                    云端配图
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ghost"
+                                    disabled={imageOpsLocked || redrawing || picking}
+                                    onClick={() => void pickSlotFromAlbum(m, si, slotRole)}
+                                  >
+                                    相册选图
+                                  </button>
+                                </div>
                                 <details className="slot-prompt-box">
                                   <summary>画图提示词</summary>
                                   <p className="slot-prompt-full">{finalPrompt}</p>
@@ -1414,15 +1477,6 @@ export function FamilyStudioPage() {
                                       背景主体在上方「场景主题」里编辑
                                     </p>
                                   )}
-                                  <button
-                                    type="button"
-                                    className="ghost"
-                                    disabled={imageOpsLocked || redrawing}
-                                    onClick={() => void redrawOneSlot(m, si)}
-                                    style={{ marginTop: 6, width: '100%' }}
-                                  >
-                                    {img ? '重画这张' : '补画这张'}
-                                  </button>
                                 </details>
                               </div>
                             )

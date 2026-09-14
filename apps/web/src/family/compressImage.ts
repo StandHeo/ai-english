@@ -1,5 +1,8 @@
-const MAX_EDGE = 768
-const MAX_CHARS = 750_000
+export const IMAGE_MAX_EDGE = 768
+export const IMAGE_MAX_CHARS = 750_000
+
+const MAX_EDGE = IMAGE_MAX_EDGE
+const MAX_CHARS = IMAGE_MAX_CHARS
 
 function canvasJpeg(bitmap: ImageBitmap, quality: number): string {
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height, 1))
