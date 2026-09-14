@@ -6,6 +6,8 @@ import { after, before, test } from 'node:test'
 import { createApp, type CreatedApp } from './app.js'
 import { listTableColumns, listTableNames } from './db.js'
 import { PLAN_DAYS } from './membership.js'
+import { resetSmsCaptcha } from './smsCaptcha.js'
+import { resetSmsIpLimiter } from './smsIpLimit.js'
 
 const PHONE = '13800138000'
 const PHONE2 = '13900139000'
@@ -53,6 +55,9 @@ before(async () => {
   process.env.MOCK_SMS_CODE = '123456'
   process.env.BILLING_PROVIDER = 'manual'
   process.env.ADMIN_TOKEN = 'test-admin-token'
+  delete process.env.SMS_CAPTCHA
+  resetSmsIpLimiter()
+  resetSmsCaptcha()
   dir = await mkdtemp(join(tmpdir(), 'plus-mem-'))
   created = createApp({ databasePath: join(dir, 'membership.db') })
   server = await listen(created)
@@ -61,6 +66,8 @@ before(async () => {
 after(async () => {
   await server.close()
   created.close()
+  resetSmsIpLimiter()
+  resetSmsCaptcha()
   await rm(dir, { recursive: true, force: true })
 })
 
@@ -218,4 +225,152 @@ test('existing asr/match/tts/family routes still respond without plus token', as
   })
   assert.equal(family.status, 200)
   assert.ok(family.data.level)
+})
+
+function captchaAnswerFromImage(image: unknown): string {
+  const value = String(image || '')
+  const prefix = 'data:image/svg+xml;base64,'
+  assert.ok(value.startsWith(prefix), 'captcha image should be svg data url')
+  const svg = Buffer.from(value.slice(prefix.length), 'base64').toString('utf8')
+  const digits = [...svg.matchAll(/>(\d)</g)].map((m) => m[1]).join('')
+  assert.equal(digits.length, 4, `expected 4 captcha digits, got ${digits}`)
+  return digits
+}
+
+test('sms ip rate limit is distinct from per-phone limit', async () => {
+  const prevMax = process.env.SMS_IP_LIMIT_MAX
+  const prevDaily = process.env.SMS_IP_DAILY_MAX
+  process.env.SMS_IP_LIMIT_MAX = '2'
+  delete process.env.SMS_IP_DAILY_MAX
+  resetSmsIpLimiter()
+  try {
+    const headers = { 'X-Forwarded-For': '203.0.113.50' }
+    const a = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000001' }, headers })
+    const b = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000002' }, headers })
+    const c = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000003' }, headers })
+    assert.equal(a.status, 200)
+    assert.equal(b.status, 200)
+    assert.equal(c.status, 429)
+    assert.equal(c.data.error, 'sms_ip_rate_limited')
+
+    const phoneHeaders = { 'X-Forwarded-For': '203.0.113.51' }
+    const first = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000010' }, headers: phoneHeaders })
+    const second = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000010' }, headers: phoneHeaders })
+    assert.equal(first.status, 200)
+    assert.equal(second.status, 429)
+    assert.equal(second.data.error, 'sms_rate_limited')
+  } finally {
+    if (prevMax === undefined) delete process.env.SMS_IP_LIMIT_MAX
+    else process.env.SMS_IP_LIMIT_MAX = prevMax
+    if (prevDaily === undefined) delete process.env.SMS_IP_DAILY_MAX
+    else process.env.SMS_IP_DAILY_MAX = prevDaily
+    resetSmsIpLimiter()
+  }
+})
+
+test('sms ip daily cap and verify ip limit', async () => {
+  const prevDaily = process.env.SMS_IP_DAILY_MAX
+  const prevSend = process.env.SMS_IP_LIMIT_MAX
+  const prevVerify = process.env.SMS_VERIFY_IP_LIMIT_MAX
+  process.env.SMS_IP_DAILY_MAX = '2'
+  process.env.SMS_IP_LIMIT_MAX = '100'
+  process.env.SMS_VERIFY_IP_LIMIT_MAX = '2'
+  resetSmsIpLimiter()
+  try {
+    const sendHeaders = { 'X-Real-IP': '203.0.113.60' }
+    const s1 = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000021' }, headers: sendHeaders })
+    const s2 = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000022' }, headers: sendHeaders })
+    const s3 = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000023' }, headers: sendHeaders })
+    assert.equal(s1.status, 200)
+    assert.equal(s2.status, 200)
+    assert.equal(s3.status, 429)
+    assert.equal(s3.data.error, 'sms_ip_rate_limited')
+
+    const verifyHeaders = { 'X-Forwarded-For': '203.0.113.61' }
+    const v1 = await json(server.base, '/api/auth/sms/verify', {
+      body: { phone: '13500000030', code: '000000' },
+      headers: verifyHeaders,
+    })
+    const v2 = await json(server.base, '/api/auth/sms/verify', {
+      body: { phone: '13500000030', code: '000000' },
+      headers: verifyHeaders,
+    })
+    const v3 = await json(server.base, '/api/auth/sms/verify', {
+      body: { phone: '13500000030', code: '000000' },
+      headers: verifyHeaders,
+    })
+    assert.equal(v1.status, 401)
+    assert.equal(v2.status, 401)
+    assert.equal(v3.status, 429)
+    assert.equal(v3.data.error, 'sms_ip_rate_limited')
+  } finally {
+    if (prevDaily === undefined) delete process.env.SMS_IP_DAILY_MAX
+    else process.env.SMS_IP_DAILY_MAX = prevDaily
+    if (prevSend === undefined) delete process.env.SMS_IP_LIMIT_MAX
+    else process.env.SMS_IP_LIMIT_MAX = prevSend
+    if (prevVerify === undefined) delete process.env.SMS_VERIFY_IP_LIMIT_MAX
+    else process.env.SMS_VERIFY_IP_LIMIT_MAX = prevVerify
+    resetSmsIpLimiter()
+  }
+})
+
+test('sms captcha off by default and required when on', async () => {
+  const prev = process.env.SMS_CAPTCHA
+  const headers = { 'X-Forwarded-For': '203.0.113.70' }
+  try {
+    const cfgOff = await json(server.base, '/api/auth/sms/config')
+    assert.equal(cfgOff.status, 200)
+    assert.equal(cfgOff.data.captcha, false)
+    const missing = await json(server.base, '/api/auth/captcha')
+    assert.equal(missing.status, 404)
+    assert.equal(missing.data.error, 'captcha_disabled')
+
+    process.env.SMS_CAPTCHA = 'on'
+    const cfgOn = await json(server.base, '/api/auth/sms/config')
+    assert.equal(cfgOn.data.captcha, true)
+
+    const noCaptcha = await json(server.base, '/api/auth/sms/send', { body: { phone: '13500000041' }, headers })
+    assert.equal(noCaptcha.status, 400)
+    assert.equal(noCaptcha.data.error, 'captcha_required')
+
+    const challenge = await json(server.base, '/api/auth/captcha')
+    assert.equal(challenge.status, 200)
+    const id = String(challenge.data.id)
+    const answer = captchaAnswerFromImage(challenge.data.image)
+    const wrong = await json(server.base, '/api/auth/sms/send', {
+      body: { phone: '13500000042', captchaId: id, captchaAnswer: '0000' },
+      headers,
+    })
+    assert.equal(wrong.status, 400)
+    assert.equal(wrong.data.error, 'captcha_invalid')
+
+    const reused = await json(server.base, '/api/auth/sms/send', {
+      body: { phone: '13500000042', captchaId: id, captchaAnswer: answer },
+      headers,
+    })
+    assert.equal(reused.status, 400)
+    assert.equal(reused.data.error, 'captcha_invalid')
+
+    const okChallenge = await json(server.base, '/api/auth/captcha')
+    const okId = String(okChallenge.data.id)
+    const okAnswer = captchaAnswerFromImage(okChallenge.data.image)
+    const ok = await json(server.base, '/api/auth/sms/send', {
+      body: { phone: '13500000043', captchaId: okId, captchaAnswer: okAnswer },
+      headers,
+    })
+    assert.equal(ok.status, 200)
+    assert.equal(ok.data.mock, true)
+
+    const replay = await json(server.base, '/api/auth/sms/send', {
+      body: { phone: '13500000044', captchaId: okId, captchaAnswer: okAnswer },
+      headers,
+    })
+    assert.equal(replay.status, 400)
+    assert.equal(replay.data.error, 'captcha_invalid')
+  } finally {
+    if (prev === undefined) delete process.env.SMS_CAPTCHA
+    else process.env.SMS_CAPTCHA = prev
+    resetSmsCaptcha()
+    resetSmsIpLimiter()
+  }
 })
