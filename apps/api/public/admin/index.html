@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>土豆豆AI英语 · 运营后台</title>
+  <style>
+    :root {
+      --bg: #f3eee4;
+      --paper: #fffdf8;
+      --ink: #2b2418;
+      --muted: #7a6f5f;
+      --line: #e3d6c2;
+      --accent: #c45c26;
+      --accent-ink: #fffaf4;
+      --ok: #2d7a45;
+      --warn: #a15c12;
+      --bad: #b42318;
+      --chip: #efe6d6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.5 system-ui, "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 400px at 10% -10%, #f8e7cf 0%, transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 22px 8px;
+    }
+    h1 { margin: 0; font-size: 20px; letter-spacing: 0.02em; }
+    .sub { color: var(--muted); font-size: 13px; }
+    main { padding: 8px 22px 32px; max-width: 1180px; }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(70, 48, 20, 0.05);
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, select, button {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 9px 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+    input { width: 100%; }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: var(--accent-ink);
+      border-color: transparent;
+    }
+    button.ghost {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    .row > * { min-width: 140px; }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+    .tabs button {
+      background: var(--chip);
+      color: var(--ink);
+      border-color: transparent;
+    }
+    .tabs button.active { background: var(--ink); color: #fffaf3; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat {
+      background: #faf6ee;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .stat b { display: block; font-size: 28px; line-height: 1.2; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--muted); font-weight: 600; }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--chip);
+      font-size: 12px;
+    }
+    .pill.ok { background: #d9f0df; color: var(--ok); }
+    .pill.bad { background: #f8d7d4; color: var(--bad); }
+    .err { color: var(--bad); margin: 8px 0; }
+    .hidden { display: none; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    @media (max-width: 640px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .row > * { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>土豆豆AI英语 · 运营后台</h1>
+      <div class="sub">查看会员账本。在线 = 未过期会话，不是实时在线。</div>
+    </div>
+    <button class="ghost hidden" id="logoutBtn" type="button">退出</button>
+  </header>
+  <main>
+    <section id="loginCard" class="card">
+      <p>输入环境变量里的 <code>ADMIN_TOKEN</code>。令牌只存在本页的 sessionStorage，关标签即清除。</p>
+      <form id="loginForm">
+        <label for="token">ADMIN_TOKEN</label>
+        <div class="row">
+          <input id="token" type="password" autocomplete="current-password" required />
+          <button type="submit">进入</button>
+        </div>
+      </form>
+      <p class="err hidden" id="loginErr"></p>
+    </section>
+
+    <section id="appCard" class="hidden">
+      <nav class="tabs" id="tabs">
+        <button type="button" data-tab="overview" class="active">概览</button>
+        <button type="button" data-tab="users">用户</button>
+        <button type="button" data-tab="sessions">会话(在线)</button>
+        <button type="button" data-tab="entitlements">会员</button>
+        <button type="button" data-tab="orders">订单</button>
+        <button type="button" data-tab="tables">表数据</button>
+      </nav>
+      <div class="toolbar">
+        <div class="sub" id="updated">尚未加载</div>
+        <div class="row" style="min-width: auto;">
+          <label style="margin:0; display:flex; gap:6px; align-items:center; min-width:auto;">
+            <input id="showPhone" type="checkbox" style="width:auto;" /> 显示完整手机号
+          </label>
+          <button type="button" id="refreshBtn">刷新</button>
+        </div>
+      </div>
+      <p class="err hidden" id="appErr"></p>
+      <section id="panel-overview" class="card"></section>
+      <section id="panel-users" class="card hidden"></section>
+      <section id="panel-sessions" class="card hidden"></section>
+      <section id="panel-entitlements" class="card hidden"></section>
+      <section id="panel-orders" class="card hidden"></section>
+      <section id="panel-tables" class="card hidden"></section>
+    </section>
+  </main>
+  <script>
+    const TOKEN_KEY = 'adminToken'
+    const PAGE = 50
+    const state = { tab: 'overview', offset: 0, table: 'users', showPhone: false }
+
+    const $ = (id) => document.getElementById(id)
+    const token = () => sessionStorage.getItem(TOKEN_KEY) || ''
+
+    function show(el, on) { el.classList.toggle('hidden', !on) }
+    function fmtTime(v) {
+      if (!v) return '—'
+      const d = new Date(v)
+      return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString('zh-CN')
+    }
+    function phoneOf(row) {
+      const full = row.phone || ''
+      const masked = row.phoneMasked || full
+      return state.showPhone ? (full || masked) : (masked || full)
+    }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[ch]))
+    }
+
+    async function api(path, init = {}) {
+      const headers = { Accept: 'application/json', ...(init.headers || {}) }
+      if (token()) headers.Authorization = 'Bearer ' + token()
+      if (init.body !== undefined) headers['Content-Type'] = 'application/json'
+      const res = await fetch(path, {
+        ...init,
+        headers,
+        body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401 || res.status === 503) {
+        sessionStorage.removeItem(TOKEN_KEY)
+        renderAuth()
+        throw new Error(data.error === 'admin_not_configured' ? '未配置 ADMIN_TOKEN' : '令牌无效')
+      }
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status))
+      return data
+    }
+
+    function renderAuth() {
+      const loggedIn = Boolean(token())
+      show($('loginCard'), !loggedIn)
+      show($('appCard'), loggedIn)
+      show($('logoutBtn'), loggedIn)
+      if (loggedIn) loadTab()
+    }
+
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const err = $('loginErr')
+      show(err, false)
+      sessionStorage.setItem(TOKEN_KEY, $('token').value.trim())
+      try {
+        await api('/api/admin/stats')
+        $('token').value = ''
+        renderAuth()
+      } catch (ex) {
+        err.textContent = ex.message
+        show(err, true)
+      }
+    })
+    $('logoutBtn').addEventListener('click', () => {
+      sessionStorage.removeItem(TOKEN_KEY)
+      renderAuth()
+    })
+    $('refreshBtn').addEventListener('click', () => loadTab())
+    $('showPhone').addEventListener('change', (e) => {
+      state.showPhone = e.target.checked
+      loadTab()
+    })
+    $('tabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-tab]')
+      if (!btn) return
+      state.tab = btn.dataset.tab
+      state.offset = 0
+      for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('active', b === btn)
+      loadTab()
+    })
+
+    function setUpdated() {
+      $('updated').textContent = '最近刷新：' + new Date().toLocaleString('zh-CN')
+    }
+
+    function pager(total) {
+      const from = total === 0 ? 0 : state.offset + 1
+      const to = Math.min(state.offset + PAGE, total)
+      return `<div class="toolbar">
+        <span class="sub">第 ${from}–${to} 条 / 共 ${total} 条</span>
+        <div class="row" style="min-width:auto">
+          <button class="ghost" type="button" data-page="-1" ${state.offset <= 0 ? 'disabled' : ''}>上一页</button>
+          <button class="ghost" type="button" data-page="1" ${state.offset + PAGE >= total ? 'disabled' : ''}>下一页</button>
+        </div>
+      </div>`
+    }
+
+    function bindPager(root, total) {
+      root.querySelectorAll('[data-page]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const dir = Number(btn.getAttribute('data-page'))
+          state.offset = Math.max(0, state.offset + dir * PAGE)
+          if (state.offset >= total && total > 0) state.offset = Math.max(0, total - PAGE)
+          loadTab()
+        })
+      })
+    }
+
+    function tableHtml(headers, rows) {
+      return `<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows.length ? rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}">暂无数据</td></tr>`}</tbody></table></div>`
+    }
+
+    async function loadTab() {
+      const err = $('appErr')
+      show(err, false)
+      const panels = ['overview', 'users', 'sessions', 'entitlements', 'orders', 'tables']
+      for (const name of panels) show($('panel-' + name), name === state.tab)
+      try {
+        if (state.tab === 'overview') await loadOverview()
+        else if (state.tab === 'users') await loadUsers()
+        else if (state.tab === 'sessions') await loadSessions()
+        else if (state.tab === 'entitlements') await loadEntitlements()
+        else if (state.tab === 'orders') await loadOrders()
+        else await loadTables()
+        setUpdated()
+      } catch (ex) {
+        err.textContent = ex.message
+        show(err, true)
+      }
+    }
+
+    async function loadOverview() {
+      const stats = await api('/api/admin/stats')
+      $('panel-overview').innerHTML = `
+        <div class="stats">
+          <div class="stat"><b>${stats.users}</b><span>注册用户</span></div>
+          <div class="stat"><b>${stats.activeSessions}</b><span>有效会话（在线）</span></div>
+          <div class="stat"><b>${stats.plusActive}</b><span>Plus 未过期</span></div>
+          <div class="stat"><b>${stats.ordersPaid}</b><span>已支付订单</span></div>
+        </div>
+        <p class="note">「在线」只统计 <code>sessions.expires_at</code> 仍大于当前时间的行，不是 WebSocket 实时在线。</p>
+        <h3>手工开通 Plus</h3>
+        <form id="plusForm" class="row">
+          <div style="flex:1"><label>手机号</label><input name="phone" required placeholder="13800138000" /></div>
+          <div><label>套餐</label><select name="plan"><option value="month">包月</option><option value="year">包年</option></select></div>
+          <button type="submit">开通</button>
+        </form>
+        <p class="note" id="plusMsg"></p>`
+      $('plusForm').addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const fd = new FormData(e.target)
+        const msg = $('plusMsg')
+        try {
+          const data = await api('/api/admin/plus', { method: 'POST', body: { phone: fd.get('phone'), plan: fd.get('plan') } })
+          msg.textContent = '已开通，到期 ' + fmtTime(data.expiresAt)
+          loadOverview()
+        } catch (ex) { msg.textContent = ex.message }
+      })
+    }
+
+    async function loadUsers() {
+      const data = await api(`/api/admin/users?limit=${PAGE}&offset=${state.offset}`)
+      $('panel-users').innerHTML = pager(data.total) + tableHtml(
+        ['用户 ID', '手机号', '注册时间'],
+        data.items.map((r) => [`<span class="mono">${escapeHtml(r.id)}</span>`, escapeHtml(phoneOf(r)), fmtTime(r.created_at)]),
+      )
+      bindPager($('panel-users'), data.total)
+    }
+
+    async function loadSessions() {
+      const data = await api(`/api/admin/sessions?limit=${PAGE}&offset=${state.offset}`)
+      $('panel-sessions').innerHTML = `<p class="note">未过期会话计为在线。过期行仍会列出，用标记区分。</p>` +
+        pager(data.total) + tableHtml(
+          ['用户', '手机号', '创建', '过期', '状态', 'hash 前缀'],
+          data.items.map((r) => [
+            `<span class="mono">${escapeHtml(r.user_id)}</span>`,
+            escapeHtml(phoneOf(r)),
+            fmtTime(r.created_at),
+            fmtTime(r.expires_at),
+            r.expired ? '<span class="pill bad">已过期</span>' : '<span class="pill ok">有效</span>',
+            `<span class="mono">${escapeHtml(r.tokenHashPrefix || '')}</span>`,
+          ]),
+        )
+      bindPager($('panel-sessions'), data.total)
+    }
+
+    async function loadEntitlements() {
+      const data = await api(`/api/admin/entitlements?limit=${PAGE}&offset=${state.offset}`)
+      $('panel-entitlements').innerHTML = pager(data.total) + tableHtml(
+        ['用户', '手机号', '到期', '来源', '更新', 'Plus'],
+        data.items.map((r) => [
+          `<span class="mono">${escapeHtml(r.user_id)}</span>`,
+          escapeHtml(phoneOf(r)),
+          fmtTime(r.expires_at),
+          escapeHtml(r.source),
+          fmtTime(r.updated_at),
+          r.plusActive ? '<span class="pill ok">有效</span>' : '<span class="pill">过期</span>',
+        ]),
+      )
+      bindPager($('panel-entitlements'), data.total)
+    }
+
+    async function loadOrders() {
+      const data = await api(`/api/admin/orders?limit=${PAGE}&offset=${state.offset}`)
+      $('panel-orders').innerHTML = pager(data.total) + tableHtml(
+        ['订单', '手机号', '套餐', '金额(分)', '状态', '渠道', '创建', '支付'],
+        data.items.map((r) => [
+          `<span class="mono">${escapeHtml(r.id)}</span>`,
+          escapeHtml(phoneOf(r)),
+          escapeHtml(r.plan),
+          String(r.amount_fen),
+          escapeHtml(r.status),
+          escapeHtml(r.provider),
+          fmtTime(r.created_at),
+          fmtTime(r.paid_at),
+        ]),
+      )
+      bindPager($('panel-orders'), data.total)
+    }
+
+    async function loadTables() {
+      const meta = await api('/api/admin/tables')
+      if (!meta.tables.includes(state.table)) state.table = meta.tables[0]
+      const data = await api(`/api/admin/table/${state.table}?limit=${PAGE}&offset=${state.offset}`)
+      const options = meta.tables.map((t) => `<option value="${t}" ${t === state.table ? 'selected' : ''}>${t}</option>`).join('')
+      const headers = data.columns
+      const rows = data.items.map((row) => headers.map((col) => {
+        if (col === 'phone' && row.phone && !state.showPhone) return escapeHtml(row.phoneMasked || String(row.phone).replace(/^(\d{3})\d+(\d{4})$/, '$1****$2'))
+        return `<span class="mono">${escapeHtml(row[col])}</span>`
+      }))
+      $('panel-tables').innerHTML = `
+        <div class="row"><div><label>表</label><select id="tableSel">${options}</select></div></div>
+        <p class="note">仅白名单会员表。短信 <code>code_hash</code> 已截断。</p>
+        ${pager(data.total)}
+        ${tableHtml(headers, rows)}`
+      $('tableSel').addEventListener('change', (e) => {
+        state.table = e.target.value
+        state.offset = 0
+        loadTables()
+      })
+      bindPager($('panel-tables'), data.total)
+    }
+
+    renderAuth()
+  </script>
+</body>
+</html>

@@ -33,10 +33,28 @@ Express 默认 `trust proxy` 为一跳（可用 `TRUST_PROXY` 覆盖；直连公
 
 备份 `*.db` 以及同目录 `-wal` / `-shm`。v1 单进程写，不要多实例同时写同一文件。
 
+## 运营后台
+
+Express 在 `/api/admin/ui/` 提供只读 Web 控制台（现有 Nginx `location /api/` 即可到达，无需改反代）。生产示例：
+
+`https://tudoudou-ai.site/api/admin/ui/`
+
+用环境变量 `ADMIN_TOKEN` 登录（`Authorization: Bearer` 或登录框）。令牌只存在浏览器 `sessionStorage`。概览「在线」= `sessions.expires_at` 仍大于当前时间的行数，**不是** WebSocket 实时在线。全部 `/api/admin/*` JSON 都要该令牌；未配置返回 503，错令牌 401。
+
+日后若想用更短路径，可另加（可选，非必须）：
+
+```nginx
+location /admin/ {
+  proxy_pass http://127.0.0.1:8787/api/admin/ui/;
+}
+```
+
 ## 手工开通 Plus
 
+后台「概览」可按手机号开通，或：
+
 ```bash
-curl -s -X POST https://example.com/api/admin/plus \
+curl -s -X POST https://tudoudou-ai.site/api/admin/plus \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"phone":"13800138000","plan":"month"}'
