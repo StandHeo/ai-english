@@ -22,6 +22,10 @@ export function adminUiDir(): string {
   return join(dirname(fileURLToPath(import.meta.url)), '../public/admin')
 }
 
+export function adminUiIndex(): string {
+  return join(adminUiDir(), 'index.html')
+}
+
 export function isAdminTable(name: string): name is AdminTable {
   return (ADMIN_TABLES as readonly string[]).includes(name)
 }

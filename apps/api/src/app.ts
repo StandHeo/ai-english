@@ -15,6 +15,7 @@ import {
   ADMIN_TABLES,
   adminStats,
   adminUiDir,
+  adminUiIndex,
   browseAdminTable,
   listAdminEntitlements,
   listAdminOrders,
@@ -652,10 +653,12 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     res.json(page)
   })
 
-  app.get('/api/admin/ui', (_req, res) => {
-    res.redirect(302, '/api/admin/ui/')
-  })
-  app.use('/api/admin/ui', express.static(adminUiDir(), { index: 'index.html' }))
+  const sendAdminUi = (_req: Request, res: Response) => {
+    res.sendFile(adminUiIndex())
+  }
+  app.get('/api/admin/ui', sendAdminUi)
+  app.get('/api/admin/ui/', sendAdminUi)
+  app.use('/api/admin/ui', express.static(adminUiDir(), { index: false }))
 
   return {
     app,
