@@ -8,6 +8,7 @@ export function isParentNetworkError(error: string | undefined): boolean {
     return true
   }
   if (error === 'missing_api_base') return true
+  if (/^http_(0|502|503|504)$/.test(error)) return true
   return /Failed to connect|ConnectException|ECONNREFUSED|ENOTFOUND|UnknownHost|Failed to fetch|NetworkError|ERR_|Cleartext|connection refused|SocketException|llm_timeout|timed\s*out|timeout/i.test(
     error,
   )
