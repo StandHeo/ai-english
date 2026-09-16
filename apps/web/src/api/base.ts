@@ -1,30 +1,54 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
+import {
+  API_BASE_STORAGE_KEY,
+  LEGACY_API_BASE_STORAGE_KEY,
+  normalizeApiBase,
+  resolveApiBase,
+} from './apiBase'
 
-const KEY = 'ai-english-api-base-v1'
-const ENV_BASE = String(import.meta.env.VITE_API_BASE || '')
-  .trim()
-  .replace(/\/$/, '')
+export { PRODUCTION_API_BASE, resolveApiBase } from './apiBase'
 
-/** User override (App 设置里填写电脑局域网 API). */
+const ENV_BASE = normalizeApiBase(String(import.meta.env.VITE_API_BASE || ''))
+
+function discardLegacyApiBase(): void {
+  try {
+    localStorage.removeItem(LEGACY_API_BASE_STORAGE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** User override（家庭日记设置里的电脑局域网 API）。旧 v1 存量不再读取。 */
 export function getStoredApiBase(): string {
   try {
-    return (localStorage.getItem(KEY) || '').trim().replace(/\/$/, '')
+    discardLegacyApiBase()
+    return normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY) || '')
   } catch {
     return ''
   }
 }
 
 export function setStoredApiBase(url: string): void {
-  localStorage.setItem(KEY, url.trim().replace(/\/$/, ''))
+  discardLegacyApiBase()
+  const next = normalizeApiBase(url)
+  if (!next) {
+    localStorage.removeItem(API_BASE_STORAGE_KEY)
+    return
+  }
+  localStorage.setItem(API_BASE_STORAGE_KEY, next)
 }
 
 /**
- * API 根地址。浏览器开发时为空走 Vite 同源代理。
- * Capacitor App：家庭生成/配图有云 Key 时可直连厂商 HTTPS，不必填局域网；
- * 仅当走电脑 .env 代理（关卡 ASR 等）时才需要，例如 http://192.168.2.104:8787
+ * API 根地址。
+ * 浏览器开发：空字符串，走 Vite 同源代理到本机 8787。
+ * Native/Capacitor：默认 https://tudoudou-ai.site；设置里的局域网地址仍可覆盖。
  */
 export function getApiBase(): string {
-  return getStoredApiBase() || ENV_BASE
+  return resolveApiBase({
+    stored: getStoredApiBase(),
+    env: ENV_BASE,
+    native: isNativeApp(),
+  })
 }
 
 export function apiUrl(path: string): string {

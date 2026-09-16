@@ -1,4 +1,5 @@
 import { apiUrl } from './base'
+import { classifyMembershipNetworkError } from './parentAuthMessages'
 
 const TOKEN_KEY = 'ai-english-parent-token-v1'
 
@@ -55,14 +56,24 @@ async function membershipFetch(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return { ok: false, status: 0, data: {}, error: msg }
+    return { ok: false, status: 0, data: {}, error: classifyMembershipNetworkError(msg) }
   }
 }
 
-export async function fetchAuthConfig(): Promise<{ captcha: boolean; authChannel: 'email' | 'sms' }> {
+export async function fetchAuthConfig(): Promise<{
+  captcha: boolean
+  authChannel: 'email' | 'sms'
+  ok: boolean
+  error?: string
+}> {
   const res = await membershipFetch('/api/auth/config')
   const channel = res.data.authChannel === 'sms' ? 'sms' : 'email'
-  return { captcha: Boolean(res.ok && res.data.captcha), authChannel: channel }
+  return {
+    captcha: Boolean(res.ok && res.data.captcha),
+    authChannel: channel,
+    ok: res.ok,
+    error: res.error,
+  }
 }
 
 /** @deprecated alias of fetchAuthConfig */

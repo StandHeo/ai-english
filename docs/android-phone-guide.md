@@ -227,19 +227,23 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 
 打成 App 后，请求不再走电脑 Vite 代理。手机上的 `localhost` 是手机自己，**不是电脑**。
 
+**会员登录 / 邮箱验证码 / 图形验证码：** App 默认请求 `https://tudoudou-ai.site/api/...`（生产会员 API，HTTPS）。不必填写电脑 IP。浏览器里 `npm run dev` 仍走 Vite 同源代理到本机 `8787`。
+
+旧版若曾在设置里保存过 `http://192.168.2.104:8787` 之类局域网调试地址，更新后会忽略这份旧存量，改走生产域名。需要再连电脑时，到设置里重新填写当前局域网地址即可。
+
 **家庭日记生成关卡 / 云端配图：** 在「设置」填写当前模型的云 Key（DeepSeek 或 Agnes；配图为通义或 Agnes 图）后，App 会 **直连 HTTPS**，不必开电脑 `apps/api`，也不必填局域网地址。
 
 直连走原生 `CapacitorHttp`。若 Logcat 出现 `SocketTimeoutException: timeout`（偶发还有 `Socket closed`），通常是手机到云端读超时，而不是 SurfaceFlinger 的 “Out of order buffers”（后者多为系统合成层噪声，可忽略）。可检查：手机外网、是否高峰限流、稍后再试。App 侧已加长连接/读超时，并对瞬时超时自动重试一次。
 
 **Clash / 代理：** 浏览器能打开 `https://apihub.agnes-ai.com`，不代表 App 一定走同一条路。App 用系统原生 HTTPS，需 Clash 开 **TUN/VPN 模式**，并把本 App（`com.aienglish.fruitforest`）纳入代理（不要排除、不要只代理浏览器）。配图等待时不要切到别的 App，否则常见 `Software caused connection abort`（连接被系统或代理掐断）。仍不稳时可暂时改用通义配图，或关 Clash 用可直连外网的网络再试。
 
-**仍需要电脑 API 的情况：** 要用电脑 `.env` 里的 Key 做代理，或关卡口语识别等仍走 `/api` 的接口。此时：
+**可选：连电脑 API 做局域网调试：** 要用电脑 `.env` 里的 Key 做代理，或关卡口语识别等仍走 `/api` 的接口时：
 
 1. 电脑保持 `apps/api` 在跑（默认 `8787`），手机与电脑同一 Wi‑Fi。
-2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.2.104:8787`（把 IP 换成你电脑的）。
+2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.x.x:8787`（把 IP 换成你电脑的）。这会覆盖默认生产域名。
 3. Capacitor 已开启 `allowMixedContent`，并用原生 `CapacitorHttp` 发请求，避免 HTTPS 页访问局域网 HTTP 被 Mixed Content 拦截。
 
-也可在打包前设 `apps/web/.env.local`：`VITE_API_BASE=http://电脑IP:8787`，再 `npm run build && npx cap sync android`。
+不要把局域网地址写进正式包的 `VITE_API_BASE`；Native 构建会忽略私有网段上的该变量，以免误打到过期的电脑 IP。局域网调试请用上面的设置项。
 
 Android 已允许明文 HTTP（局域网调试）。若仍看到 Mixed Content，确认已重新 `build` + `cap sync` 后再 Run。若仍连不上，检查电脑防火墙是否放行 8787。
 
