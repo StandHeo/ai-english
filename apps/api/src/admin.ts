@@ -2,10 +2,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseSync } from 'node:sqlite'
 import { listTableColumns } from './db.js'
+import { maskEmail } from './email.js'
 import { plusFromExpiresAt } from './membership.js'
 import { maskPhone } from './phone.js'
 
-export const ADMIN_TABLES = ['users', 'entitlements', 'orders', 'sessions', 'sms_codes'] as const
+export const ADMIN_TABLES = ['users', 'entitlements', 'orders', 'sessions', 'auth_codes'] as const
 export type AdminTable = (typeof ADMIN_TABLES)[number]
 
 export const ADMIN_LIMIT_DEFAULT = 50
@@ -60,18 +61,25 @@ export function adminStats(db: DatabaseSync, now = new Date().toISOString()) {
   }
 }
 
-function withPhone<T extends { phone?: string | null }>(row: T) {
+function withIdentity<T extends { phone?: string | null; email?: string | null }>(row: T) {
   const phone = row.phone || ''
-  return { ...row, phone, phoneMasked: phone ? maskPhone(phone) : '' }
+  const email = row.email || ''
+  return {
+    ...row,
+    phone,
+    phoneMasked: phone ? maskPhone(phone) : '',
+    email,
+    emailMasked: email ? maskEmail(email) : '',
+  }
 }
 
 export function listAdminUsers(db: DatabaseSync, limit: number, offset: number) {
   const total = count(db, 'SELECT COUNT(*) AS n FROM users')
   const rows = db
-    .prepare('SELECT id, phone, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?')
-    .all(limit, offset) as { id: string; phone: string; created_at: string }[]
+    .prepare('SELECT id, email, phone, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?')
+    .all(limit, offset) as { id: string; email: string | null; phone: string | null; created_at: string }[]
   return {
-    items: rows.map((row) => withPhone(row)),
+    items: rows.map((row) => withIdentity(row)),
     total,
     limit,
     offset,
@@ -82,7 +90,7 @@ export function listAdminSessions(db: DatabaseSync, limit: number, offset: numbe
   const total = count(db, 'SELECT COUNT(*) AS n FROM sessions')
   const rows = db
     .prepare(
-      `SELECT s.token_hash, s.user_id, s.expires_at, s.created_at, u.phone
+      `SELECT s.token_hash, s.user_id, s.expires_at, s.created_at, u.phone, u.email
        FROM sessions s
        LEFT JOIN users u ON u.id = s.user_id
        ORDER BY s.created_at DESC
@@ -94,12 +102,13 @@ export function listAdminSessions(db: DatabaseSync, limit: number, offset: numbe
     expires_at: string
     created_at: string
     phone: string | null
+    email: string | null
   }[]
   return {
     items: rows.map((row) => {
       const { token_hash, ...rest } = row
       return {
-        ...withPhone(rest),
+        ...withIdentity(rest),
         expired: Date.parse(row.expires_at) <= now,
         tokenHashPrefix: token_hash.slice(0, 8),
       }
@@ -114,7 +123,7 @@ export function listAdminEntitlements(db: DatabaseSync, limit: number, offset: n
   const total = count(db, 'SELECT COUNT(*) AS n FROM entitlements')
   const rows = db
     .prepare(
-      `SELECT e.user_id, e.expires_at, e.source, e.updated_at, u.phone
+      `SELECT e.user_id, e.expires_at, e.source, e.updated_at, u.phone, u.email
        FROM entitlements e
        LEFT JOIN users u ON u.id = e.user_id
        ORDER BY e.updated_at DESC
@@ -126,10 +135,11 @@ export function listAdminEntitlements(db: DatabaseSync, limit: number, offset: n
     source: string
     updated_at: string
     phone: string | null
+    email: string | null
   }[]
   return {
     items: rows.map((row) => ({
-      ...withPhone(row),
+      ...withIdentity(row),
       plusActive: plusFromExpiresAt(row.expires_at, now),
     })),
     total,
@@ -142,7 +152,7 @@ export function listAdminOrders(db: DatabaseSync, limit: number, offset: number)
   const total = count(db, 'SELECT COUNT(*) AS n FROM orders')
   const rows = db
     .prepare(
-      `SELECT o.id, o.user_id, o.provider, o.plan, o.amount_fen, o.status, o.out_trade_no, o.created_at, o.paid_at, u.phone
+      `SELECT o.id, o.user_id, o.provider, o.plan, o.amount_fen, o.status, o.out_trade_no, o.created_at, o.paid_at, u.phone, u.email
        FROM orders o
        LEFT JOIN users u ON u.id = o.user_id
        ORDER BY o.created_at DESC
@@ -159,20 +169,23 @@ export function listAdminOrders(db: DatabaseSync, limit: number, offset: number)
     created_at: string
     paid_at: string | null
     phone: string | null
+    email: string | null
   }[]
   return {
-    items: rows.map((row) => withPhone(row)),
+    items: rows.map((row) => withIdentity(row)),
     total,
     limit,
     offset,
   }
 }
 
-function maskSmsRow(row: Record<string, unknown>): Record<string, unknown> {
+function maskAuthRow(row: Record<string, unknown>): Record<string, unknown> {
   const hash = String(row.code_hash || '')
+  const dest = String(row.destination || '')
+  const masked = dest.includes('@') ? maskEmail(dest) : dest ? maskPhone(dest) : dest
   return {
     ...row,
-    phone: row.phone ? maskPhone(String(row.phone)) : row.phone,
+    destination: masked,
     code_hash: hash ? `${hash.slice(0, 8)}…` : hash,
   }
 }
@@ -185,6 +198,6 @@ export function browseAdminTable(db: DatabaseSync, name: string, limit: number, 
     string,
     unknown
   >[]
-  const items = name === 'sms_codes' ? rows.map(maskSmsRow) : rows
+  const items = name === 'auth_codes' ? rows.map(maskAuthRow) : rows
   return { name, columns, items, total, limit, offset }
 }

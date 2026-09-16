@@ -33,6 +33,7 @@ import {
   findUserById,
   getEntitlement,
   getOrCreateUser,
+  getOrCreateUserByEmail,
   grantPlus,
   insertOrder,
   isPlanId,
@@ -40,6 +41,9 @@ import {
   PLAN_AMOUNT_FEN,
   PLAN_DAYS,
 } from './membership.js'
+import { maskEmail, normalizeEmail } from './email.js'
+import { authChannel, issueEmailCode, verifyEmailCode } from './emailAuth.js'
+import { emailProvider, emailSendPrecheckError, isEmailProviderFailure } from './mail.js'
 import { maskPhone, normalizePhone } from './phone.js'
 import { issueSmsCode, smsProvider, tencentSmsConfigured, verifySmsCode } from './sms.js'
 import { consumeSmsCaptcha, createSmsCaptcha, smsCaptchaEnabled } from './smsCaptcha.js'
@@ -110,6 +114,32 @@ function requireAuth(db: DatabaseSync) {
   }
 }
 
+function requireCaptcha(req: Request, res: Response): boolean {
+  if (!smsCaptchaEnabled()) return true
+  const captchaId = String(req.body?.captchaId || '').trim()
+  const captchaAnswer = String(req.body?.captchaAnswer || '').trim()
+  if (!captchaId || !captchaAnswer) {
+    res.status(400).json({ error: 'captcha_required' })
+    return false
+  }
+  if (!consumeSmsCaptcha(captchaId, captchaAnswer)) {
+    res.status(400).json({ error: 'captcha_invalid' })
+    return false
+  }
+  return true
+}
+
+function publicIdentity(user: { email: string | null; phone: string | null }) {
+  return {
+    email: user.email ? maskEmail(user.email) : null,
+    phone: user.phone ? maskPhone(user.phone) : null,
+  }
+}
+
+function authConfigPayload() {
+  return { captcha: smsCaptchaEnabled(), authChannel: authChannel() }
+}
+
 export function createApp(options: { databasePath?: string } = {}): CreatedApp {
   const db = openDatabase(options.databasePath)
   const app = express()
@@ -135,6 +165,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       familyLlm: process.env.FAMILY_LLM_PROVIDER || 'deepseek',
       familyImage: process.env.FAMILY_IMAGE_PROVIDER || 'tongyi',
       sms: smsProvider(),
+      email: emailProvider(),
       billing: billingProvider(),
     })
   })
@@ -379,8 +410,12 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     }
   })
 
+  app.get('/api/auth/config', (_req, res) => {
+    res.json(authConfigPayload())
+  })
+
   app.get('/api/auth/sms/config', (_req, res) => {
-    res.json({ captcha: smsCaptchaEnabled() })
+    res.json(authConfigPayload())
   })
 
   app.get('/api/auth/captcha', (_req, res) => {
@@ -390,6 +425,65 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     }
     const challenge = createSmsCaptcha()
     res.json(challenge)
+  })
+
+  app.post('/api/auth/email/send', async (req, res) => {
+    if (consumeSmsIpLimit(clientIp(req), 'send') === 'limited') {
+      res.status(429).json({ error: 'auth_ip_rate_limited' })
+      return
+    }
+    const email = normalizeEmail(req.body?.email)
+    if (!email) {
+      res.status(400).json({ error: 'invalid_email' })
+      return
+    }
+    if (!requireCaptcha(req, res)) return
+    const precheck = emailSendPrecheckError()
+    if (precheck) {
+      res.status(503).json({ error: precheck })
+      return
+    }
+    try {
+      const issued = await issueEmailCode(db, email)
+      res.json({
+        ok: true,
+        mock: issued.mock,
+        ...(issued.mock ? { devHint: 'mock code is MOCK_EMAIL_CODE (default 123456), also logged' } : {}),
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'email_send_failed'
+      if (message === 'email_rate_limited') {
+        res.status(429).json({ error: 'email_rate_limited' })
+        return
+      }
+      if (isEmailProviderFailure(message)) {
+        res.status(503).json({ error: message })
+        return
+      }
+      console.error('[auth/email/send]', message)
+      res.status(500).json({ error: 'email_send_failed' })
+    }
+  })
+
+  app.post('/api/auth/email/verify', (req, res) => {
+    if (consumeSmsIpLimit(clientIp(req), 'verify') === 'limited') {
+      res.status(429).json({ error: 'auth_ip_rate_limited' })
+      return
+    }
+    const email = normalizeEmail(req.body?.email)
+    const code = String(req.body?.code || '').trim()
+    if (!email || !code) {
+      res.status(400).json({ error: 'invalid_email_or_code' })
+      return
+    }
+    if (!verifyEmailCode(db, email, code)) {
+      res.status(401).json({ error: 'invalid_code' })
+      return
+    }
+    const user = getOrCreateUserByEmail(db, email)
+    const token = createSession(db, user.id)
+    const ent = getEntitlement(db, user.id)
+    res.json({ token, ...mePayload(ent?.expires_at), ...publicIdentity(user) })
   })
 
   app.post('/api/auth/sms/send', async (req, res) => {
@@ -402,18 +496,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       res.status(400).json({ error: 'invalid_phone' })
       return
     }
-    if (smsCaptchaEnabled()) {
-      const captchaId = String(req.body?.captchaId || '').trim()
-      const captchaAnswer = String(req.body?.captchaAnswer || '').trim()
-      if (!captchaId || !captchaAnswer) {
-        res.status(400).json({ error: 'captcha_required' })
-        return
-      }
-      if (!consumeSmsCaptcha(captchaId, captchaAnswer)) {
-        res.status(400).json({ error: 'captcha_invalid' })
-        return
-      }
-    }
+    if (!requireCaptcha(req, res)) return
     if (smsProvider() === 'tencent' && !tencentSmsConfigured()) {
       res.status(503).json({ error: 'sms_tencent_not_configured' })
       return
@@ -458,7 +541,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     const user = getOrCreateUser(db, phone)
     const token = createSession(db, user.id)
     const ent = getEntitlement(db, user.id)
-    res.json({ token, ...mePayload(ent?.expires_at), phone: maskPhone(phone) })
+    res.json({ token, ...mePayload(ent?.expires_at), ...publicIdentity(user) })
   })
 
   const auth = requireAuth(db)
@@ -478,7 +561,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     const ent = getEntitlement(db, user.id)
     res.json({
       ...mePayload(ent?.expires_at),
-      phone: maskPhone(user.phone),
+      ...publicIdentity(user),
     })
   })
 
@@ -599,15 +682,16 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
   })
 
   app.post('/api/admin/plus', requireAdmin, (req, res) => {
+    const email = normalizeEmail(req.body?.email)
     const phone = normalizePhone(req.body?.phone)
-    if (!phone || !isPlanId(req.body?.plan)) {
-      res.status(400).json({ error: 'invalid_phone_or_plan' })
+    if ((!email && !phone) || !isPlanId(req.body?.plan)) {
+      res.status(400).json({ error: 'invalid_email_or_phone_or_plan' })
       return
     }
-    const granted = grantPlus(db, phone, req.body.plan, 'manual')
+    const granted = grantPlus(db, { email, phone: email ? null : phone }, req.body.plan, 'manual')
     res.json({
       ok: true,
-      phone: maskPhone(phone),
+      ...publicIdentity(granted.user),
       plan: req.body.plan,
       ...mePayload(granted.expiresAt),
       orderId: granted.order.id,

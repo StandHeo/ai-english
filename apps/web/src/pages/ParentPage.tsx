@@ -27,14 +27,14 @@ import type { ContentPack, ProgressState } from '../types'
 import {
   createBillingOrder,
   deleteParentAccount,
+  fetchAuthConfig,
   fetchBillingPlans,
   fetchMe,
-  fetchSmsAuthConfig,
   fetchSmsCaptcha,
   formatFen,
   logoutParent,
-  sendParentSms,
-  verifyParentSms,
+  sendParentEmail,
+  verifyParentEmail,
   type BillingPlans,
   type MeResponse,
 } from '../api/membership'
@@ -59,7 +59,7 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [voiceSaved, setVoiceSaved] = useState('')
   const [me, setMe] = useState<MeResponse | null>(null)
   const [plans, setPlans] = useState<BillingPlans | null>(null)
-  const [loginPhone, setLoginPhone] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
   const [loginCode, setLoginCode] = useState('')
   const [captchaOn, setCaptchaOn] = useState(false)
   const [captchaId, setCaptchaId] = useState('')
@@ -92,7 +92,7 @@ export function ParentPage({ progress, onProgress }: Props) {
   useEffect(() => {
     if (!gated || me) return
     let cancelled = false
-    void fetchSmsAuthConfig().then(async (cfg) => {
+    void fetchAuthConfig().then(async (cfg) => {
       if (cancelled) return
       setCaptchaOn(cfg.captcha)
       if (cfg.captcha) await loadCaptcha()
@@ -137,11 +137,11 @@ export function ParentPage({ progress, onProgress }: Props) {
     setVoiceSaved('已保存，关卡里马上生效')
   }
 
-  async function onSendSms() {
+  async function onSendCode() {
     setAccountBusy(true)
     setAccountMsg('')
-    const res = await sendParentSms(
-      loginPhone,
+    const res = await sendParentEmail(
+      loginEmail,
       captchaOn || captchaId ? { captchaId, captchaAnswer } : undefined,
     )
     if (res.error === 'captcha_required' || res.error === 'captcha_invalid') {
@@ -155,25 +155,29 @@ export function ParentPage({ progress, onProgress }: Props) {
       res.ok
         ? res.data.mock
           ? '验证码已写入本机 API 日志（mock 默认 123456）'
-          : '验证码已发送'
-        : res.error === 'sms_rate_limited'
+          : '验证码已发送到邮箱'
+        : res.error === 'email_rate_limited'
           ? '发送太频繁，请稍后再试'
-          : res.error === 'sms_ip_rate_limited'
+          : res.error === 'auth_ip_rate_limited' || res.error === 'sms_ip_rate_limited'
             ? '该网络发送过于频繁，请稍后再试'
-            : res.error === 'invalid_phone'
-              ? '请填写 11 位大陆手机号'
-              : res.error === 'captcha_required'
-                ? '请先完成图形验证'
-                : res.error === 'captcha_invalid'
-                  ? '图形验证码错误，请重试'
-                  : `发送失败：${res.error || res.status}`,
+            : res.error === 'invalid_email'
+              ? '请填写有效邮箱'
+              : res.error === 'email_ses_not_configured' || res.error === 'email_smtp_not_configured'
+                ? '邮件服务未配置。个人实名腾讯云 SES 需走 API（不能 SMTP），请联系管理员'
+                : res.error?.startsWith('email_ses_failed:') || res.error?.startsWith('email_smtp_failed:')
+                  ? '验证码邮件发送失败，请稍后重试'
+                  : res.error === 'captcha_required'
+                    ? '请先完成图形验证'
+                    : res.error === 'captcha_invalid'
+                      ? '图形验证码错误，请重试'
+                      : `发送失败：${res.error || res.status}`,
     )
   }
 
-  async function onVerifySms() {
+  async function onVerifyCode() {
     setAccountBusy(true)
     setAccountMsg('')
-    const res = await verifyParentSms(loginPhone, loginCode)
+    const res = await verifyParentEmail(loginEmail, loginCode)
     setAccountBusy(false)
     if (!res.ok) {
       setAccountMsg(res.error === 'invalid_code' ? '验证码错误或已过期' : `登录失败：${res.error || res.status}`)
@@ -270,7 +274,7 @@ export function ParentPage({ progress, onProgress }: Props) {
         {me ? (
           <div className="plus-status">
             <p>
-              已登录 {me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
+              已登录 {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
               {me.expiresAt ? ` · 到期 ${me.expiresAt.slice(0, 10)}` : ''}
             </p>
             <div className="row-actions">
@@ -285,13 +289,13 @@ export function ParentPage({ progress, onProgress }: Props) {
         ) : (
           <div className="plus-login">
             <label>
-              手机号
+              邮箱
               <input
-                value={loginPhone}
-                onChange={(e) => setLoginPhone(e.target.value)}
-                inputMode="numeric"
-                autoComplete="tel"
-                placeholder="11 位大陆手机号"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                type="email"
+                autoComplete="email"
+                placeholder="家长邮箱"
               />
             </label>
             {captchaOn && (
@@ -317,7 +321,7 @@ export function ParentPage({ progress, onProgress }: Props) {
               </div>
             )}
             <div className="row-actions">
-              <button type="button" disabled={accountBusy} onClick={() => void onSendSms()}>
+              <button type="button" disabled={accountBusy} onClick={() => void onSendCode()}>
                 发送验证码
               </button>
             </div>
@@ -330,9 +334,10 @@ export function ParentPage({ progress, onProgress }: Props) {
                 placeholder="6 位验证码"
               />
             </label>
-            <button type="button" disabled={accountBusy} onClick={() => void onVerifySms()}>
+            <button type="button" disabled={accountBusy} onClick={() => void onVerifyCode()}>
               登录
             </button>
+            <p className="muted">验证码发到该邮箱。生产环境走腾讯云 SES API（个人实名账号不能用 SMTP）。</p>
           </div>
         )}
         <div className="plus-plans">
@@ -354,7 +359,7 @@ export function ParentPage({ progress, onProgress }: Props) {
           ))}
         </div>
         {plans?.provider !== 'wechat' && (
-          <p className="muted">在线支付尚未开放。开通请联系管理员按手机号开通 Plus，请勿在儿童路径操作。</p>
+          <p className="muted">在线支付尚未开放。开通请联系管理员按邮箱开通 Plus，请勿在儿童路径操作。</p>
         )}
         {accountMsg && <p className="muted">{accountMsg}</p>}
       </section>

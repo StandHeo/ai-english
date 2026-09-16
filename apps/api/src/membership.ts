@@ -1,6 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { deleteAuthCodesForDestinations } from './authCodes.js'
 import { randomId, randomToken, sha256Hex } from './cryptoUtil.js'
 import type { EntitlementRow, OrderRow, SessionRow, UserRow } from './db.js'
+
+const USER_COLS = 'id, email, phone, created_at'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -11,31 +14,47 @@ export function sessionTtlMs(): number {
 }
 
 export function findUserByPhone(db: DatabaseSync, phone: string): UserRow | undefined {
-  return db.prepare('SELECT id, phone, created_at FROM users WHERE phone = ?').get(phone) as
-    | UserRow
-    | undefined
+  return db.prepare(`SELECT ${USER_COLS} FROM users WHERE phone = ?`).get(phone) as UserRow | undefined
+}
+
+export function findUserByEmail(db: DatabaseSync, email: string): UserRow | undefined {
+  return db.prepare(`SELECT ${USER_COLS} FROM users WHERE email = ?`).get(email) as UserRow | undefined
 }
 
 export function findUserById(db: DatabaseSync, id: string): UserRow | undefined {
-  return db.prepare('SELECT id, phone, created_at FROM users WHERE id = ?').get(id) as
-    | UserRow
-    | undefined
+  return db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).get(id) as UserRow | undefined
+}
+
+function insertUser(db: DatabaseSync, row: UserRow): UserRow {
+  db.prepare('INSERT INTO users (id, email, phone, created_at) VALUES (?, ?, ?, ?)').run(
+    row.id,
+    row.email,
+    row.phone,
+    row.created_at,
+  )
+  return row
 }
 
 export function getOrCreateUser(db: DatabaseSync, phone: string): UserRow {
   const existing = findUserByPhone(db, phone)
   if (existing) return existing
-  const row: UserRow = {
+  return insertUser(db, {
     id: randomId(),
+    email: null,
     phone,
     created_at: new Date().toISOString(),
-  }
-  db.prepare('INSERT INTO users (id, phone, created_at) VALUES (?, ?, ?)').run(
-    row.id,
-    row.phone,
-    row.created_at,
-  )
-  return row
+  })
+}
+
+export function getOrCreateUserByEmail(db: DatabaseSync, email: string): UserRow {
+  const existing = findUserByEmail(db, email)
+  if (existing) return existing
+  return insertUser(db, {
+    id: randomId(),
+    email,
+    phone: null,
+    created_at: new Date().toISOString(),
+  })
 }
 
 export function getEntitlement(db: DatabaseSync, userId: string): EntitlementRow | undefined {
@@ -115,7 +134,7 @@ export function deleteUserAccount(db: DatabaseSync, userId: string): void {
     db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
     db.prepare('DELETE FROM entitlements WHERE user_id = ?').run(userId)
     db.prepare('DELETE FROM orders WHERE user_id = ?').run(userId)
-    if (user) db.prepare('DELETE FROM sms_codes WHERE phone = ?').run(user.phone)
+    if (user) deleteAuthCodesForDestinations(db, { email: user.email, phone: user.phone })
     db.prepare('DELETE FROM users WHERE id = ?').run(userId)
     db.exec('COMMIT')
   } catch (err) {
@@ -187,11 +206,18 @@ export function markOrderPaid(db: DatabaseSync, orderId: string, paidAt = new Da
 
 export function grantPlus(
   db: DatabaseSync,
-  phone: string,
+  ident: { email?: string | null; phone?: string | null },
   plan: PlanId,
   provider: 'manual' | 'wechat',
 ): { user: UserRow; expiresAt: string; order: OrderRow } {
-  const user = getOrCreateUser(db, phone)
+  const user = ident.email
+    ? getOrCreateUserByEmail(db, ident.email)
+    : ident.phone
+      ? getOrCreateUser(db, ident.phone)
+      : undefined
+  if (!user) {
+    throw new Error('invalid_identity')
+  }
   db.exec('BEGIN')
   try {
     const expiresAt = addPlusDays(db, user.id, PLAN_DAYS[plan], provider)

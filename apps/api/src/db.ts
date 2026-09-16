@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-export const MIGRATION_FILES = ['001_init.sql'] as const
+export const MIGRATION_FILES = ['001_init.sql', '002_email_auth.sql'] as const
 
 export function resolveDatabasePath(override?: string): string {
   if (override) return override
@@ -50,7 +50,7 @@ export function applyMigrations(db: DatabaseSync): void {
   }
 }
 
-export type UserRow = { id: string; phone: string; created_at: string }
+export type UserRow = { id: string; email: string | null; phone: string | null; created_at: string }
 export type EntitlementRow = {
   user_id: string
   expires_at: string | null
