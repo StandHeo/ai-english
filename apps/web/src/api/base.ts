@@ -1,9 +1,12 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 
 const KEY = 'ai-english-api-base-v1'
-const ENV_BASE = String(import.meta.env.VITE_API_BASE || '')
+const ENV_BASE = String(import.meta.env?.VITE_API_BASE || '')
   .trim()
   .replace(/\/$/, '')
+
+/** 生产会员/登录 origin（无尾斜杠）。家庭工作室局域网不得覆盖此项。 */
+export const PRODUCT_MEMBERSHIP_ORIGIN = 'https://tudoudou-ai.site'
 
 /** User override (App 设置里填写电脑局域网 API). */
 export function getStoredApiBase(): string {
@@ -27,8 +30,62 @@ export function getApiBase(): string {
   return getStoredApiBase() || ENV_BASE
 }
 
+/**
+ * 回环 / RFC1918 / 链路本地 / *.local。家庭工作室「电脑 API」常用这些，
+ * 不能拿来当会员服务地址。
+ */
+export function isPrivateOrLocalApiBase(base: string): boolean {
+  const trimmed = base.trim()
+  if (!trimmed) return false
+  try {
+    const host = new URL(trimmed).hostname.replace(/^\[|\]$/g, '').toLowerCase()
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local')) {
+      return true
+    }
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+    if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+    const m = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/)
+    if (m) {
+      const second = Number(m[1])
+      return second >= 16 && second <= 31
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+export function resolveMembershipApiBase(opts: {
+  stored: string
+  envBase: string
+  native: boolean
+}): string {
+  const stored = opts.stored.trim().replace(/\/$/, '')
+  if (stored && !isPrivateOrLocalApiBase(stored)) return stored
+  const envBase = opts.envBase.trim().replace(/\/$/, '')
+  if (envBase && !isPrivateOrLocalApiBase(envBase)) return envBase
+  if (opts.native) return PRODUCT_MEMBERSHIP_ORIGIN
+  return envBase
+}
+
+/** 会员/登录 API 根。原生默认线上；浏览器开发空字符串走 Vite 代理。 */
+export function getMembershipApiBase(): string {
+  return resolveMembershipApiBase({
+    stored: getStoredApiBase(),
+    envBase: ENV_BASE,
+    native: isNativeApp(),
+  })
+}
+
 export function apiUrl(path: string): string {
   const base = getApiBase()
+  const p = path.startsWith('/') ? path : `/${path}`
+  return `${base}${p}`
+}
+
+export function membershipApiUrl(path: string): string {
+  const base = getMembershipApiBase()
   const p = path.startsWith('/') ? path : `/${path}`
   return `${base}${p}`
 }

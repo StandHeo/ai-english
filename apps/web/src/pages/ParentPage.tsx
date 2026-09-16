@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { assetUrl, listPackIds, loadPack } from '../content/loader'
@@ -32,7 +32,9 @@ import {
   fetchMe,
   fetchSmsCaptcha,
   formatFen,
+  isMembershipConnectFailure,
   logoutParent,
+  parentEmailSendMessage,
   sendParentEmail,
   verifyParentEmail,
   type BillingPlans,
@@ -61,13 +63,17 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [plans, setPlans] = useState<BillingPlans | null>(null)
   const [loginEmail, setLoginEmail] = useState('')
   const [loginCode, setLoginCode] = useState('')
-  const [captchaOn, setCaptchaOn] = useState(false)
+  const [captchaOn, setCaptchaOn] = useState(true)
   const [captchaId, setCaptchaId] = useState('')
   const [captchaImage, setCaptchaImage] = useState('')
   const [captchaAnswer, setCaptchaAnswer] = useState('')
   const [accountMsg, setAccountMsg] = useState('')
   const [accountBusy, setAccountBusy] = useState(false)
+  const [resendUntil, setResendUntil] = useState(0)
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  const codeInputRef = useRef<HTMLInputElement>(null)
   const plusActive = Boolean(me?.plus)
+  const resendLeft = Math.max(0, Math.ceil((resendUntil - nowTick) / 1000))
 
   useEffect(() => {
     listPackIds()
@@ -92,15 +98,22 @@ export function ParentPage({ progress, onProgress }: Props) {
   useEffect(() => {
     if (!gated || me) return
     let cancelled = false
-    void fetchAuthConfig().then(async (cfg) => {
+    void loadCaptcha()
+    void fetchAuthConfig().then((cfg) => {
       if (cancelled) return
+      if (!cfg.ok) return
       setCaptchaOn(cfg.captcha)
-      if (cfg.captcha) await loadCaptcha()
     })
     return () => {
       cancelled = true
     }
   }, [gated, me])
+
+  useEffect(() => {
+    if (resendUntil <= Date.now()) return
+    const id = window.setInterval(() => setNowTick(Date.now()), 250)
+    return () => window.clearInterval(id)
+  }, [resendUntil])
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
@@ -151,27 +164,12 @@ export function ParentPage({ progress, onProgress }: Props) {
       await loadCaptcha()
     }
     setAccountBusy(false)
-    setAccountMsg(
-      res.ok
-        ? res.data.mock
-          ? '验证码已写入本机 API 日志（mock 默认 123456）'
-          : '验证码已发送到邮箱'
-        : res.error === 'email_rate_limited'
-          ? '发送太频繁，请稍后再试'
-          : res.error === 'auth_ip_rate_limited' || res.error === 'sms_ip_rate_limited'
-            ? '该网络发送过于频繁，请稍后再试'
-            : res.error === 'invalid_email'
-              ? '请填写有效邮箱'
-              : res.error === 'email_ses_not_configured' || res.error === 'email_smtp_not_configured'
-                ? '邮件服务未配置。个人实名腾讯云 SES 需走 API（不能 SMTP），请联系管理员'
-                : res.error?.startsWith('email_ses_failed:') || res.error?.startsWith('email_smtp_failed:')
-                  ? '验证码邮件发送失败，请稍后重试'
-                  : res.error === 'captcha_required'
-                    ? '请先完成图形验证'
-                    : res.error === 'captcha_invalid'
-                      ? '图形验证码错误，请重试'
-                      : `发送失败：${res.error || res.status}`,
-    )
+    setAccountMsg(parentEmailSendMessage(res))
+    if (res.ok) {
+      setResendUntil(Date.now() + 60_000)
+      setNowTick(Date.now())
+      codeInputRef.current?.focus()
+    }
   }
 
   async function onVerifyCode() {
@@ -180,7 +178,13 @@ export function ParentPage({ progress, onProgress }: Props) {
     const res = await verifyParentEmail(loginEmail, loginCode)
     setAccountBusy(false)
     if (!res.ok) {
-      setAccountMsg(res.error === 'invalid_code' ? '验证码错误或已过期' : `登录失败：${res.error || res.status}`)
+      setAccountMsg(
+        res.error === 'invalid_code'
+          ? '验证码错误或已过期'
+          : isMembershipConnectFailure(res.error || '')
+            ? '连不上会员服务，请检查网络后重试'
+            : '登录失败，请稍后重试',
+      )
       return
     }
     const next = await fetchMe()
@@ -266,26 +270,48 @@ export function ParentPage({ progress, onProgress }: Props) {
       </header>
 
       <section className="parent-plus">
-        <h2>家长账号与 Plus</h2>
-        <p className="muted">
-          Plus 只解锁家庭日记 / 每日关卡工作室，不含第三方模型调用费。日记生成需家长在本机自备供应商
-          Key。
-        </p>
+        <h2>家长账号</h2>
         {me ? (
-          <div className="plus-status">
-            <p>
-              已登录 {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
-              {me.expiresAt ? ` · 到期 ${me.expiresAt.slice(0, 10)}` : ''}
-            </p>
-            <div className="row-actions">
-              <button type="button" className="linkish" onClick={() => void onLogout()}>
-                退出登录
-              </button>
-              <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
-                注销账号
-              </button>
+          <>
+            <div className="plus-status">
+              <p>
+                已登录 {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
+                {me.expiresAt ? ` · 到期 ${me.expiresAt.slice(0, 10)}` : ''}
+              </p>
+              <div className="row-actions">
+                <button type="button" className="linkish" onClick={() => void onLogout()}>
+                  退出登录
+                </button>
+                <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
+                  注销账号
+                </button>
+              </div>
             </div>
-          </div>
+            <details className="plus-fold">
+              <summary>Plus</summary>
+              <p className="muted">
+                Plus 只解锁家庭日记 / 每日关卡工作室，不含第三方模型调用费。日记生成需本机自备供应商
+                Key。
+              </p>
+              {plans?.provider === 'wechat' ? (
+                <div className="plus-plans">
+                  {(plans.plans || []).map((p) => (
+                    <div key={p.id} className="plus-plan-card">
+                      <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
+                      <span>
+                        {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
+                      </span>
+                      <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
+                        开通
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">在线支付尚未开放。开通请联系管理员。</p>
+              )}
+            </details>
+          </>
         ) : (
           <div className="plus-login">
             <label>
@@ -301,13 +327,25 @@ export function ParentPage({ progress, onProgress }: Props) {
             {captchaOn && (
               <div className="plus-captcha">
                 {captchaImage ? (
-                  <img src={captchaImage} alt="图形验证码" width={140} height={48} />
+                  <button
+                    type="button"
+                    className="plus-captcha-image"
+                    disabled={accountBusy}
+                    onClick={() => void loadCaptcha()}
+                    aria-label="刷新图形验证码"
+                  >
+                    <img src={captchaImage} alt="图形验证码" width={140} height={48} />
+                  </button>
                 ) : (
-                  <span className="muted">验证码加载中…</span>
+                  <button
+                    type="button"
+                    className="plus-captcha-placeholder"
+                    disabled={accountBusy}
+                    onClick={() => void loadCaptcha()}
+                  >
+                    点此刷新图形验证码
+                  </button>
                 )}
-                <button type="button" className="linkish" disabled={accountBusy} onClick={() => void loadCaptcha()}>
-                  换一张
-                </button>
                 <label>
                   图形验证码
                   <input
@@ -320,48 +358,35 @@ export function ParentPage({ progress, onProgress }: Props) {
                 </label>
               </div>
             )}
-            <div className="row-actions">
-              <button type="button" disabled={accountBusy} onClick={() => void onSendCode()}>
-                发送验证码
-              </button>
-            </div>
+            <button
+              type="button"
+              className="plus-send"
+              disabled={accountBusy || resendLeft > 0}
+              onClick={() => void onSendCode()}
+            >
+              {resendLeft > 0 ? `重新发送（${resendLeft}）` : '发送验证码'}
+            </button>
             <label>
               验证码
               <input
+                ref={codeInputRef}
                 value={loginCode}
                 onChange={(e) => setLoginCode(e.target.value)}
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 placeholder="6 位验证码"
               />
             </label>
-            <button type="button" disabled={accountBusy} onClick={() => void onVerifyCode()}>
+            <button type="button" className="plus-login-submit" disabled={accountBusy} onClick={() => void onVerifyCode()}>
               登录
             </button>
-            <p className="muted">验证码发到该邮箱。生产环境走腾讯云 SES API（个人实名账号不能用 SMTP）。</p>
           </div>
         )}
-        <div className="plus-plans">
-          {(plans?.plans || [
-            { id: 'month' as const, priceFen: 1800, days: 30 },
-            { id: 'year' as const, priceFen: 14800, days: 365 },
-          ]).map((p) => (
-            <div key={p.id} className="plus-plan-card">
-              <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
-              <span>
-                {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
-              </span>
-              {plans?.provider === 'wechat' && me ? (
-                <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
-                  开通
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {plans?.provider !== 'wechat' && (
-          <p className="muted">在线支付尚未开放。开通请联系管理员按邮箱开通 Plus，请勿在儿童路径操作。</p>
+        {accountMsg && (
+          <p className={`account-msg${/已发到邮箱|已登录|已退出|已注销/.test(accountMsg) ? ' ok' : ''}`}>
+            {accountMsg}
+          </p>
         )}
-        {accountMsg && <p className="muted">{accountMsg}</p>}
       </section>
 
       <div className="parent-card-grid">

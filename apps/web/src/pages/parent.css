@@ -106,28 +106,76 @@
   font-size: 15px;
 }
 
+.plus-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .plus-login label {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .plus-captcha {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.plus-captcha-image,
+.plus-captcha-placeholder {
+  margin-top: 0 !important;
+  padding: 0 !important;
+  width: 140px;
+  height: 48px;
+  border-radius: 8px;
+  background: #f6efe6 !important;
+  color: #5a4a3a !important;
+  font-size: 12px !important;
+  overflow: hidden;
+}
+
+.plus-captcha-placeholder {
+  display: flex;
   align-items: center;
-  gap: 8px 12px;
-  margin-top: 8px;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 8px !important;
+  line-height: 1.3;
 }
 
 .plus-captcha img {
   height: 48px;
   width: 140px;
+  display: block;
   border-radius: 8px;
   background: #f6efe6;
 }
 
 .plus-captcha label {
-  flex: 1 1 140px;
   margin-top: 0;
+}
+
+.plus-send,
+.plus-login-submit {
+  width: 100%;
+  margin-top: 0 !important;
+  white-space: nowrap;
+}
+
+.plus-fold {
+  margin-top: 10px;
+}
+
+.plus-fold summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.plus-fold .muted {
+  margin-top: 8px;
 }
 
 .plus-status p {
@@ -136,6 +184,16 @@
 
 .parent-plus .row-actions button {
   margin-top: 0;
+}
+
+.account-msg {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: #a14a32;
+}
+
+.account-msg.ok {
+  color: #2d6a4f;
 }
 
 .parent-feature-card .card-label {

@@ -157,7 +157,8 @@ export function FamilyStudioSettingsPage() {
             <h2>电脑 API 地址（可选）</h2>
             <p className="muted">
               生成关卡和云端配图：App 里填了对应云 Key 后会直连 HTTPS，不必填局域网。仅当要用电脑
-              .env 里的 Key、或电脑浏览器联调时，再填例如 http://192.168.2.104:8787。
+              .env 里的 Key、或电脑浏览器联调时，再填例如 http://192.168.2.104:8787。此地址不影响家长登录与
+              Plus（会员走线上）。
             </p>
             <input
               type="url"
