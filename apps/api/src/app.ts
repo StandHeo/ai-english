@@ -12,6 +12,18 @@ import { generateFamilyPack } from './familyPackGenerate.js'
 import { generateFamilyImages, slotsFromLevel } from './tongyiImage.js'
 import { openDatabase } from './db.js'
 import {
+  ADMIN_TABLES,
+  adminStats,
+  adminUiDir,
+  adminUiIndex,
+  browseAdminTable,
+  listAdminEntitlements,
+  listAdminOrders,
+  listAdminSessions,
+  listAdminUsers,
+  parseLimitOffset,
+} from './admin.js'
+import {
   applyPaidOrder,
   createSession,
   deleteSession,
@@ -66,6 +78,19 @@ function adminAuthorized(req: Request): boolean {
   const header = String(req.header('x-admin-token') || '').trim()
   const token = bearerToken(req)
   return (header && timingSafeEqualStr(header, expected)) || (token ? timingSafeEqualStr(token, expected) : false)
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const expected = (process.env.ADMIN_TOKEN || '').trim()
+  if (!expected) {
+    res.status(503).json({ error: 'admin_not_configured' })
+    return
+  }
+  if (!adminAuthorized(req)) {
+    res.status(401).json({ error: 'unauthorized' })
+    return
+  }
+  next()
 }
 
 function requireAuth(db: DatabaseSync) {
@@ -573,16 +598,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
     }
   })
 
-  app.post('/api/admin/plus', (req, res) => {
-    const expected = (process.env.ADMIN_TOKEN || '').trim()
-    if (!expected) {
-      res.status(503).json({ error: 'admin_not_configured' })
-      return
-    }
-    if (!adminAuthorized(req)) {
-      res.status(401).json({ error: 'unauthorized' })
-      return
-    }
+  app.post('/api/admin/plus', requireAdmin, (req, res) => {
     const phone = normalizePhone(req.body?.phone)
     if (!phone || !isPlanId(req.body?.plan)) {
       res.status(400).json({ error: 'invalid_phone_or_plan' })
@@ -598,6 +614,51 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       provider: 'manual',
     })
   })
+
+  app.get('/api/admin/stats', requireAdmin, (_req, res) => {
+    res.json(adminStats(db))
+  })
+
+  app.get('/api/admin/users', requireAdmin, (req, res) => {
+    const { limit, offset } = parseLimitOffset(req.query)
+    res.json(listAdminUsers(db, limit, offset))
+  })
+
+  app.get('/api/admin/sessions', requireAdmin, (req, res) => {
+    const { limit, offset } = parseLimitOffset(req.query)
+    res.json(listAdminSessions(db, limit, offset))
+  })
+
+  app.get('/api/admin/entitlements', requireAdmin, (req, res) => {
+    const { limit, offset } = parseLimitOffset(req.query)
+    res.json(listAdminEntitlements(db, limit, offset))
+  })
+
+  app.get('/api/admin/orders', requireAdmin, (req, res) => {
+    const { limit, offset } = parseLimitOffset(req.query)
+    res.json(listAdminOrders(db, limit, offset))
+  })
+
+  app.get('/api/admin/tables', requireAdmin, (_req, res) => {
+    res.json({ tables: [...ADMIN_TABLES] })
+  })
+
+  app.get('/api/admin/table/:name', requireAdmin, (req, res) => {
+    const { limit, offset } = parseLimitOffset(req.query)
+    const page = browseAdminTable(db, String(req.params.name || ''), limit, offset)
+    if (!page) {
+      res.status(400).json({ error: 'table_not_allowed' })
+      return
+    }
+    res.json(page)
+  })
+
+  const sendAdminUi = (_req: Request, res: Response) => {
+    res.sendFile(adminUiIndex())
+  }
+  app.get('/api/admin/ui', sendAdminUi)
+  app.get('/api/admin/ui/', sendAdminUi)
+  app.use('/api/admin/ui', express.static(adminUiDir(), { index: false }))
 
   return {
     app,

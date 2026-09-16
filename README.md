@@ -18,7 +18,8 @@ docs/             # 使用说明与技术方案
 → 家长视角体验与待定：[`docs/parent-child-ux-notes.md`](docs/parent-child-ux-notes.md)  
 → 竞品分析：[`docs/competitive-analysis.md`](docs/competitive-analysis.md)  
 → 收费方案（国内双端）：[`docs/monetization.md`](docs/monetization.md)  
-→ 轻量主机 + SQLite 会员切片：[`docs/lite-host.md`](docs/lite-host.md)
+→ 轻量主机 + SQLite 会员切片：[`docs/lite-host.md`](docs/lite-host.md)  
+→ 运营后台（需 `ADMIN_TOKEN`）：`/api/admin/ui/`，例如 [https://tudoudou-ai.site/api/admin/ui/](https://tudoudou-ai.site/api/admin/ui/)
 
 ## 主题包
 
