@@ -14,9 +14,18 @@ export function resetSmsCaptcha(): void {
   challenges.clear()
 }
 
-export function smsCaptchaEnabled(): boolean {
-  const v = (process.env.SMS_CAPTCHA || '').trim().toLowerCase()
+function envFlagOn(name: string): boolean {
+  const v = (process.env[name] || '').trim().toLowerCase()
   return v === 'on' || v === 'true' || v === '1'
+}
+
+/** AUTH_CAPTCHA or legacy SMS_CAPTCHA: either switch enables captcha for both channels. */
+export function authCaptchaEnabled(): boolean {
+  return envFlagOn('AUTH_CAPTCHA') || envFlagOn('SMS_CAPTCHA')
+}
+
+export function smsCaptchaEnabled(): boolean {
+  return authCaptchaEnabled()
 }
 
 function pruneExpired(now = Date.now()): void {

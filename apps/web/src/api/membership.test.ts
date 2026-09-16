@@ -41,12 +41,15 @@ describe('parent plus copy', () => {
     assert.match(membershipSrc, /¥\$\{/)
   })
 
-  it('can fetch sms captcha config for parent login', () => {
-    assert.match(membershipSrc, /\/api\/auth\/sms\/config/)
+  it('can fetch auth captcha config for parent login', () => {
+    assert.match(membershipSrc, /\/api\/auth\/config/)
+    assert.match(membershipSrc, /\/api\/auth\/email\/send/)
     assert.match(membershipSrc, /\/api\/auth\/captcha/)
     assert.match(membershipSrc, /captchaId/)
     const src = readFileSync(join(pages, 'ParentPage.tsx'), 'utf8')
     assert.match(src, /图形验证码/)
-    assert.match(src, /sms_ip_rate_limited/)
+    assert.match(src, /auth_ip_rate_limited/)
+    assert.match(src, /邮箱/)
+    assert.match(src, /sendParentEmail/)
   })
 })

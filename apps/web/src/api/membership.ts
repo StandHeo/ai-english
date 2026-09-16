@@ -5,7 +5,8 @@ const TOKEN_KEY = 'ai-english-parent-token-v1'
 export type MeResponse = {
   plus: boolean
   expiresAt: string | null
-  phone?: string
+  email?: string | null
+  phone?: string | null
 }
 
 export type BillingPlans = {
@@ -58,9 +59,16 @@ async function membershipFetch(
   }
 }
 
+export async function fetchAuthConfig(): Promise<{ captcha: boolean; authChannel: 'email' | 'sms' }> {
+  const res = await membershipFetch('/api/auth/config')
+  const channel = res.data.authChannel === 'sms' ? 'sms' : 'email'
+  return { captcha: Boolean(res.ok && res.data.captcha), authChannel: channel }
+}
+
+/** @deprecated alias of fetchAuthConfig */
 export async function fetchSmsAuthConfig(): Promise<{ captcha: boolean }> {
-  const res = await membershipFetch('/api/auth/sms/config')
-  return { captcha: Boolean(res.ok && res.data.captcha) }
+  const cfg = await fetchAuthConfig()
+  return { captcha: cfg.captcha }
 }
 
 export async function fetchSmsCaptcha(): Promise<{ id: string; image: string } | null> {
@@ -71,16 +79,35 @@ export async function fetchSmsCaptcha(): Promise<{ id: string; image: string } |
   return { id, image }
 }
 
+function captchaBody(captcha?: { captchaId?: string; captchaAnswer?: string }) {
+  return {
+    ...(captcha?.captchaId ? { captchaId: captcha.captchaId } : {}),
+    ...(captcha?.captchaAnswer ? { captchaAnswer: captcha.captchaAnswer } : {}),
+  }
+}
+
+export async function sendParentEmail(
+  email: string,
+  captcha?: { captchaId?: string; captchaAnswer?: string },
+) {
+  return membershipFetch('/api/auth/email/send', {
+    body: { email, ...captchaBody(captcha) },
+  })
+}
+
+export async function verifyParentEmail(email: string, code: string) {
+  const res = await membershipFetch('/api/auth/email/verify', { body: { email, code }, token: null })
+  const token = typeof res.data.token === 'string' ? res.data.token : ''
+  if (res.ok && token) setParentToken(token)
+  return res
+}
+
 export async function sendParentSms(
   phone: string,
   captcha?: { captchaId?: string; captchaAnswer?: string },
 ) {
   return membershipFetch('/api/auth/sms/send', {
-    body: {
-      phone,
-      ...(captcha?.captchaId ? { captchaId: captcha.captchaId } : {}),
-      ...(captcha?.captchaAnswer ? { captchaAnswer: captcha.captchaAnswer } : {}),
-    },
+    body: { phone, ...captchaBody(captcha) },
   })
 }
 
@@ -102,7 +129,8 @@ export async function fetchMe(): Promise<MeResponse | null> {
   return {
     plus: Boolean(res.data.plus),
     expiresAt: typeof res.data.expiresAt === 'string' ? res.data.expiresAt : null,
-    phone: typeof res.data.phone === 'string' ? res.data.phone : undefined,
+    email: typeof res.data.email === 'string' ? res.data.email : res.data.email === null ? null : undefined,
+    phone: typeof res.data.phone === 'string' ? res.data.phone : res.data.phone === null ? null : undefined,
   }
 }
 

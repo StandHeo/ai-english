@@ -142,13 +142,14 @@ test('sessions flag expired and omit raw session token', async () => {
 test('table browse allows membership tables and rejects others', async () => {
   const tables = await json(server.base, '/api/admin/tables', { token: ADMIN })
   assert.equal(tables.status, 200)
-  assert.deepEqual(tables.data.tables, ['users', 'entitlements', 'orders', 'sessions', 'sms_codes'])
+  assert.deepEqual(tables.data.tables, ['users', 'entitlements', 'orders', 'sessions', 'auth_codes'])
 
   const users = await json(server.base, '/api/admin/table/users', { token: ADMIN })
   assert.equal(users.status, 200)
   assert.ok(Array.isArray(users.data.columns))
   assert.ok(Array.isArray(users.data.items))
   assert.ok((users.data.columns as string[]).includes('phone'))
+  assert.ok((users.data.columns as string[]).includes('email'))
 
   const denied = await json(server.base, '/api/admin/table/schema_migrations', { token: ADMIN })
   assert.equal(denied.status, 400)
@@ -160,15 +161,15 @@ test('table browse allows membership tables and rejects others', async () => {
     headers: { 'X-Forwarded-For': '203.0.113.81' },
   })
   assert.equal(pending.status, 200)
-  const sms = await json(server.base, '/api/admin/table/sms_codes', { token: ADMIN })
-  assert.equal(sms.status, 200)
-  const smsItems = sms.data.items as Array<Record<string, unknown>>
-  assert.ok(smsItems.length >= 1)
-  for (const row of smsItems) {
+  const codes = await json(server.base, '/api/admin/table/auth_codes', { token: ADMIN })
+  assert.equal(codes.status, 200)
+  const codeItems = codes.data.items as Array<Record<string, unknown>>
+  assert.ok(codeItems.length >= 1)
+  for (const row of codeItems) {
     const hash = String(row.code_hash || '')
     assert.ok(hash.endsWith('…'), 'code_hash must be truncated')
     assert.ok(hash.length <= 16)
-    assert.ok(!String(row.phone || '').includes('13600136099'))
+    assert.ok(!String(row.destination || '').includes('13600136099'))
   }
 })
 
@@ -195,10 +196,42 @@ test('entitlements and orders list after admin plus grant', async () => {
   assert.ok(orderItems.some((row) => row.status === 'paid' && row.plan === 'month'))
 })
 
+test('admin lists email users and grants plus by email', async () => {
+  process.env.EMAIL_PROVIDER = 'mock'
+  process.env.MOCK_EMAIL_CODE = '123456'
+  const email = 'ops-parent@example.com'
+  const send = await json(server.base, '/api/auth/email/send', {
+    body: { email },
+    headers: { 'X-Forwarded-For': '203.0.113.82' },
+  })
+  assert.equal(send.status, 200)
+  const login = await json(server.base, '/api/auth/email/verify', {
+    body: { email, code: '123456' },
+    headers: { 'X-Forwarded-For': '203.0.113.82' },
+  })
+  assert.equal(login.status, 200)
+
+  const users = await json(server.base, '/api/admin/users', { token: ADMIN })
+  const items = users.data.items as Array<Record<string, unknown>>
+  const found = items.find((row) => row.email === email || row.emailMasked === 'o***@example.com')
+  assert.ok(found, 'email user should appear')
+  assert.equal(found?.email, email)
+  assert.equal(found?.emailMasked, 'o***@example.com')
+
+  const grant = await json(server.base, '/api/admin/plus', {
+    token: ADMIN,
+    body: { email, plan: 'year' },
+  })
+  assert.equal(grant.status, 200)
+  assert.equal(grant.data.plus, true)
+  assert.equal(grant.data.email, 'o***@example.com')
+})
+
 test('admin UI is served without a token', async () => {
   const res = await fetch(`${server.base}/api/admin/ui/`)
   assert.equal(res.status, 200)
   const html = await res.text()
   assert.match(html, /运营后台/)
   assert.match(html, /sessionStorage/)
+  assert.match(html, /邮箱/)
 })

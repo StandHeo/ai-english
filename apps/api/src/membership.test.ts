@@ -73,9 +73,12 @@ after(async () => {
 
 test('schema has membership tables, WAL, and no llm key columns', () => {
   const names = listTableNames(created.db)
-  for (const table of ['users', 'entitlements', 'orders', 'sms_codes', 'sessions']) {
+  for (const table of ['users', 'entitlements', 'orders', 'auth_codes', 'sessions']) {
     assert.ok(names.includes(table), table)
   }
+  assert.equal(names.includes('sms_codes'), false)
+  assert.ok(listTableColumns(created.db, 'users').includes('email'))
+  assert.ok(listTableColumns(created.db, 'users').includes('phone'))
   const mode = created.db.prepare('PRAGMA journal_mode').get() as { journal_mode: string }
   assert.equal(mode.journal_mode, 'wal')
   const forbidden = /key|llm|agnes|deepseek|tongyi|mysql/i
@@ -109,6 +112,8 @@ test('mock sms login, me, logout, wrong code', async () => {
   assert.equal(me.status, 200)
   assert.equal(me.data.plus, false)
   assert.ok('expiresAt' in me.data)
+  assert.equal(me.data.phone, '138****8000')
+  assert.equal(me.data.email, null)
 
   const logout = await json(server.base, '/api/auth/logout', { method: 'POST', token })
   assert.equal(logout.status, 200)
@@ -321,6 +326,10 @@ test('sms captcha off by default and required when on', async () => {
     const cfgOff = await json(server.base, '/api/auth/sms/config')
     assert.equal(cfgOff.status, 200)
     assert.equal(cfgOff.data.captcha, false)
+    assert.equal(cfgOff.data.authChannel, 'email')
+    const cfgAlias = await json(server.base, '/api/auth/config')
+    assert.equal(cfgAlias.data.authChannel, 'email')
+    assert.equal(cfgAlias.data.captcha, false)
     const missing = await json(server.base, '/api/auth/captcha')
     assert.equal(missing.status, 404)
     assert.equal(missing.data.error, 'captcha_disabled')
@@ -373,4 +382,159 @@ test('sms captcha off by default and required when on', async () => {
     resetSmsCaptcha()
     resetSmsIpLimiter()
   }
+})
+
+test('mock email login, me, admin grant by email, smtp missing config', async () => {
+  process.env.EMAIL_PROVIDER = 'mock'
+  process.env.MOCK_EMAIL_CODE = '123456'
+  const headers = { 'X-Forwarded-For': '203.0.113.90' }
+  const email = 'parent@example.com'
+  const send = await json(server.base, '/api/auth/email/send', { body: { email }, headers })
+  assert.equal(send.status, 200)
+  assert.equal(send.data.mock, true)
+
+  const bad = await json(server.base, '/api/auth/email/verify', {
+    body: { email, code: '000000' },
+    headers: { 'X-Forwarded-For': '203.0.113.91' },
+  })
+  assert.equal(bad.status, 401)
+  assert.equal(bad.data.token, undefined)
+
+  const invalid = await json(server.base, '/api/auth/email/send', {
+    body: { email: 'not-an-email' },
+    headers: { 'X-Forwarded-For': '203.0.113.92' },
+  })
+  assert.equal(invalid.status, 400)
+  assert.equal(invalid.data.error, 'invalid_email')
+
+  const ok = await json(server.base, '/api/auth/email/verify', {
+    body: { email, code: '123456' },
+    headers: { 'X-Forwarded-For': '203.0.113.93' },
+  })
+  assert.equal(ok.status, 200)
+  const token = String(ok.data.token)
+  assert.ok(token.length > 20)
+  assert.equal(ok.data.email, 'p***@example.com')
+  assert.equal(ok.data.phone, null)
+
+  const me = await json(server.base, '/api/me', { token })
+  assert.equal(me.status, 200)
+  assert.equal(me.data.email, 'p***@example.com')
+  assert.equal(me.data.phone, null)
+  assert.equal(me.data.plus, false)
+
+  const grant = await json(server.base, '/api/admin/plus', {
+    body: { email, plan: 'month' },
+    headers: { Authorization: 'Bearer test-admin-token' },
+  })
+  assert.equal(grant.status, 200)
+  assert.equal(grant.data.plus, true)
+  assert.equal(grant.data.email, 'p***@example.com')
+
+  const mePlus = await json(server.base, '/api/me', { token })
+  assert.equal(mePlus.data.plus, true)
+
+  process.env.EMAIL_PROVIDER = 'smtp'
+  delete process.env.SMTP_HOST
+  delete process.env.SMTP_FROM
+  const smtpFail = await json(server.base, '/api/auth/email/send', {
+    body: { email: 'other@example.com' },
+    headers: { 'X-Forwarded-For': '203.0.113.94' },
+  })
+  assert.equal(smtpFail.status, 503)
+  assert.equal(smtpFail.data.error, 'email_smtp_not_configured')
+  process.env.EMAIL_PROVIDER = 'mock'
+})
+
+test('email ip rate limit and per-address interval; AUTH_CAPTCHA gates email send', async () => {
+  const prevMax = process.env.SMS_IP_LIMIT_MAX
+  const prevAuth = process.env.AUTH_CAPTCHA
+  const prevSms = process.env.SMS_CAPTCHA
+  process.env.SMS_IP_LIMIT_MAX = '2'
+  delete process.env.SMS_CAPTCHA
+  delete process.env.AUTH_CAPTCHA
+  resetSmsIpLimiter()
+  resetSmsCaptcha()
+  try {
+    const headers = { 'X-Forwarded-For': '203.0.113.100' }
+    const a = await json(server.base, '/api/auth/email/send', { body: { email: 'a1@example.com' }, headers })
+    const b = await json(server.base, '/api/auth/email/send', { body: { email: 'a2@example.com' }, headers })
+    const c = await json(server.base, '/api/auth/email/send', { body: { email: 'a3@example.com' }, headers })
+    assert.equal(a.status, 200)
+    assert.equal(b.status, 200)
+    assert.equal(c.status, 429)
+    assert.equal(c.data.error, 'auth_ip_rate_limited')
+
+    process.env.SMS_IP_LIMIT_MAX = '100'
+    resetSmsIpLimiter()
+    const addrHeaders = { 'X-Forwarded-For': '203.0.113.101' }
+    const first = await json(server.base, '/api/auth/email/send', {
+      body: { email: 'repeat@example.com' },
+      headers: addrHeaders,
+    })
+    const second = await json(server.base, '/api/auth/email/send', {
+      body: { email: 'repeat@example.com' },
+      headers: addrHeaders,
+    })
+    assert.equal(first.status, 200)
+    assert.equal(second.status, 429)
+    assert.equal(second.data.error, 'email_rate_limited')
+
+    process.env.AUTH_CAPTCHA = 'on'
+    const capHeaders = { 'X-Forwarded-For': '203.0.113.102' }
+    const noCaptcha = await json(server.base, '/api/auth/email/send', {
+      body: { email: 'cap@example.com' },
+      headers: capHeaders,
+    })
+    assert.equal(noCaptcha.status, 400)
+    assert.equal(noCaptcha.data.error, 'captcha_required')
+
+    const challenge = await json(server.base, '/api/auth/captcha')
+    const id = String(challenge.data.id)
+    const answer = captchaAnswerFromImage(challenge.data.image)
+    const ok = await json(server.base, '/api/auth/email/send', {
+      body: { email: 'cap@example.com', captchaId: id, captchaAnswer: answer },
+      headers: capHeaders,
+    })
+    assert.equal(ok.status, 200)
+  } finally {
+    if (prevMax === undefined) delete process.env.SMS_IP_LIMIT_MAX
+    else process.env.SMS_IP_LIMIT_MAX = prevMax
+    if (prevAuth === undefined) delete process.env.AUTH_CAPTCHA
+    else process.env.AUTH_CAPTCHA = prevAuth
+    if (prevSms === undefined) delete process.env.SMS_CAPTCHA
+    else process.env.SMS_CAPTCHA = prevSms
+    resetSmsCaptcha()
+    resetSmsIpLimiter()
+  }
+})
+
+test('email login does not merge with phone-only user', async () => {
+  const phone = '13600136999'
+  await json(server.base, '/api/auth/sms/send', {
+    body: { phone },
+    headers: { 'X-Forwarded-For': '203.0.113.110' },
+  })
+  const smsLogin = await json(server.base, '/api/auth/sms/verify', {
+    body: { phone, code: '123456' },
+    headers: { 'X-Forwarded-For': '203.0.113.110' },
+  })
+  assert.equal(smsLogin.status, 200)
+  await json(server.base, '/api/admin/plus', {
+    body: { phone, plan: 'year' },
+    headers: { Authorization: 'Bearer test-admin-token' },
+  })
+
+  const email = 'unrelated@example.com'
+  await json(server.base, '/api/auth/email/send', {
+    body: { email },
+    headers: { 'X-Forwarded-For': '203.0.113.111' },
+  })
+  const emailLogin = await json(server.base, '/api/auth/email/verify', {
+    body: { email, code: '123456' },
+    headers: { 'X-Forwarded-For': '203.0.113.111' },
+  })
+  assert.equal(emailLogin.status, 200)
+  assert.equal(emailLogin.data.plus, false)
+  assert.equal(emailLogin.data.phone, null)
 })

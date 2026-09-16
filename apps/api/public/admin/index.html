@@ -160,7 +160,7 @@
         <div class="sub" id="updated">尚未加载</div>
         <div class="row" style="min-width: auto;">
           <label style="margin:0; display:flex; gap:6px; align-items:center; min-width:auto;">
-            <input id="showPhone" type="checkbox" style="width:auto;" /> 显示完整手机号
+            <input id="showPhone" type="checkbox" style="width:auto;" /> 显示完整手机号/邮箱
           </label>
           <button type="button" id="refreshBtn">刷新</button>
         </div>
@@ -191,6 +191,11 @@
     function phoneOf(row) {
       const full = row.phone || ''
       const masked = row.phoneMasked || full
+      return state.showPhone ? (full || masked) : (masked || full)
+    }
+    function emailOf(row) {
+      const full = row.email || ''
+      const masked = row.emailMasked || full
       return state.showPhone ? (full || masked) : (masked || full)
     }
     function escapeHtml(value) {
@@ -321,7 +326,8 @@
         <p class="note">「在线」只统计 <code>sessions.expires_at</code> 仍大于当前时间的行，不是 WebSocket 实时在线。</p>
         <h3>手工开通 Plus</h3>
         <form id="plusForm" class="row">
-          <div style="flex:1"><label>手机号</label><input name="phone" required placeholder="13800138000" /></div>
+          <div style="flex:1"><label>邮箱</label><input name="email" type="email" placeholder="parent@example.com" /></div>
+          <div style="flex:1"><label>手机号（旧账号）</label><input name="phone" placeholder="13800138000" /></div>
           <div><label>套餐</label><select name="plan"><option value="month">包月</option><option value="year">包年</option></select></div>
           <button type="submit">开通</button>
         </form>
@@ -330,8 +336,15 @@
         e.preventDefault()
         const fd = new FormData(e.target)
         const msg = $('plusMsg')
+        const email = String(fd.get('email') || '').trim()
+        const phone = String(fd.get('phone') || '').trim()
+        if (!email && !phone) {
+          msg.textContent = '请填写邮箱或手机号'
+          return
+        }
         try {
-          const data = await api('/api/admin/plus', { method: 'POST', body: { phone: fd.get('phone'), plan: fd.get('plan') } })
+          const body = { plan: fd.get('plan'), ...(email ? { email } : { phone }) }
+          const data = await api('/api/admin/plus', { method: 'POST', body })
           msg.textContent = '已开通，到期 ' + fmtTime(data.expiresAt)
           loadOverview()
         } catch (ex) { msg.textContent = ex.message }
@@ -341,8 +354,8 @@
     async function loadUsers() {
       const data = await api(`/api/admin/users?limit=${PAGE}&offset=${state.offset}`)
       $('panel-users').innerHTML = pager(data.total) + tableHtml(
-        ['用户 ID', '手机号', '注册时间'],
-        data.items.map((r) => [`<span class="mono">${escapeHtml(r.id)}</span>`, escapeHtml(phoneOf(r)), fmtTime(r.created_at)]),
+        ['用户 ID', '邮箱', '手机号', '注册时间'],
+        data.items.map((r) => [`<span class="mono">${escapeHtml(r.id)}</span>`, escapeHtml(emailOf(r)), escapeHtml(phoneOf(r)), fmtTime(r.created_at)]),
       )
       bindPager($('panel-users'), data.total)
     }
@@ -351,9 +364,10 @@
       const data = await api(`/api/admin/sessions?limit=${PAGE}&offset=${state.offset}`)
       $('panel-sessions').innerHTML = `<p class="note">未过期会话计为在线。过期行仍会列出，用标记区分。</p>` +
         pager(data.total) + tableHtml(
-          ['用户', '手机号', '创建', '过期', '状态', 'hash 前缀'],
+          ['用户', '邮箱', '手机号', '创建', '过期', '状态', 'hash 前缀'],
           data.items.map((r) => [
             `<span class="mono">${escapeHtml(r.user_id)}</span>`,
+            escapeHtml(emailOf(r)),
             escapeHtml(phoneOf(r)),
             fmtTime(r.created_at),
             fmtTime(r.expires_at),
@@ -367,9 +381,10 @@
     async function loadEntitlements() {
       const data = await api(`/api/admin/entitlements?limit=${PAGE}&offset=${state.offset}`)
       $('panel-entitlements').innerHTML = pager(data.total) + tableHtml(
-        ['用户', '手机号', '到期', '来源', '更新', 'Plus'],
+        ['用户', '邮箱', '手机号', '到期', '来源', '更新', 'Plus'],
         data.items.map((r) => [
           `<span class="mono">${escapeHtml(r.user_id)}</span>`,
+          escapeHtml(emailOf(r)),
           escapeHtml(phoneOf(r)),
           fmtTime(r.expires_at),
           escapeHtml(r.source),
@@ -383,9 +398,10 @@
     async function loadOrders() {
       const data = await api(`/api/admin/orders?limit=${PAGE}&offset=${state.offset}`)
       $('panel-orders').innerHTML = pager(data.total) + tableHtml(
-        ['订单', '手机号', '套餐', '金额(分)', '状态', '渠道', '创建', '支付'],
+        ['订单', '邮箱', '手机号', '套餐', '金额(分)', '状态', '渠道', '创建', '支付'],
         data.items.map((r) => [
           `<span class="mono">${escapeHtml(r.id)}</span>`,
+          escapeHtml(emailOf(r)),
           escapeHtml(phoneOf(r)),
           escapeHtml(r.plan),
           String(r.amount_fen),
@@ -406,11 +422,13 @@
       const headers = data.columns
       const rows = data.items.map((row) => headers.map((col) => {
         if (col === 'phone' && row.phone && !state.showPhone) return escapeHtml(row.phoneMasked || String(row.phone).replace(/^(\d{3})\d+(\d{4})$/, '$1****$2'))
+        if (col === 'email' && row.email && !state.showPhone) return escapeHtml(row.emailMasked || String(row.email))
+        if (col === 'destination' && row.destination && !state.showPhone) return escapeHtml(String(row.destination))
         return `<span class="mono">${escapeHtml(row[col])}</span>`
       }))
       $('panel-tables').innerHTML = `
         <div class="row"><div><label>表</label><select id="tableSel">${options}</select></div></div>
-        <p class="note">仅白名单会员表。短信 <code>code_hash</code> 已截断。</p>
+        <p class="note">仅白名单会员表。验证码 <code>code_hash</code> 与 <code>destination</code> 已截断/掩码。</p>
         ${pager(data.total)}
         ${tableHtml(headers, rows)}`
       $('tableSel').addEventListener('change', (e) => {
