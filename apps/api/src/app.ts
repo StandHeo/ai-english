@@ -43,7 +43,7 @@ import {
 } from './membership.js'
 import { maskEmail, normalizeEmail } from './email.js'
 import { authChannel, issueEmailCode, verifyEmailCode } from './emailAuth.js'
-import { emailProvider, smtpConfigured } from './mail.js'
+import { emailProvider, emailSendPrecheckError, isEmailProviderFailure } from './mail.js'
 import { maskPhone, normalizePhone } from './phone.js'
 import { issueSmsCode, smsProvider, tencentSmsConfigured, verifySmsCode } from './sms.js'
 import { consumeSmsCaptcha, createSmsCaptcha, smsCaptchaEnabled } from './smsCaptcha.js'
@@ -438,8 +438,9 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       return
     }
     if (!requireCaptcha(req, res)) return
-    if (emailProvider() === 'smtp' && !smtpConfigured()) {
-      res.status(503).json({ error: 'email_smtp_not_configured' })
+    const precheck = emailSendPrecheckError()
+    if (precheck) {
+      res.status(503).json({ error: precheck })
       return
     }
     try {
@@ -455,7 +456,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
         res.status(429).json({ error: 'email_rate_limited' })
         return
       }
-      if (message === 'email_smtp_not_configured' || message.startsWith('email_smtp_failed:')) {
+      if (isEmailProviderFailure(message)) {
         res.status(503).json({ error: message })
         return
       }

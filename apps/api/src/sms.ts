@@ -1,7 +1,7 @@
-import { createHmac, createHash } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
 import { assertCanSendAuthCode, upsertAuthCode, verifyAuthCode } from './authCodes.js'
 import { randomSmsCode } from './cryptoUtil.js'
+import { callTencentCloud } from './tencentCloud.js'
 
 export function smsProvider(): 'mock' | 'tencent' {
   return process.env.SMS_PROVIDER === 'tencent' ? 'tencent' : 'mock'
@@ -39,71 +39,27 @@ export function tencentSmsConfigured(): boolean {
   )
 }
 
-function sha256HexUtf8(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex')
-}
-
-function hmacBuf(key: Buffer | string, msg: string): Buffer {
-  return createHmac('sha256', key).update(msg, 'utf8').digest()
-}
-
 export async function sendTencentSms(phone: string, code: string): Promise<void> {
   if (!tencentSmsConfigured()) {
     throw new Error('sms_tencent_not_configured')
   }
-  const secretId = process.env.TENCENT_SMS_SECRET_ID!.trim()
-  const secretKey = process.env.TENCENT_SMS_SECRET_KEY!.trim()
-  const sdkAppId = process.env.TENCENT_SMS_SDK_APP_ID!.trim()
-  const signName = process.env.TENCENT_SMS_SIGN_NAME!.trim()
-  const templateId = process.env.TENCENT_SMS_TEMPLATE_ID!.trim()
-  const region = (process.env.TENCENT_SMS_REGION || 'ap-guangzhou').trim()
-
-  const payload = JSON.stringify({
-    PhoneNumberSet: [`+86${phone}`],
-    SmsSdkAppId: sdkAppId,
-    SignName: signName,
-    TemplateId: templateId,
-    TemplateParamSet: [code],
-  })
-  const host = 'sms.tencentcloudapi.com'
-  const service = 'sms'
-  const action = 'SendSms'
-  const version = '2021-01-11'
-  const timestamp = Math.floor(Date.now() / 1000)
-  const date = new Date(timestamp * 1000).toISOString().slice(0, 10)
-
-  const hashedPayload = sha256HexUtf8(payload)
-  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${host}\nx-tc-action:${action.toLowerCase()}\n`
-  const signedHeaders = 'content-type;host;x-tc-action'
-  const canonicalRequest = ['POST', '/', '', canonicalHeaders, signedHeaders, hashedPayload].join('\n')
-  const credentialScope = `${date}/${service}/tc3_request`
-  const stringToSign = ['TC3-HMAC-SHA256', String(timestamp), credentialScope, sha256HexUtf8(canonicalRequest)].join(
-    '\n',
-  )
-  const secretDate = hmacBuf(`TC3${secretKey}`, date)
-  const secretService = hmacBuf(secretDate, service)
-  const secretSigning = hmacBuf(secretService, 'tc3_request')
-  const signature = createHmac('sha256', secretSigning).update(stringToSign, 'utf8').digest('hex')
-  const authorization = `TC3-HMAC-SHA256 Credential=${secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
-
-  const res = await fetch(`https://${host}/`, {
-    method: 'POST',
-    headers: {
-      Authorization: authorization,
-      'Content-Type': 'application/json; charset=utf-8',
-      Host: host,
-      'X-TC-Action': action,
-      'X-TC-Timestamp': String(timestamp),
-      'X-TC-Version': version,
-      'X-TC-Region': region,
+  const result = await callTencentCloud({
+    secretId: process.env.TENCENT_SMS_SECRET_ID!.trim(),
+    secretKey: process.env.TENCENT_SMS_SECRET_KEY!.trim(),
+    host: 'sms.tencentcloudapi.com',
+    service: 'sms',
+    action: 'SendSms',
+    version: '2021-01-11',
+    region: (process.env.TENCENT_SMS_REGION || 'ap-guangzhou').trim(),
+    payload: {
+      PhoneNumberSet: [`+86${phone}`],
+      SmsSdkAppId: process.env.TENCENT_SMS_SDK_APP_ID!.trim(),
+      SignName: process.env.TENCENT_SMS_SIGN_NAME!.trim(),
+      TemplateId: process.env.TENCENT_SMS_TEMPLATE_ID!.trim(),
+      TemplateParamSet: [code],
     },
-    body: payload,
   })
-  const data = (await res.json().catch(() => ({}))) as {
-    Response?: { Error?: { Code?: string; Message?: string } }
-  }
-  if (!res.ok || data.Response?.Error) {
-    const codeName = data.Response?.Error?.Code || `http_${res.status}`
-    throw new Error(`sms_tencent_failed:${codeName}`)
+  if (result.errorCode) {
+    throw new Error(`sms_tencent_failed:${result.errorCode}`)
   }
 }

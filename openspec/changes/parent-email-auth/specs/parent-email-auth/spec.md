@@ -1,6 +1,6 @@
 ## Purpose
 
-让家长在门禁之后用邮箱验证码登录，以规范化邮箱作为账号主键认 Plus，并在开发环境用 mock、生产用 SMTP 发信。
+让家长在门禁之后用邮箱验证码登录，以规范化邮箱作为账号主键认 Plus；开发用 mock，生产用腾讯云 SES API（个人实名不能 SMTP），SMTP 作为备选。
 
 ## ADDED Requirements
 
@@ -30,16 +30,24 @@
 - **WHEN** 发送或校验请求中的邮箱格式无效
 - **THEN** 系统返回 HTTP 400 `invalid_email` 且 MUST NOT 发信或颁发令牌
 
-### Requirement: 邮件 mock 与 SMTP
-当 `EMAIL_PROVIDER` 未设置或为 `mock` 时，系统 MUST NOT 连接 SMTP，MUST 将验证码写入服务端日志，并 MAY 使用 `MOCK_EMAIL_CODE`（缺省为约定开发码）。当 `EMAIL_PROVIDER=smtp` 时，系统 MUST 使用 `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM`（可选 `SMTP_SECURE`）发送验证码邮件；配置不全 MUST 明确失败且 MUST NOT 颁发令牌。
+### Requirement: 邮件 mock、SMTP 与腾讯云 SES API
+当 `EMAIL_PROVIDER` 未设置或为 `mock` 时，系统 MUST NOT 连接 SMTP 或腾讯云 SES，MUST 将验证码写入服务端日志，并 MAY 使用 `MOCK_EMAIL_CODE`（缺省为约定开发码）。当 `EMAIL_PROVIDER=smtp` 时，系统 MUST 使用 `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM`（可选 `SMTP_SECURE`）发送验证码邮件；配置不全 MUST 明确失败且 MUST NOT 颁发令牌。当 `EMAIL_PROVIDER=tencent_ses` 时，系统 MUST 调用腾讯云邮件推送 `SendEmail` API（host `ses.tencentcloudapi.com`，Version `2020-10-02`），MUST 使用已审核模板（`TENCENT_SES_TEMPLATE_ID` + `TemplateData` 含验证码），MUST NOT 依赖 SMTP，MUST NOT 对个人/普通账号使用已废弃的 `Simple` 正文。密钥 MUST 读取 `TENCENT_SES_SECRET_ID`/`TENCENT_SES_SECRET_KEY`，若未设则可回落 `TENCENT_CLOUD_SECRET_ID`/`TENCENT_CLOUD_SECRET_KEY`。发件人 MUST 读取 `TENCENT_SES_FROM`，若未设则可回落 `EMAIL_FROM` 或 `SMTP_FROM`。地域缺省 MUST 为 `ap-guangzhou`。配置不全 MUST 返回可区分错误（如 `email_ses_not_configured`）且 MUST NOT 颁发令牌。
 
 #### Scenario: 开发 mock 不真发邮件
 - **WHEN** 邮件提供方为 mock
-- **THEN** 系统不连接 SMTP，仍可用日志或约定码完成校验
+- **THEN** 系统不连接 SMTP 或 SES API，仍可用日志或约定码完成校验
 
 #### Scenario: SMTP 未配置明确失败
 - **WHEN** `EMAIL_PROVIDER=smtp` 且主机或发件人等必要配置缺失
 - **THEN** 发送接口失败且错误可区分，MUST NOT 静默当成功
+
+#### Scenario: 腾讯云 SES 走模板 SendEmail
+- **WHEN** `EMAIL_PROVIDER=tencent_ses` 且密钥、发件人、模板 ID 已配置
+- **THEN** 系统向 `ses.tencentcloudapi.com` 发送 TC3 签名的 `SendEmail` 请求，body 含 `Template.TemplateID` 与含验证码的 `TemplateData`，且不含 `Simple`
+
+#### Scenario: 腾讯云 SES 未配置明确失败
+- **WHEN** `EMAIL_PROVIDER=tencent_ses` 且密钥、发件人或模板 ID 缺失
+- **THEN** 发送接口失败且错误可区分（如 `email_ses_not_configured`），MUST NOT 静默当成功
 
 ### Requirement: 配置接口暴露通道与验证码开关
 系统 MUST 提供 `GET /api/auth/config`（既有 `GET /api/auth/sms/config` MAY 作为兼容别名），成功响应 MUST 包含 `{ captcha: boolean, authChannel: 'email' | 'sms' }`。默认产品通道 MUST 为 `email`。`captcha` 为 true 时，邮箱发送 MUST 与短信发送一样校验图形验证码。

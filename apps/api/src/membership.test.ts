@@ -8,6 +8,7 @@ import { listTableColumns, listTableNames } from './db.js'
 import { PLAN_DAYS } from './membership.js'
 import { resetSmsCaptcha } from './smsCaptcha.js'
 import { resetSmsIpLimiter } from './smsIpLimit.js'
+import { setTencentCloudFetch } from './tencentCloud.js'
 
 const PHONE = '13800138000'
 const PHONE2 = '13900139000'
@@ -444,6 +445,78 @@ test('mock email login, me, admin grant by email, smtp missing config', async ()
   assert.equal(smtpFail.status, 503)
   assert.equal(smtpFail.data.error, 'email_smtp_not_configured')
   process.env.EMAIL_PROVIDER = 'mock'
+})
+
+test('tencent_ses send uses SendEmail template API; missing config is 503', async () => {
+  process.env.EMAIL_PROVIDER = 'tencent_ses'
+  process.env.TENCENT_SES_SECRET_ID = 'AKIDtest'
+  process.env.TENCENT_SES_SECRET_KEY = 'ses-secret'
+  process.env.TENCENT_SES_FROM = 'noreply@mail.tudoudou-ai.site'
+  process.env.TENCENT_SES_TEMPLATE_ID = '100091'
+  process.env.TENCENT_SES_REGION = 'ap-guangzhou'
+
+  let capturedUrl = ''
+  let capturedAction = ''
+  let capturedVersion = ''
+  let capturedBody: {
+    FromEmailAddress?: string
+    Destination?: string[]
+    Template?: { TemplateID?: number; TemplateData?: string }
+    Simple?: unknown
+  } = {}
+  setTencentCloudFetch(async (input, init) => {
+    capturedUrl = String(input)
+    const headers = init?.headers as Record<string, string>
+    capturedAction = headers['X-TC-Action'] || ''
+    capturedVersion = headers['X-TC-Version'] || ''
+    capturedBody = JSON.parse(String(init?.body || '{}')) as typeof capturedBody
+    return new Response(JSON.stringify({ Response: { MessageId: 'mid-1', RequestId: 'req-1' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  })
+
+  const email = 'ses-parent@example.com'
+  try {
+    const send = await json(server.base, '/api/auth/email/send', {
+      body: { email },
+      headers: { 'X-Forwarded-For': '203.0.113.110' },
+    })
+    assert.equal(send.status, 200)
+    assert.equal(send.data.mock, false)
+    assert.equal(capturedUrl, 'https://ses.tencentcloudapi.com/')
+    assert.equal(capturedAction, 'SendEmail')
+    assert.equal(capturedVersion, '2020-10-02')
+    assert.equal(capturedBody.FromEmailAddress, 'noreply@mail.tudoudou-ai.site')
+    assert.deepEqual(capturedBody.Destination, [email])
+    assert.equal(capturedBody.Template?.TemplateID, 100091)
+    assert.equal(capturedBody.Simple, undefined)
+    const sentCode = String(JSON.parse(capturedBody.Template?.TemplateData || '{}').code || '')
+    assert.match(sentCode, /^\d{4,8}$/)
+
+    const verify = await json(server.base, '/api/auth/email/verify', {
+      body: { email, code: sentCode },
+      headers: { 'X-Forwarded-For': '203.0.113.111' },
+    })
+    assert.equal(verify.status, 200)
+    assert.ok(String(verify.data.token).length > 20)
+
+    delete process.env.TENCENT_SES_TEMPLATE_ID
+    const missing = await json(server.base, '/api/auth/email/send', {
+      body: { email: 'ses-other@example.com' },
+      headers: { 'X-Forwarded-For': '203.0.113.112' },
+    })
+    assert.equal(missing.status, 503)
+    assert.equal(missing.data.error, 'email_ses_not_configured')
+  } finally {
+    setTencentCloudFetch(undefined)
+    process.env.EMAIL_PROVIDER = 'mock'
+    delete process.env.TENCENT_SES_SECRET_ID
+    delete process.env.TENCENT_SES_SECRET_KEY
+    delete process.env.TENCENT_SES_FROM
+    delete process.env.TENCENT_SES_TEMPLATE_ID
+    delete process.env.TENCENT_SES_REGION
+  }
 })
 
 test('email ip rate limit and per-address interval; AUTH_CAPTCHA gates email send', async () => {

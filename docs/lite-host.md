@@ -7,7 +7,7 @@
 - Express 监听 `127.0.0.1:8787`（`PORT=8787`）
 - SQLite 文件：`DATABASE_PATH`（或 `DATA_DIR/membership.db`），启动时 `PRAGMA journal_mode=WAL`
 - 进程管理：pm2（或 systemd）跑 `npm --prefix apps/api start`
-- 默认 `EMAIL_PROVIDER=mock`、`SMS_PROVIDER=mock`、`BILLING_PROVIDER=manual`；家长产品路径为邮箱验证码。腾讯云短信与微信支付只在环境变量配齐后开启
+- 默认 `EMAIL_PROVIDER=mock`、`SMS_PROVIDER=mock`、`BILLING_PROVIDER=manual`；家长产品路径为邮箱验证码。生产发信用腾讯云 SES **API**（个人实名不能 SMTP）。腾讯云短信与微信支付只在环境变量配齐后开启
 
 ## Nginx
 
@@ -53,7 +53,24 @@ location /admin/ {
 
 家长中心走 `POST /api/auth/email/send` 与 `/verify`。开发默认 `EMAIL_PROVIDER=mock`，验证码写 API 日志（`MOCK_EMAIL_CODE` 默认 `123456`）。
 
-生产用 SMTP（不接付费邮件 SaaS）：
+生产默认走腾讯云邮件推送 **API**（`SendEmail`），**不要**对个人实名账号配 SES SMTP：2026-03-02 起新开通的个人实名用户不能 SMTP，只能 API 或控制台。普通账号也 **必须用已审核模板**（`Simple` 正文已废弃；缺模板会 `FailedOperation.WithOutPermission`）。
+
+1. 控制台开通 SES，验证发信域名（如 `mail.tudoudou-ai.site`），添加发件地址（如 `noreply@mail.tudoudou-ai.site`）。
+2. 创建并审核「验证码」模板，变量名必须是 `code`（正文示例：`您的验证码是{{code}}，5 分钟内有效。`）。记下模板 ID。
+3. 填环境变量：
+
+```bash
+EMAIL_PROVIDER=tencent_ses
+TENCENT_SES_SECRET_ID=
+TENCENT_SES_SECRET_KEY=
+TENCENT_SES_REGION=ap-guangzhou
+TENCENT_SES_FROM=noreply@mail.tudoudou-ai.site
+TENCENT_SES_TEMPLATE_ID=
+```
+
+密钥也可改用 `TENCENT_CLOUD_SECRET_ID` / `TENCENT_CLOUD_SECRET_KEY`（SES 专用变量未设时回落）。**不要**把 `TENCENT_SMS_*` 当 SES 密钥。发件人未设 `TENCENT_SES_FROM` 时回落 `EMAIL_FROM` / `SMTP_FROM`。
+
+企业认证或 QQ 邮箱仍可用 SMTP 备选：
 
 ```bash
 EMAIL_PROVIDER=smtp
@@ -65,7 +82,7 @@ SMTP_PASS=授权码
 SMTP_FROM="土豆豆AI英语 <your-qq@qq.com>"
 ```
 
-QQ 邮箱需在网页版开启 SMTP 并使用**授权码**（不是登录密码）。自有域名可把 `SMTP_HOST` 换成服务商 SMTP，`SMTP_FROM` 用该域名发件人，有利于送达。短信路由 `/api/auth/sms/*` 仍保留，待资质后再开 `SMS_PROVIDER=tencent`。
+QQ 邮箱需在网页版开启 SMTP 并使用**授权码**（不是登录密码）。短信路由 `/api/auth/sms/*` 仍保留，待资质后再开 `SMS_PROVIDER=tencent`。
 
 既有仅手机号用户（`users.email` 为空）仍可用短信校验登录；**不会**与新邮箱账号自动合并。运营开通请按家长实际登录键（邮箱或旧手机号）。
 

@@ -7,7 +7,7 @@
 - 家长中心登录改为邮箱 + 验证码（交互对齐现有短信：发送 / 图形验证码 / 校验）。
 - 账号身份以 **email** 为主键；`phone` 改为可空，供日后绑定短信。既有仅手机号行仍可用 `/api/auth/sms/*` 登录，不与新邮箱账号自动合并。
 - 新增 `POST /api/auth/email/send` 与 `POST /api/auth/email/verify`；保留短信路由。配置接口暴露 `{ captcha, authChannel }`，默认 `authChannel=email`。
-- 邮件发送 `EMAIL_PROVIDER=mock|smtp`（默认 mock）；SMTP 用 nodemailer + 环境变量，不接付费邮件 SaaS。
+- 邮件发送 `EMAIL_PROVIDER=mock|smtp|tencent_ses`（开发默认 mock）。生产文档默认 **腾讯云 SES API**（`SendEmail`）：个人实名账号自 2026-03-02 起不能 SMTP，必须走 API/控制台，且须用已审核模板。SMTP 仍保留给企业/QQ。不接 Resend/SendGrid。
 - 复用现有 IP 限流；图形验证码用一个开关同时覆盖短信与邮箱发送（`AUTH_CAPTCHA`，兼容 `SMS_CAPTCHA`）。
 - `GET /api/me` 返回 `email`（及若有则 `phone`）。`POST /api/admin/plus` 支持按邮箱开通，并保留按手机号开通旧行。
 - 运营后台在有邮箱列时展示邮箱；手工开通表单支持邮箱。
@@ -17,7 +17,7 @@
 
 ### 新增能力
 
-- `parent-email-auth`：家长邮箱验证码登录、会话、`GET /api/me` 暴露邮箱；SMTP/mock 发信。
+- `parent-email-auth`：家长邮箱验证码登录、会话、`GET /api/me` 暴露邮箱；mock / SMTP / 腾讯云 SES API 发信。
 
 ### 修改的能力
 
@@ -28,7 +28,7 @@
 
 ## 影响
 
-- `apps/api`：migration、auth 路由、发信、会员查找、admin JSON/UI、`.env.example`
+- `apps/api`：migration、auth 路由、发信（含腾讯云 SES `SendEmail`）、会员查找、admin JSON/UI、`.env.example`
 - `apps/web`：`ParentPage`、`membership.ts` 客户端与测试
-- `docs/lite-host.md`、`docs/monetization.md`：登录标识从手机号改为邮箱为主
-- 依赖：`nodemailer`（仅 API）
+- `docs/lite-host.md`、`docs/monetization.md`：登录标识从手机号改为邮箱为主；生产发信默认 SES API
+- 依赖：`nodemailer`（SMTP 备选，仅 API）；SES 用内置 `fetch` + TC3 签名

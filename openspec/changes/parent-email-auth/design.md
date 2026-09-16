@@ -8,10 +8,10 @@
 
 - 顺序 migration：`users.email` 唯一可空；`phone` 改为可空唯一；至少一端非空。
 - 验证码表收成 `auth_codes(channel, destination)`；短信模块改写该表，路由保持 `/api/auth/sms/*`。
-- 邮箱发送 mock/SMTP；家长 UI 走邮箱；限流与 captcha 复用。
+- 邮箱发送 mock / SMTP / 腾讯云 SES API（个人实名默认 API 模板发信）；家长 UI 走邮箱；限流与 captcha 复用。
 - admin / `/api/me` / 手工开通识别邮箱。
 
-**非目标：** 密码登录、邮箱与手机号自动绑户、生产腾讯云短信、改微信、分布式限流、第三方邮件 SaaS。
+**非目标：** 密码登录、邮箱与手机号自动绑户、生产腾讯云短信、改微信、分布式限流、Resend/SendGrid 等第三方邮件 SaaS。
 
 ## 决策
 
@@ -28,11 +28,14 @@
 - **原因：** 一张表、一套哈希与限流，比并列 `email_codes` 更干净。
 - **备选：** 新增 `email_codes` 保留 `sms_codes`（双份逻辑）。
 
-### D3 — 发信 mock | SMTP
+### D3 — 发信 mock | SMTP | 腾讯云 SES API
 
-- **选择：** `EMAIL_PROVIDER=mock|smtp`，默认 mock。mock：日志 `[email/mock] email=… code=…`，码为 `MOCK_EMAIL_CODE`（默认 `123456`）。smtp：nodemailer，`SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`，可选 `SMTP_SECURE`。主题与正文中文，含 6 位码。文档写 QQ 邮箱 / 域名 SMTP。
-- **原因：** v1 零 SaaS；CI 不连外网。
-- **备选：** Resend/SendGrid（否决）。
+- **选择：** `EMAIL_PROVIDER=mock|smtp|tencent_ses`，开发默认 mock。生产文档默认 `tencent_ses`。
+  - mock：日志 `[email/mock] email=… code=…`，码为 `MOCK_EMAIL_CODE`（默认 `123456`）。
+  - smtp：nodemailer，`SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`，可选 `SMTP_SECURE`。保留给企业 SMTP / QQ 授权码。
+  - tencent_ses：TC3 签 `ses.tencentcloudapi.com`，Action=`SendEmail`，Version=`2020-10-02`，地域默认 `ap-guangzhou`。**个人/普通账号必须用已审核模板**（官方：默认仅模板；`Simple` 已废弃；`FailedOperation.WithOutPermission` = 仅模板）。`TENCENT_SES_TEMPLATE_ID` 必填，`TemplateData` 为 `{"code":"<6位码>"}`。密钥优先 `TENCENT_SES_SECRET_ID/KEY`，可回落 `TENCENT_CLOUD_SECRET_ID/KEY`；**不**复用 `TENCENT_SMS_*`。发件人 `TENCENT_SES_FROM`，可回落 `EMAIL_FROM` / `SMTP_FROM`。
+- **原因：** 2026-03-02 起新开通的个人实名 SES **不能 SMTP**，只能 API/控制台。CI 用注入 `fetch` 测 HTTP，不连外网。
+- **备选：** 只 SMTP（个人账号不可用，否决）；Resend/SendGrid（否决）；裸 `Simple` 正文（个人账号会 `WithOutPermission`，否决）。
 
 ### D4 — 默认通道与配置
 
@@ -69,16 +72,17 @@
 ## 风险
 
 - **[邮箱与手机号分裂账号]** → 文档写明不自动合并；运营按正确键开通。
-- **[SMTP 被当垃圾邮件]** → 文档建议域名信或 QQ SMTP；mock 不挡开发。
+- **[个人 SES 不能 SMTP]** → 生产走 `tencent_ses` 模板 API；SMTP 仅作企业/QQ 备选。
+- **[SES 模板未审核]** → 文档写明控制台创建验证码模板（变量名 `code`）并填 `TENCENT_SES_TEMPLATE_ID`；缺配置返回 `email_ses_not_configured`。
 - **[SQLite 重建 users]** → migration 拷贝后再改名；外键 ON，事务内完成。
 - **[验证码枚举邮箱是否存在]** → 发送对未知邮箱也返回成功（仍写入 auth_codes），与短信「先发后建用户」一致。
 
 ## 迁移
 
 1. 部署带 `002_email_auth.sql` 的 API；启动时自动 apply。
-2. 设 `EMAIL_PROVIDER=mock` 验证家长页；生产再改 `smtp`。
+2. 设 `EMAIL_PROVIDER=mock` 验证家长页；生产改 `tencent_ses`（模板 ID + 密钥 + 发件域名）。企业 SMTP 仍可用 `smtp`。
 3. 回滚：恢复上一版二进制不能理解 `auth_codes` / 可空 phone，需备库；v1 单机接受备份回退。
 
 ## 待决
 
-- （无。QQ SMTP 具体授权码由运维填 env，不挡实现。）
+- （无。SES 模板 ID 与密钥由运维在控制台创建后填 env。）

@@ -6,7 +6,7 @@
 ## 2. 邮箱发信与验证码表
 
 - [x] 2.1 短信读写改为 `auth_codes`（`channel=sms`）；`/api/auth/sms/*` 行为与错误码不变，mock 短信测试仍绿
-- [x] 2.2 实现 `EMAIL_PROVIDER=mock|smtp`：mock 打日志 + `MOCK_EMAIL_CODE`；smtp 用 nodemailer；缺配置明确失败。实现 `POST /api/auth/email/send|verify`（规范化邮箱、按邮箱 60s 间隔）
+- [x] 2.2 实现 `EMAIL_PROVIDER=mock|smtp|tencent_ses`：mock 打日志 + `MOCK_EMAIL_CODE`；smtp 用 nodemailer；tencent_ses 走 `SendEmail` 模板 API（个人实名不能 SMTP）；缺配置明确失败。实现 `POST /api/auth/email/send|verify`（规范化邮箱、按邮箱 60s 间隔）
 - [x] 2.3 邮箱 send/verify 接上现有 IP 限流与统一 captcha（`AUTH_CAPTCHA` 或 `SMS_CAPTCHA`）；`GET /api/auth/config` 返回 `{ captcha, authChannel }`，默认 `authChannel=email`；`GET /api/auth/sms/config` 返回同一 JSON
 
 ## 3. me、开通、后台
@@ -17,9 +17,14 @@
 ## 4. 家长 UI 与客户端
 
 - [x] 4.1 `membership.ts` 增加邮箱 send/verify 与 config；`ParentPage` 改为邮箱字段与中文文案，儿童路径测试仍禁止登录/价格
-- [x] 4.2 更新 `apps/api/.env.example`、`docs/lite-host.md`、`docs/monetization.md` 中手机号主路径表述，补 QQ/域名 SMTP 说明
+- [x] 4.2 更新 `apps/api/.env.example`、`docs/lite-host.md`、`docs/monetization.md` 中手机号主路径表述；生产发信默认腾讯云 SES API（模板必填），SMTP 作备选
 
 ## 5. 测试
 
 - [x] 5.1 补充邮箱 mock 登录、SMTP 未配置、限流、captcha、schema、phone-only 行仍可短信登录的 API 测试
 - [x] 5.2 跑 `npm run test:api` 与 `npm run test:web` 全绿
+
+## 6. 腾讯云 SES API（个人实名）
+
+- [x] 6.1 增加 `EMAIL_PROVIDER=tencent_ses`：TC3 签 `SendEmail`，模板 ID + `TemplateData.code`；密钥 `TENCENT_SES_*` 可回落 `TENCENT_CLOUD_*`；注入 fetch 单测覆盖成功与 `WithOutPermission`
+- [x] 6.2 家长页与 lite-host 写明个人 SES 不能 SMTP、必须 API/已审核模板；生产默认 `tencent_ses`

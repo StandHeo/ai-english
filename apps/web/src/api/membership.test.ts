@@ -51,5 +51,7 @@ describe('parent plus copy', () => {
     assert.match(src, /auth_ip_rate_limited/)
     assert.match(src, /邮箱/)
     assert.match(src, /sendParentEmail/)
+    assert.match(src, /腾讯云 SES/)
+    assert.match(src, /email_ses_not_configured/)
   })
 })

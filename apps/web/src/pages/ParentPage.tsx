@@ -162,11 +162,15 @@ export function ParentPage({ progress, onProgress }: Props) {
             ? '该网络发送过于频繁，请稍后再试'
             : res.error === 'invalid_email'
               ? '请填写有效邮箱'
-              : res.error === 'captcha_required'
-                ? '请先完成图形验证'
-                : res.error === 'captcha_invalid'
-                  ? '图形验证码错误，请重试'
-                  : `发送失败：${res.error || res.status}`,
+              : res.error === 'email_ses_not_configured' || res.error === 'email_smtp_not_configured'
+                ? '邮件服务未配置。个人实名腾讯云 SES 需走 API（不能 SMTP），请联系管理员'
+                : res.error?.startsWith('email_ses_failed:') || res.error?.startsWith('email_smtp_failed:')
+                  ? '验证码邮件发送失败，请稍后重试'
+                  : res.error === 'captcha_required'
+                    ? '请先完成图形验证'
+                    : res.error === 'captcha_invalid'
+                      ? '图形验证码错误，请重试'
+                      : `发送失败：${res.error || res.status}`,
     )
   }
 
@@ -333,6 +337,7 @@ export function ParentPage({ progress, onProgress }: Props) {
             <button type="button" disabled={accountBusy} onClick={() => void onVerifyCode()}>
               登录
             </button>
+            <p className="muted">验证码发到该邮箱。生产环境走腾讯云 SES API（个人实名账号不能用 SMTP）。</p>
           </div>
         )}
         <div className="plus-plans">
