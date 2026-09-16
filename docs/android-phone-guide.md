@@ -227,6 +227,8 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 
 打成 App 后，请求不再走电脑 Vite 代理。手机上的 `localhost` 是手机自己，**不是电脑**。
 
+**家长登录 / Plus：** 会员请求默认打线上 `https://tudoudou-ai.site/api/...`。家庭日记设置里填写的电脑局域网地址（如 `http://192.168.x.x:8787`）**只用于家庭联调**，不会把家长验证码发到家里那台电脑。清空或未填局域网时同样走线上。
+
 **家庭日记生成关卡 / 云端配图：** 在「设置」填写当前模型的云 Key（DeepSeek 或 Agnes；配图为通义或 Agnes 图）后，App 会 **直连 HTTPS**，不必开电脑 `apps/api`，也不必填局域网地址。
 
 直连走原生 `CapacitorHttp`。若 Logcat 出现 `SocketTimeoutException: timeout`（偶发还有 `Socket closed`），通常是手机到云端读超时，而不是 SurfaceFlinger 的 “Out of order buffers”（后者多为系统合成层噪声，可忽略）。可检查：手机外网、是否高峰限流、稍后再试。App 侧已加长连接/读超时，并对瞬时超时自动重试一次。
@@ -239,7 +241,7 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 2. 在 App「家庭日记 → 设置」填写 **电脑 API 地址**，例如 `http://192.168.2.104:8787`（把 IP 换成你电脑的）。
 3. Capacitor 已开启 `allowMixedContent`，并用原生 `CapacitorHttp` 发请求，避免 HTTPS 页访问局域网 HTTP 被 Mixed Content 拦截。
 
-也可在打包前设 `apps/web/.env.local`：`VITE_API_BASE=http://电脑IP:8787`，再 `npm run build && npx cap sync android`。
+也可在打包前设 `apps/web/.env.local`：`VITE_API_BASE=http://电脑IP:8787`，再 `npm run build && npx cap sync android`。这只影响家庭/关卡电脑代理，**不会**改写家长登录的线上会员地址。
 
 Android 已允许明文 HTTP（局域网调试）。若仍看到 Mixed Content，确认已重新 `build` + `cap sync` 后再 Run。若仍连不上，检查电脑防火墙是否放行 8787。
 

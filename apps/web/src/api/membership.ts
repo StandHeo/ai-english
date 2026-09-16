@@ -1,4 +1,4 @@
-import { apiUrl } from './base'
+import { membershipApiUrl } from './base'
 
 const TOKEN_KEY = 'ai-english-parent-token-v1'
 
@@ -40,7 +40,7 @@ async function membershipFetch(
   const token = init.token === undefined ? getParentToken() : init.token
   if (token) headers.Authorization = `Bearer ${token}`
   try {
-    const res = await fetch(apiUrl(path), {
+    const res = await fetch(membershipApiUrl(path), {
       method: init.method || (init.body !== undefined ? 'POST' : 'GET'),
       headers,
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
@@ -59,10 +59,51 @@ async function membershipFetch(
   }
 }
 
-export async function fetchAuthConfig(): Promise<{ captcha: boolean; authChannel: 'email' | 'sms' }> {
+export async function fetchAuthConfig(): Promise<{
+  ok: boolean
+  captcha: boolean
+  authChannel: 'email' | 'sms'
+}> {
   const res = await membershipFetch('/api/auth/config')
   const channel = res.data.authChannel === 'sms' ? 'sms' : 'email'
-  return { captcha: Boolean(res.ok && res.data.captcha), authChannel: channel }
+  return {
+    ok: res.ok,
+    captcha: res.ok ? Boolean(res.data.captcha) : true,
+    authChannel: channel,
+  }
+}
+
+export function isMembershipConnectFailure(error: string): boolean {
+  return (
+    /Failed to connect|ConnectException|ECONNREFUSED|ENOTFOUND|UnknownHost|Unable to resolve|Network Error|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|Failed to fetch|Load failed/i.test(
+      error,
+    ) || /(?:\d{1,3}\.){3}\d{1,3}:\d+/.test(error)
+  )
+}
+
+export function parentEmailSendMessage(res: {
+  ok: boolean
+  error?: string
+}): string {
+  if (res.ok) return '验证码已发到邮箱'
+  const err = res.error || ''
+  if (err === 'email_rate_limited') return '发送太频繁，请稍后再试'
+  if (err === 'auth_ip_rate_limited' || err === 'sms_ip_rate_limited') {
+    return '该网络发送过于频繁，请稍后再试'
+  }
+  if (err === 'invalid_email') return '请填写有效邮箱'
+  if (err === 'captcha_required') return '请先完成图形验证'
+  if (err === 'captcha_invalid') return '图形验证码错误，请重试'
+  if (
+    err === 'email_ses_not_configured' ||
+    err === 'email_smtp_not_configured' ||
+    err.startsWith('email_ses_failed:') ||
+    err.startsWith('email_smtp_failed:')
+  ) {
+    return '验证码暂时发不出去，请稍后重试'
+  }
+  if (isMembershipConnectFailure(err)) return '连不上会员服务，请检查网络后重试'
+  return '发送失败，请稍后重试'
 }
 
 /** @deprecated alias of fetchAuthConfig */
