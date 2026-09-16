@@ -1,30 +1,152 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 
 const KEY = 'ai-english-api-base-v1'
-const ENV_BASE = String(import.meta.env.VITE_API_BASE || '')
+const SKIP_PRIVATE_KEY = 'ai-english-api-skip-private-v1'
+const viteEnv = (import.meta as ImportMeta & { env?: { VITE_API_BASE?: string; PROD?: boolean } }).env || {}
+const ENV_BASE = String(viteEnv.VITE_API_BASE || '')
   .trim()
   .replace(/\/$/, '')
 
-/** User override (App 设置里填写电脑局域网 API). */
+/** 正式 App / 生产 Web 默认会员与 /api 地址。不要把开发者局域网 IP 写进仓库。 */
+export const PRODUCTION_API_BASE = 'https://tudoudou-ai.site'
+
+/** 本会话内跳过已失败的局域网地址（localStorage 之外再挡一层）。 */
+let sessionSkipPrivate = false
+
+function normalizeBase(url: string): string {
+  return url.trim().replace(/\/$/, '')
+}
+
+export function hostnameOfApiBase(url: string): string {
+  const raw = url.trim()
+  if (!raw) return ''
+  try {
+    return new URL(raw.includes('://') ? raw : `http://${raw}`).hostname
+  } catch {
+    return ''
+  }
+}
+
+/** 192.168/10./127. 以及 RFC1918 的 172.16–31、localhost。 */
+export function isPrivateLanHost(host: string): boolean {
+  const h = host.replace(/^\[|\]$/g, '').toLowerCase()
+  if (!h) return false
+  if (h === 'localhost' || h === '::1' || h === '0.0.0.0') return true
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h)
+  if (!ipv4) return false
+  const a = Number(ipv4[1])
+  const b = Number(ipv4[2])
+  if (a === 10 || a === 127) return true
+  if (a === 192 && b === 168) return true
+  if (a === 172 && b >= 16 && b <= 31) return true
+  return false
+}
+
+export function isPrivateApiBase(url: string): boolean {
+  return isPrivateLanHost(hostnameOfApiBase(url))
+}
+
+export function isApiUnreachableError(msg: string): boolean {
+  return /Failed to connect|ConnectException|java\.net\.|OkHttp|ECONNREFUSED|ENETUNREACH|ENOTFOUND|ERR_CONNECTION|Failed to fetch|Network request failed|net::ERR_|UnknownHost|SocketException|llm_timeout|timeout|timed\s*out|aborted|AbortError|SocketTimeout|Socket closed|ETIMEDOUT/i.test(
+    msg,
+  )
+}
+
+export function resolveApiBase(opts: {
+  stored: string
+  envBase: string
+  native: boolean
+  prod: boolean
+  skipPrivate?: boolean
+}): string {
+  const skip = Boolean(opts.skipPrivate)
+  const stored = normalizeBase(opts.stored)
+  if (stored && !(skip && isPrivateApiBase(stored))) return stored
+  const envBase = normalizeBase(opts.envBase)
+  if (envBase && !(skip && isPrivateApiBase(envBase))) return envBase
+  if (opts.native || opts.prod) return PRODUCTION_API_BASE
+  return ''
+}
+
+function skipPrivateActive(): boolean {
+  if (sessionSkipPrivate) return true
+  try {
+    return localStorage.getItem(SKIP_PRIVATE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** User override（家庭日记设置里填写电脑局域网 API）。 */
 export function getStoredApiBase(): string {
   try {
-    return (localStorage.getItem(KEY) || '').trim().replace(/\/$/, '')
+    return normalizeBase(localStorage.getItem(KEY) || '')
   } catch {
     return ''
   }
 }
 
 export function setStoredApiBase(url: string): void {
-  localStorage.setItem(KEY, url.trim().replace(/\/$/, ''))
+  const n = normalizeBase(url)
+  sessionSkipPrivate = false
+  try {
+    if (n) {
+      localStorage.setItem(KEY, n)
+      localStorage.removeItem(SKIP_PRIVATE_KEY)
+    } else {
+      localStorage.removeItem(KEY)
+    }
+  } catch {
+    /* ignore quota / private mode */
+  }
 }
 
 /**
- * API 根地址。浏览器开发时为空走 Vite 同源代理。
- * Capacitor App：家庭生成/配图有云 Key 时可直连厂商 HTTPS，不必填局域网；
- * 仅当走电脑 .env 代理（关卡 ASR 等）时才需要，例如 http://192.168.2.104:8787
+ * 局域网地址连不上时改走官方站。只清私网覆盖，不清开发者有意填的公网调试地址。
+ * 之后 getApiBase() 会跳过已失败的 192.168/10./127. 覆盖与烘焙的 VITE_API_BASE。
+ */
+export function recoverFromUnreachablePrivateBase(): boolean {
+  if (!isPrivateApiBase(getApiBase())) return false
+  sessionSkipPrivate = true
+  try {
+    if (isPrivateApiBase(getStoredApiBase())) localStorage.removeItem(KEY)
+    localStorage.setItem(SKIP_PRIVATE_KEY, '1')
+  } catch {
+    /* session flag still applies */
+  }
+  return true
+}
+
+/** 家长一键切到官方服务器（会清掉已保存的 API 覆盖）。 */
+export function switchToOfficialApiBase(): string {
+  sessionSkipPrivate = true
+  try {
+    localStorage.removeItem(KEY)
+    localStorage.setItem(SKIP_PRIVATE_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+  return PRODUCTION_API_BASE
+}
+
+export function isOfficialApiBase(url = getApiBase()): boolean {
+  return normalizeBase(url) === PRODUCTION_API_BASE
+}
+
+/**
+ * API 根地址。
+ * - 电脑浏览器 `npm run dev`：空字符串，走 Vite 同源代理 /api → localhost:8787
+ * - Capacitor / 生产构建：默认 https://tudoudou-ai.site
+ * - 覆盖：设置里的电脑 API 地址，或打包时的 VITE_API_BASE（仅同 Wi‑Fi 调试）
  */
 export function getApiBase(): string {
-  return getStoredApiBase() || ENV_BASE
+  return resolveApiBase({
+    stored: getStoredApiBase(),
+    envBase: ENV_BASE,
+    native: isNativeApp(),
+    prod: Boolean(viteEnv.PROD),
+    skipPrivate: skipPrivateActive(),
+  })
 }
 
 export function apiUrl(path: string): string {

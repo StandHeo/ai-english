@@ -1,4 +1,13 @@
-import { apiUrl } from './base'
+import {
+  apiJson,
+  apiUrl,
+  getApiBase,
+  isApiUnreachableError,
+  isNativeApp,
+  isPrivateApiBase,
+  recoverFromUnreachablePrivateBase,
+} from './base'
+import { sanitizeMembershipError } from './parentAuthMessage'
 
 const TOKEN_KEY = 'ai-english-parent-token-v1'
 
@@ -31,7 +40,7 @@ export function clearParentToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-async function membershipFetch(
+async function membershipRequest(
   path: string,
   init: { method?: string; body?: unknown; token?: string | null } = {},
 ): Promise<{ ok: boolean; status: number; data: Record<string, unknown>; error?: string }> {
@@ -39,9 +48,15 @@ async function membershipFetch(
   if (init.body !== undefined) headers['Content-Type'] = 'application/json'
   const token = init.token === undefined ? getParentToken() : init.token
   if (token) headers.Authorization = `Bearer ${token}`
+  const method = init.method || (init.body !== undefined ? 'POST' : 'GET')
+
+  if (isNativeApp()) {
+    return apiJson(path, { method, headers, body: init.body, timeoutMs: 30_000 })
+  }
+
   try {
     const res = await fetch(apiUrl(path), {
-      method: init.method || (init.body !== undefined ? 'POST' : 'GET'),
+      method,
       headers,
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: AbortSignal.timeout(30_000),
@@ -57,6 +72,26 @@ async function membershipFetch(
     const msg = err instanceof Error ? err.message : String(err)
     return { ok: false, status: 0, data: {}, error: msg }
   }
+}
+
+async function membershipFetch(
+  path: string,
+  init: { method?: string; body?: unknown; token?: string | null } = {},
+): Promise<{ ok: boolean; status: number; data: Record<string, unknown>; error?: string }> {
+  let res = await membershipRequest(path, init)
+  if (
+    !res.ok &&
+    res.status === 0 &&
+    isPrivateApiBase(getApiBase()) &&
+    isApiUnreachableError(res.error || '')
+  ) {
+    recoverFromUnreachablePrivateBase()
+    res = await membershipRequest(path, init)
+  }
+  if (!res.ok) {
+    return { ...res, error: sanitizeMembershipError(res.error) || res.error }
+  }
+  return res
 }
 
 export async function fetchAuthConfig(): Promise<{ captcha: boolean; authChannel: 'email' | 'sms' }> {

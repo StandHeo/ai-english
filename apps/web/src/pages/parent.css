@@ -28,6 +28,10 @@
   box-shadow: 0 8px 18px rgba(40, 30, 20, 0.06);
 }
 
+.parent-plus {
+  padding: 14px 14px 12px;
+}
+
 .parent-gate {
   text-align: center;
   padding-top: 48px;
@@ -89,49 +93,118 @@
 .plus-plans {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .plus-plan-card {
   background: #f7f2ea;
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .plus-plan-card strong {
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.plus-plan-card span {
+  font-size: 13px;
+  color: #5a4a3a;
+}
+
+.plus-lead {
+  margin: 0 0 2px;
+}
+
+.plus-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .plus-login label {
-  margin-top: 8px;
+  margin-top: 0;
+  gap: 6px;
 }
 
 .plus-captcha {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-top: 8px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
 }
 
-.plus-captcha img {
-  height: 48px;
-  width: 140px;
-  border-radius: 8px;
-  background: #f6efe6;
+.plus-captcha-img {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 120px;
+  min-width: 120px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f6efe6 !important;
+  color: #7a6a58 !important;
+  font-size: 12px !important;
+  box-shadow: none;
 }
 
-.plus-captcha label {
-  flex: 1 1 140px;
+.plus-captcha-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.plus-captcha input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.parent-plus .plus-primary {
   margin-top: 0;
+  width: 100%;
+  font-weight: 600;
+  padding: 12px 16px;
+}
+
+.plus-feedback {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.plus-feedback.ok {
+  color: #2d6a4f;
+}
+
+.plus-feedback.err {
+  color: #b42318;
+}
+
+.plus-server {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7a6a58;
+  line-height: 1.4;
+}
+
+.plus-server .linkish {
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+.plus-pay-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
 }
 
 .plus-status p {
-  margin: 8px 0 0;
+  margin: 4px 0 8px;
 }
 
 .parent-plus .row-actions button {
