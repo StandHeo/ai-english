@@ -51,6 +51,10 @@
   flex-wrap: nowrap;
 }
 
+.family-studio .row.api-base-actions {
+  flex-wrap: wrap;
+}
+
 /* 顶部四个操作按钮：2×2 网格，避免挤压竖排文字 */
 .family-studio .row.photo-actions {
   display: grid;

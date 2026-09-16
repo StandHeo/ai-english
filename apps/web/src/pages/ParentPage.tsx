@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { assetUrl, listPackIds, loadPack } from '../content/loader'
@@ -25,6 +25,12 @@ import { requestTts } from '../voice/client'
 import { ensurePiperReady } from '../voice/piperTts'
 import type { ContentPack, ProgressState } from '../types'
 import {
+  getApiBase,
+  isOfficialApiBase,
+  PRODUCTION_API_BASE,
+  switchToOfficialApiBase,
+} from '../api/base'
+import {
   createBillingOrder,
   deleteParentAccount,
   fetchAuthConfig,
@@ -38,7 +44,10 @@ import {
   type BillingPlans,
   type MeResponse,
 } from '../api/membership'
+import { parentSendErrorMessage, parentVerifyErrorMessage } from '../api/parentAuthMessage'
 import './parent.css'
+
+const SEND_COOLDOWN_SEC = 60
 
 type Props = {
   progress: ProgressState
@@ -66,7 +75,11 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [captchaImage, setCaptchaImage] = useState('')
   const [captchaAnswer, setCaptchaAnswer] = useState('')
   const [accountMsg, setAccountMsg] = useState('')
+  const [accountTone, setAccountTone] = useState<'ok' | 'err' | ''>('')
   const [accountBusy, setAccountBusy] = useState(false)
+  const [sendWait, setSendWait] = useState(0)
+  const [apiHint, setApiHint] = useState('')
+  const codeInputRef = useRef<HTMLInputElement>(null)
   const plusActive = Boolean(me?.plus)
 
   useEffect(() => {
@@ -92,15 +105,24 @@ export function ParentPage({ progress, onProgress }: Props) {
   useEffect(() => {
     if (!gated || me) return
     let cancelled = false
-    void fetchAuthConfig().then(async (cfg) => {
+    void (async () => {
+      setApiHint(isOfficialApiBase() ? '' : getApiBase())
+      const cfg = await fetchAuthConfig()
       if (cancelled) return
+      setApiHint(isOfficialApiBase() ? '' : getApiBase())
       setCaptchaOn(cfg.captcha)
       if (cfg.captcha) await loadCaptcha()
-    })
+    })()
     return () => {
       cancelled = true
     }
   }, [gated, me])
+
+  useEffect(() => {
+    if (sendWait <= 0) return
+    const t = window.setTimeout(() => setSendWait((n) => n - 1), 1000)
+    return () => window.clearTimeout(t)
+  }, [sendWait])
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
@@ -137,61 +159,54 @@ export function ParentPage({ progress, onProgress }: Props) {
     setVoiceSaved('已保存，关卡里马上生效')
   }
 
+  function showAccount(text: string, tone: 'ok' | 'err' | '' = '') {
+    setAccountMsg(text)
+    setAccountTone(tone)
+  }
+
   async function onSendCode() {
+    if (sendWait > 0) return
     setAccountBusy(true)
-    setAccountMsg('')
+    showAccount('', '')
     const res = await sendParentEmail(
       loginEmail,
       captchaOn || captchaId ? { captchaId, captchaAnswer } : undefined,
     )
+    setApiHint(isOfficialApiBase() ? '' : getApiBase())
     if (res.error === 'captcha_required' || res.error === 'captcha_invalid') {
       setCaptchaOn(true)
       await loadCaptcha()
     } else if (res.ok && captchaOn) {
-      await loadCaptcha()
+      void loadCaptcha()
     }
     setAccountBusy(false)
-    setAccountMsg(
-      res.ok
-        ? res.data.mock
-          ? '验证码已写入本机 API 日志（mock 默认 123456）'
-          : '验证码已发送到邮箱'
-        : res.error === 'email_rate_limited'
-          ? '发送太频繁，请稍后再试'
-          : res.error === 'auth_ip_rate_limited' || res.error === 'sms_ip_rate_limited'
-            ? '该网络发送过于频繁，请稍后再试'
-            : res.error === 'invalid_email'
-              ? '请填写有效邮箱'
-              : res.error === 'email_ses_not_configured' || res.error === 'email_smtp_not_configured'
-                ? '邮件服务未配置。个人实名腾讯云 SES 需走 API（不能 SMTP），请联系管理员'
-                : res.error?.startsWith('email_ses_failed:') || res.error?.startsWith('email_smtp_failed:')
-                  ? '验证码邮件发送失败，请稍后重试'
-                  : res.error === 'captcha_required'
-                    ? '请先完成图形验证'
-                    : res.error === 'captcha_invalid'
-                      ? '图形验证码错误，请重试'
-                      : `发送失败：${res.error || res.status}`,
-    )
+    if (res.ok) {
+      setSendWait(SEND_COOLDOWN_SEC)
+      showAccount('验证码已发送到邮箱', 'ok')
+      requestAnimationFrame(() => codeInputRef.current?.focus())
+      return
+    }
+    showAccount(parentSendErrorMessage(res.error), 'err')
   }
 
   async function onVerifyCode() {
     setAccountBusy(true)
-    setAccountMsg('')
+    showAccount('', '')
     const res = await verifyParentEmail(loginEmail, loginCode)
     setAccountBusy(false)
     if (!res.ok) {
-      setAccountMsg(res.error === 'invalid_code' ? '验证码错误或已过期' : `登录失败：${res.error || res.status}`)
+      showAccount(parentVerifyErrorMessage(res.error), 'err')
       return
     }
     const next = await fetchMe()
     setMe(next)
-    setAccountMsg('已登录')
+    showAccount('已登录', 'ok')
   }
 
   async function onLogout() {
     await logoutParent()
     setMe(null)
-    setAccountMsg('已退出')
+    showAccount('已退出', 'ok')
   }
 
   async function onDeleteAccount() {
@@ -204,7 +219,7 @@ export function ParentPage({ progress, onProgress }: Props) {
     }
     const res = await deleteParentAccount()
     setMe(null)
-    setAccountMsg(res.ok ? '账号已注销' : `注销失败：${res.error}`)
+    showAccount(res.ok ? '账号已注销' : '注销失败，请稍后重试', res.ok ? 'ok' : 'err')
   }
 
   async function onBuy(plan: 'month' | 'year') {
@@ -213,19 +228,19 @@ export function ParentPage({ progress, onProgress }: Props) {
     const res = await createBillingOrder(plan)
     setAccountBusy(false)
     if (!res.ok) {
-      setAccountMsg(res.error === 'unauthorized' ? '请先登录' : `下单失败：${res.error}`)
+      showAccount(res.error === 'unauthorized' ? '请先登录' : '下单失败，请稍后重试', 'err')
       return
     }
     const pay = res.data.pay as { unavailable?: boolean; prepay?: { codeUrl?: string } } | undefined
     if (pay?.unavailable) {
-      setAccountMsg('微信支付商户尚未配置完成')
+      showAccount('微信支付商户尚未配置完成', 'err')
       return
     }
     if (pay?.prepay?.codeUrl) {
-      setAccountMsg(`请用微信扫码支付：${pay.prepay.codeUrl}`)
+      showAccount(`请用微信扫码支付：${pay.prepay.codeUrl}`, 'ok')
       return
     }
-    setAccountMsg('已创建订单，请在微信中完成支付')
+    showAccount('已创建订单，请在微信中完成支付', 'ok')
   }
 
   async function previewVoice() {
@@ -266,28 +281,49 @@ export function ParentPage({ progress, onProgress }: Props) {
       </header>
 
       <section className="parent-plus">
-        <h2>家长账号与 Plus</h2>
-        <p className="muted">
-          Plus 只解锁家庭日记 / 每日关卡工作室，不含第三方模型调用费。日记生成需家长在本机自备供应商
-          Key。
-        </p>
+        <h2>账号与 Plus</h2>
         {me ? (
-          <div className="plus-status">
-            <p>
-              已登录 {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
-              {me.expiresAt ? ` · 到期 ${me.expiresAt.slice(0, 10)}` : ''}
-            </p>
-            <div className="row-actions">
-              <button type="button" className="linkish" onClick={() => void onLogout()}>
-                退出登录
-              </button>
-              <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
-                注销账号
-              </button>
+          <>
+            <div className="plus-status">
+              <p>
+                {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
+                {me.expiresAt ? ` · ${me.expiresAt.slice(0, 10)} 到期` : ''}
+              </p>
+              <div className="row-actions">
+                <button type="button" className="linkish" onClick={() => void onLogout()}>
+                  退出登录
+                </button>
+                <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
+                  注销账号
+                </button>
+              </div>
             </div>
-          </div>
+            <div className="plus-plans">
+              {(plans?.plans || [
+                { id: 'month' as const, priceFen: 1800, days: 30 },
+                { id: 'year' as const, priceFen: 14800, days: 365 },
+              ]).map((p) => (
+                <div key={p.id} className="plus-plan-card">
+                  <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
+                  <span>
+                    {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
+                  </span>
+                  {plans?.provider === 'wechat' ? (
+                    <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
+                      开通
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {plans?.provider !== 'wechat' && (
+              <p className="muted plus-pay-note">在线支付尚未开放，开通请联系管理员。</p>
+            )}
+            {accountMsg ? <p className={`plus-feedback ${accountTone}`}>{accountMsg}</p> : null}
+          </>
         ) : (
           <div className="plus-login">
+            <p className="muted plus-lead">Plus 解锁家庭日记 / 每日关卡。开通请先登录，在线支付稍后开放。</p>
             <label>
               邮箱
               <input
@@ -300,68 +336,79 @@ export function ParentPage({ progress, onProgress }: Props) {
             </label>
             {captchaOn && (
               <div className="plus-captcha">
-                {captchaImage ? (
-                  <img src={captchaImage} alt="图形验证码" width={140} height={48} />
-                ) : (
-                  <span className="muted">验证码加载中…</span>
-                )}
-                <button type="button" className="linkish" disabled={accountBusy} onClick={() => void loadCaptcha()}>
-                  换一张
+                <button
+                  type="button"
+                  className="plus-captcha-img"
+                  disabled={accountBusy}
+                  onClick={() => void loadCaptcha()}
+                  aria-label="换一张图形验证码"
+                >
+                  {captchaImage ? (
+                    <img src={captchaImage} alt="图形验证码" width={120} height={44} />
+                  ) : (
+                    <span>点此刷新</span>
+                  )}
                 </button>
-                <label>
-                  图形验证码
-                  <input
-                    value={captchaAnswer}
-                    onChange={(e) => setCaptchaAnswer(e.target.value)}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="图片中的数字"
-                  />
-                </label>
+                <input
+                  value={captchaAnswer}
+                  onChange={(e) => setCaptchaAnswer(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  aria-label="图形验证码"
+                  placeholder="图中数字"
+                />
               </div>
             )}
-            <div className="row-actions">
-              <button type="button" disabled={accountBusy} onClick={() => void onSendCode()}>
-                发送验证码
-              </button>
-            </div>
+            <button
+              type="button"
+              className="plus-primary"
+              disabled={accountBusy || sendWait > 0}
+              onClick={() => void onSendCode()}
+            >
+              {sendWait > 0 ? `${sendWait} 秒后可重发` : '发送验证码'}
+            </button>
             <label>
               验证码
               <input
+                ref={codeInputRef}
                 value={loginCode}
                 onChange={(e) => setLoginCode(e.target.value)}
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 placeholder="6 位验证码"
               />
             </label>
-            <button type="button" disabled={accountBusy} onClick={() => void onVerifyCode()}>
+            <button
+              type="button"
+              className="plus-primary"
+              disabled={accountBusy}
+              onClick={() => void onVerifyCode()}
+            >
               登录
             </button>
-            <p className="muted">验证码发到该邮箱。生产环境走腾讯云 SES API（个人实名账号不能用 SMTP）。</p>
+            {accountMsg ? <p className={`plus-feedback ${accountTone}`}>{accountMsg}</p> : null}
+            {apiHint ? (
+              <p className="plus-server">
+                当前连接的服务器 {apiHint}{' '}
+                <button
+                  type="button"
+                  className="linkish"
+                  onClick={() => {
+                    switchToOfficialApiBase()
+                    setApiHint('')
+                    showAccount(`已切换到官方服务器 ${PRODUCTION_API_BASE}`, 'ok')
+                    void fetchAuthConfig().then(async (cfg) => {
+                      setCaptchaOn(cfg.captcha)
+                      if (cfg.captcha) await loadCaptcha()
+                    })
+                  }}
+                >
+                  改用官方
+                </button>
+              </p>
+            ) : null}
           </div>
         )}
-        <div className="plus-plans">
-          {(plans?.plans || [
-            { id: 'month' as const, priceFen: 1800, days: 30 },
-            { id: 'year' as const, priceFen: 14800, days: 365 },
-          ]).map((p) => (
-            <div key={p.id} className="plus-plan-card">
-              <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
-              <span>
-                {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
-              </span>
-              {plans?.provider === 'wechat' && me ? (
-                <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
-                  开通
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {plans?.provider !== 'wechat' && (
-          <p className="muted">在线支付尚未开放。开通请联系管理员按邮箱开通 Plus，请勿在儿童路径操作。</p>
-        )}
-        {accountMsg && <p className="muted">{accountMsg}</p>}
       </section>
 
       <div className="parent-card-grid">
