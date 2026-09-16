@@ -115,7 +115,7 @@ export function FamilyStudioSettingsPage() {
     setStatus(
       getStoredApiBase()
         ? `已保存 API 地址：${getStoredApiBase()}`
-        : '已清空 API 地址（App 有云 Key 时可直连；浏览器走同源代理）',
+        : '已清空 API 地址（App 默认连生产会员服务；浏览器走同源代理）',
     )
   }
 
@@ -156,8 +156,8 @@ export function FamilyStudioSettingsPage() {
           <>
             <h2>电脑 API 地址（可选）</h2>
             <p className="muted">
-              生成关卡和云端配图：App 里填了对应云 Key 后会直连 HTTPS，不必填局域网。仅当要用电脑
-              .env 里的 Key、或电脑浏览器联调时，再填例如 http://192.168.2.104:8787。
+              App 默认连接会员服务 https://tudoudou-ai.site，不必填电脑 IP。仅当要用电脑
+              .env 里的 Key 做局域网调试时，再填写例如 http://192.168.x.x:8787。
             </p>
             <input
               type="url"
