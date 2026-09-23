@@ -46,6 +46,16 @@ import {
   type MeResponse,
 } from '../api/membership'
 import { parentSendErrorMessage, parentVerifyErrorMessage } from '../api/parentAuthMessage'
+import {
+  UPDATE_ACTION_LABEL,
+  UPDATE_AVAILABLE_LABEL,
+  UPDATE_INSTALL_HINT,
+  UPDATE_LATER_LABEL,
+  checkForSideloadUpdate,
+  downloadAndInstallApk,
+  installResultHint,
+  type AppVersionManifest,
+} from '../appUpdate/sideload'
 import './parent.css'
 
 const SEND_COOLDOWN_SEC = 60
@@ -82,6 +92,10 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [apiHint, setApiHint] = useState('')
   const [plusDetailsOpen, setPlusDetailsOpen] = useState(false)
   const [accountManageOpen, setAccountManageOpen] = useState(false)
+  const [updateOffer, setUpdateOffer] = useState<AppVersionManifest | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
+  const [updateBusy, setUpdateBusy] = useState(false)
+  const [updateHint, setUpdateHint] = useState('')
   const codeInputRef = useRef<HTMLInputElement>(null)
   const plusActive = Boolean(me?.plus)
   const planList = plans?.plans || [
@@ -133,6 +147,17 @@ export function ParentPage({ progress, onProgress }: Props) {
     const t = window.setTimeout(() => setSendWait((n) => n - 1), 1000)
     return () => window.clearTimeout(t)
   }, [sendWait])
+
+  useEffect(() => {
+    if (!gated) return
+    let cancelled = false
+    void checkForSideloadUpdate().then((offer) => {
+      if (!cancelled) setUpdateOffer(offer)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [gated])
 
   useEffect(() => {
     if (!gated || !Capacitor.isNativePlatform()) return
@@ -253,6 +278,20 @@ export function ParentPage({ progress, onProgress }: Props) {
     showAccount('已创建订单，请在微信中完成支付', 'ok')
   }
 
+  async function onUpgrade() {
+    if (!updateOffer || updateBusy) return
+    setUpdateBusy(true)
+    setUpdateHint('')
+    try {
+      const result = await downloadAndInstallApk(updateOffer.apkUrl)
+      setUpdateHint(installResultHint(result.mode))
+    } catch {
+      setUpdateHint('暂时无法开始下载，请稍后再试。')
+    } finally {
+      setUpdateBusy(false)
+    }
+  }
+
   async function previewVoice() {
     saveVoicePrefs(voicePrefs)
     setVoiceSaved('试听中…')
@@ -289,6 +328,26 @@ export function ParentPage({ progress, onProgress }: Props) {
           <p className="muted">今日已玩约 {todayMin} 分钟 · 星星 {progress.stars}</p>
         </div>
       </header>
+
+      {updateOffer && !updateDismissed ? (
+        <section className="parent-update" aria-label={UPDATE_AVAILABLE_LABEL}>
+          <h2>{UPDATE_AVAILABLE_LABEL}</h2>
+          <p>
+            {updateOffer.versionName}
+            {updateOffer.notes ? ` · ${updateOffer.notes}` : ''}
+          </p>
+          <p className="muted">{UPDATE_INSTALL_HINT}</p>
+          {updateHint ? <p className="muted">{updateHint}</p> : null}
+          <div className="row-actions">
+            <button type="button" disabled={updateBusy} onClick={() => void onUpgrade()}>
+              {updateBusy ? '正在下载…' : UPDATE_ACTION_LABEL}
+            </button>
+            <button type="button" className="linkish" onClick={() => setUpdateDismissed(true)}>
+              {UPDATE_LATER_LABEL}
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="parent-plus">
         <h2>账号与 Plus</h2>
