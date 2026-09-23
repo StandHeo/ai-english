@@ -29,6 +29,7 @@
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "diary-whisper": "file:plugins/diary-whisper",
+    "fflate": "^0.8.3",
     "monosklet": "^1.0.1",
     "piper-tts": "file:plugins/piper-tts",
     "react": "^19.2.8",

@@ -10,9 +10,9 @@ import {
   nativeFamilyCloudReady,
 } from './providers.ts'
 
-test('defaults stay DeepSeek and Tongyi', () => {
-  assert.equal(DEFAULT_FAMILY_LLM, 'deepseek')
-  assert.equal(DEFAULT_IMAGE_CLOUD, 'tongyi')
+test('defaults are Agnes for LLM and image cloud', () => {
+  assert.equal(DEFAULT_FAMILY_LLM, 'agnes')
+  assert.equal(DEFAULT_IMAGE_CLOUD, 'agnes')
 })
 
 test('provider labels', () => {

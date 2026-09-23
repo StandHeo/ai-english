@@ -958,6 +958,25 @@
   margin: 8px 0 4px;
 }
 
+.model-option-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.model-option-row .model-option {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-guide-link {
+  flex-shrink: 0;
+  align-self: center;
+  white-space: nowrap;
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+}
+
 .model-option {
   display: flex;
   flex-direction: column;
