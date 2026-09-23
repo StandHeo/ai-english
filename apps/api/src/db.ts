@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-export const MIGRATION_FILES = ['001_init.sql', '002_email_auth.sql'] as const
+export const MIGRATION_FILES = ['001_init.sql', '002_email_auth.sql', '003_image_prompt_config.sql'] as const
 
 export function resolveDatabasePath(override?: string): string {
   if (override) return override

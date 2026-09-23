@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import sharp from 'sharp'
+import { defaultImagePromptConfig } from './imagePromptDefaults.ts'
 import {
   buildKidsPrompt,
   bufferToJpegDataUrl,
@@ -14,13 +15,28 @@ test('buildKidsPrompt includes safety prefix for items', () => {
   assert.match(p, /儿童绘本/)
   assert.match(p, /slide/)
   assert.match(p, /居中/)
+  assert.match(p, /七成/)
+  assert.match(p, /闪卡/)
+  assert.doesNotMatch(p, /正方形|兔子/)
 })
 
-test('buildKidsPrompt scene asks for wide background', () => {
+test('buildKidsPrompt scene asks for a tall background', () => {
   const p = buildKidsPrompt({ subject: '小区游乐场', role: 'scene' })
   assert.match(p, /儿童绘本/)
-  assert.match(p, /全景|环境/)
+  assert.match(p, /竖/)
+  assert.match(p, /环境/)
   assert.match(p, /小区游乐场/)
+  assert.doesNotMatch(p, /正方形/)
+})
+
+test('distractor prompt names the target word and omits it when empty', () => {
+  const avoid = buildKidsPrompt(
+    { subject: 'fork', role: 'item', distractor: true, targetWord: 'chopsticks' },
+  )
+  assert.match(avoid, /fork/)
+  assert.match(avoid, /不要画成或看起来像chopsticks/)
+  const plain = buildKidsPrompt({ subject: 'fork', role: 'item', distractor: true, targetWord: '' })
+  assert.doesNotMatch(plain, /\{targetWord\}|不要画成|看起来像/)
 })
 
 test('slotsFromLevel uses scene.setting as first scene slot', () => {
@@ -80,6 +96,32 @@ test('bufferToJpegDataUrl returns jpeg data url', async () => {
   const url = await bufferToJpegDataUrl(png)
   assert.match(url, /^data:image\/jpeg;base64,/)
   assert.ok(url.length < 80_000)
+})
+
+test('mock generate-images applies prompt config to scene, item, and distractor', async () => {
+  const custom = {
+    ...defaultImagePromptConfig(),
+    sceneTemplate: '竖版背景主题：{subject}',
+    itemTemplate: '闪卡主体：{subject}',
+    distractorTemplate: '闪卡主体：{subject}，不要像{targetWord}',
+    negativePrompt: '文字,暴力',
+  }
+  assert.doesNotMatch(custom.negativePrompt, /兔子|bunny/i)
+  const result = await generateFamilyImages({
+    date: '2026-08-07',
+    forceMock: true,
+    slots: [
+      { subject: 'park', role: 'scene' },
+      { subject: 'slide', role: 'item' },
+      { subject: 'kite', role: 'item' },
+    ],
+    promptConfig: custom,
+  })
+  assert.equal(result.images.length, 3)
+  assert.match(result.debug?.calls[0]?.prompt || '', /竖版背景主题：park/)
+  assert.match(result.debug?.calls[1]?.prompt || '', /闪卡主体：slide/)
+  assert.doesNotMatch(result.debug?.calls[1]?.prompt || '', /不要像/)
+  assert.match(result.debug?.calls[2]?.prompt || '', /不要像slide/)
 })
 
 test('mock generate-images returns data urls', async () => {

@@ -1,14 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  annotatePromptSlots,
   buildKidsPrompt,
   clampImageSlots,
   firstItemImage,
   imageUrlBySubject,
   miniLevelMissingImageSlots,
+  promptForSlotAt,
+  resetActiveImagePromptConfig,
+  setActiveImagePromptConfig,
   slotsForMiniLevel,
   slotsFromLevel,
 } from './imageSlots.ts'
+import { defaultImagePromptConfig } from './imagePromptDefaults.ts'
 
 test('clampImageSlots stays within 3-12', () => {
   assert.equal(clampImageSlots(undefined), 9)
@@ -52,12 +57,77 @@ test('slotsFromLevel falls back to first word when setting empty', () => {
 test('buildKidsPrompt differs for scene vs item', () => {
   const scene = buildKidsPrompt({ subject: '小区游乐场', role: 'scene' })
   const item = buildKidsPrompt({ subject: 'slide', role: 'item' })
-  assert.match(scene, /全景|环境/)
+  assert.match(scene, /竖/)
+  assert.match(scene, /环境/)
   assert.match(scene, /小区游乐场/)
-  assert.match(scene, /儿童绘本|绘本|卡通兔/)
+  assert.match(scene, /儿童绘本/)
+  assert.doesNotMatch(scene, /正方形/)
   assert.match(item, /居中/)
+  assert.match(item, /七成/)
+  assert.match(item, /闪卡/)
   assert.match(item, /slide/)
-  assert.doesNotMatch(item, /全景/)
+  assert.doesNotMatch(item, /竖版/)
+  assert.doesNotMatch(item, /不要画成/)
+})
+
+test('distractor prompt avoids the main word and drops the clause when target is empty', () => {
+  const slots = [
+    { subject: 'lunch table', role: 'scene' as const },
+    { subject: 'chopsticks', role: 'item' as const },
+    { subject: 'fork', role: 'item' as const },
+  ]
+  const scene = promptForSlotAt(slots, 0)
+  const main = promptForSlotAt(slots, 1)
+  const distractor = promptForSlotAt(slots, 2)
+  assert.match(scene, /竖/)
+  assert.doesNotMatch(scene, /正方形/)
+  assert.match(main, /chopsticks/)
+  assert.doesNotMatch(main, /不要画成/)
+  assert.match(distractor, /fork/)
+  assert.match(distractor, /chopsticks/)
+  assert.match(distractor, /不要画成或看起来像/)
+
+  const alone = buildKidsPrompt(
+    { subject: 'fork', role: 'item', distractor: true, targetWord: 'chopsticks' },
+  )
+  assert.match(alone, /不要画成或看起来像chopsticks/)
+
+  const omitted = buildKidsPrompt(
+    { subject: 'fork', role: 'item', distractor: true, targetWord: '' },
+  )
+  assert.match(omitted, /fork/)
+  assert.doesNotMatch(omitted, /\{targetWord\}|不要画成|看起来像/)
+})
+
+test('annotatePromptSlots marks later items as distractors of the first item', () => {
+  const slots = annotatePromptSlots([
+    { subject: 'park', role: 'scene' },
+    { subject: 'slide', role: 'item' },
+    { subject: 'kite', role: 'item' },
+  ])
+  assert.equal(slots[1]?.distractor, undefined)
+  assert.equal(slots[2]?.distractor, true)
+  assert.equal(slots[2]?.targetWord, 'slide')
+  assert.match(buildKidsPrompt(slots[2]!), /不要画成或看起来像slide/)
+})
+
+test('active prompt config overrides baked templates', () => {
+  const custom = {
+    ...defaultImagePromptConfig(),
+    version: 4,
+    sceneTemplate: '竖版封面主题：{subject}',
+    itemTemplate: '闪卡只画{subject}',
+    distractorTemplate: '闪卡只画{subject}，不要像{targetWord}',
+    negativePrompt: '文字,暴力',
+  }
+  setActiveImagePromptConfig(custom)
+  try {
+    assert.match(buildKidsPrompt({ subject: 'park', role: 'scene' }), /竖版封面主题：park/)
+    assert.match(buildKidsPrompt({ subject: 'slide', role: 'item' }), /闪卡只画slide/)
+    assert.doesNotMatch(custom.negativePrompt, /兔子/)
+  } finally {
+    resetActiveImagePromptConfig()
+  }
 })
 
 test('imageUrlBySubject maps option id to item slot', () => {

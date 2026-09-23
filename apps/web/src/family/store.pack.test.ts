@@ -35,7 +35,7 @@ import {
   setMinLevelKeywords,
   type FamilyDayRecord,
 } from './store.ts'
-import { buildKidsPrompt, slotRoleLabel, slotsForMiniLevel } from './imageSlots.ts'
+import { annotatePromptSlots, buildKidsPrompt, slotRoleLabel, slotsForMiniLevel } from './imageSlots.ts'
 
 const sampleLevel = (id: string, word: string): LevelScript => ({
   id,
@@ -224,12 +224,16 @@ test('buildKidsPrompt composes final prompt and slotRoleLabel names slots', () =
     'A warm home living room',
     5,
   )
-  const scenePrompt = buildKidsPrompt(slots[0]!)
-  const itemPrompt = buildKidsPrompt(slots[2]!)
+  const annotated = annotatePromptSlots(slots)
+  const scenePrompt = buildKidsPrompt(annotated[0]!)
+  const itemPrompt = buildKidsPrompt(annotated[2]!)
   assert.match(scenePrompt, /背景/)
+  assert.match(scenePrompt, /竖/)
+  assert.doesNotMatch(scenePrompt, /正方形/)
   assert.match(scenePrompt, /A warm home living room/)
   assert.match(itemPrompt, /只画一个主体/)
   assert.match(itemPrompt, /bus/)
+  assert.match(itemPrompt, /不要画成或看起来像dad/)
   assert.equal(slotRoleLabel(slots, 0), '背景图')
   assert.equal(slotRoleLabel(slots, 1), '主词图')
   assert.equal(slotRoleLabel(slots, 2), '干扰图')

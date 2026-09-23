@@ -1,9 +1,10 @@
 import { cloudJson, downloadBinary, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
 import { compressBytes, compressDataUrl, mockSlotDataUrl } from './compressImage'
+import { refreshImagePromptConfig } from './imagePromptConfig'
 import {
-  buildKidsPrompt,
   clampImageSlots,
+  promptForSlotAt,
   type ImageSlot,
 } from './imageSlots'
 import {
@@ -27,9 +28,6 @@ export type DirectImagesResult = {
   warnings: string[]
   provider: FamilyImageCloudProvider
 }
-
-const NEGATIVE =
-  '文字,字母,数字,水印,招牌,卡通兔子,兔子,小白兔,暴力,恐怖,血腥,写实血腥,成人内容,畸形,低清晰度,复杂背景杂乱'
 
 function extractImageUrls(payload: unknown): string[] {
   const urls: string[] = []
@@ -110,7 +108,7 @@ async function callAgnesImage(apiKey: string, prompt: string): Promise<string> {
   }
 }
 
-async function onceTongyiImage(apiKey: string, prompt: string): Promise<string> {
+async function onceTongyiImage(apiKey: string, prompt: string, negativePrompt: string): Promise<string> {
   const res = await cloudJson(TONGYI_IMAGE_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -123,7 +121,7 @@ async function onceTongyiImage(apiKey: string, prompt: string): Promise<string> 
         prompt_extend: false,
         watermark: false,
         n: 1,
-        negative_prompt: NEGATIVE,
+        negative_prompt: negativePrompt,
         size: '1280*1280',
       },
     },
@@ -140,13 +138,13 @@ async function onceTongyiImage(apiKey: string, prompt: string): Promise<string> 
   return toJpegDataUrl(urls[0])
 }
 
-async function callTongyiImage(apiKey: string, prompt: string): Promise<string> {
+async function callTongyiImage(apiKey: string, prompt: string, negativePrompt: string): Promise<string> {
   try {
-    return await onceTongyiImage(apiKey, prompt)
+    return await onceTongyiImage(apiKey, prompt, negativePrompt)
   } catch (first) {
     const msg = first instanceof Error ? first.message : String(first)
     if (msg === 'llm_timeout' || isCloudTimeoutMessage(msg)) {
-      return await onceTongyiImage(apiKey, prompt)
+      return await onceTongyiImage(apiKey, prompt, negativePrompt)
     }
     throw first instanceof Error ? first : new Error(msg)
   }
@@ -184,17 +182,18 @@ export async function generateFamilyImagesDirect(input: {
 }): Promise<DirectImagesResult> {
   const key = input.apiKey.trim()
   if (!key) throw new Error('image_provider_unavailable')
+  const config = await refreshImagePromptConfig()
   const maxSlots = clampImageSlots(input.maxSlots)
   const slots = input.slots.slice(0, maxSlots)
   const warnings: string[] = []
-  // 同关场景 / 道具并行请求，缩短单关耗时
+  // 同关场景 / 道具并行请求，缩短单关耗时。Agnes 不支持 negative prompt。
   const images = await Promise.all(
-    slots.map(async (slot) => {
-      const prompt = buildKidsPrompt(slot)
+    slots.map(async (slot, index) => {
+      const prompt = promptForSlotAt(slots, index, config)
       try {
         return input.provider === 'agnes'
           ? await callAgnesImage(key, prompt)
-          : await callTongyiImage(key, prompt)
+          : await callTongyiImage(key, prompt, config.negativePrompt)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         warnings.push(`slot_failed:${slot.subject}:${msg}`)
