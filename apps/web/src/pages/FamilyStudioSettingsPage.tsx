@@ -286,7 +286,7 @@ export function FamilyStudioSettingsPage() {
               )
             }}
           >
-            如何获取 Agnes API Key
+            如何获取 API Key（Agnes / DeepSeek）
           </button>
           <button type="button" onClick={saveProviders}>
             保存模型与 Key
