@@ -30,6 +30,8 @@ npx cap open android
 
 `apps/web/android/app/build/outputs/apk/debug/app-debug.apk`
 
+侧载更新（服务器 `version.json` + 家长中心「立即升级」）见 [`android-sideload-update.md`](./android-sideload-update.md)。发新包前把本机 `android/app/build.gradle` 的 `versionCode` 调高，并和清单写成同一个数。
+
 ## 应用图标
 
 源图：`apps/web/resources/icon.png`（1024×1024）。网页参考副本：`apps/web/public/app-icon.png`。仓库没有图标生成脚本，也不提交 `android/`。

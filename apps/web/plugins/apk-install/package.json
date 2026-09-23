@@ -1,0 +1,22 @@
+{
+  "name": "apk-install",
+  "version": "0.1.0",
+  "description": "Download a sideload APK and open the Android package installer",
+  "main": "index.js",
+  "files": [
+    "android/src/main/",
+    "android/build.gradle",
+    "index.js",
+    "README.md"
+  ],
+  "author": "ai-english",
+  "license": "MIT",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

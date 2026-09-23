@@ -52,6 +52,14 @@
   margin-bottom: 8px;
 }
 
+.parent-update h2 {
+  color: #9a3412;
+}
+
+.parent-update p {
+  margin: 4px 0;
+}
+
 .parent-avatar {
   width: 64px;
   height: 64px;
