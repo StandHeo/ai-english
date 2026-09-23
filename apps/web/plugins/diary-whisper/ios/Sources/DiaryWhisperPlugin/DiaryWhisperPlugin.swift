@@ -38,14 +38,17 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
     private let modelUrls: [String: [String]] = [
         "tiny": [
+            "http://118.24.164.40/models/ggml-tiny-q5_1.bin",
             "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
         ],
         "base": [
+            "http://118.24.164.40/models/ggml-base-q5_1.bin",
             "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
         ],
         "small": [
+            "http://118.24.164.40/models/ggml-small-q5_1.bin",
             "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
         ],
