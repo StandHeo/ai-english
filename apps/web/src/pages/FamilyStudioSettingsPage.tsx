@@ -1,4 +1,3 @@
-import { Browser } from '@capacitor/browser'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -246,7 +245,11 @@ export function FamilyStudioSettingsPage() {
             type="button"
             className="ghost"
             onClick={() => {
-              void Browser.open({ url: 'http://118.24.164.40/agnes-api-key.html' })
+              window.open(
+                'http://118.24.164.40/agnes-api-key.html',
+                '_blank',
+                'noopener,noreferrer',
+              )
             }}
           >
             如何获取 Agnes API Key
