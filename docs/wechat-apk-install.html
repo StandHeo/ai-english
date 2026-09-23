@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>土豆豆AI英语 · 微信传 APK 安装说明</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+      color: #1f2937;
+      background: #f8fafc;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 22px 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+    h1 { font-size: 1.45rem; margin: 0 0 8px; color: #0f172a; }
+    .sub { color: #64748b; margin: 0 0 20px; font-size: 0.95rem; }
+    h2 { font-size: 1.1rem; margin: 22px 0 10px; color: #0f172a; }
+    ol, ul { padding-left: 1.2em; margin: 8px 0; }
+    li { margin: 8px 0; }
+    a { color: #2563eb; word-break: break-all; }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: 0.92em;
+    }
+    .box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    .note {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 18px;
+      font-size: 0.95rem;
+    }
+    .ok {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 0.95rem;
+    }
+    footer { margin-top: 18px; color: #94a3b8; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>土豆豆AI英语 · 微信传 APK 安装说明</h1>
+      <p class="sub">用微信把安卓安装包（.apk）发给朋友时，文件常被拦截或改后缀。按下面步骤一般就能装上。</p>
+
+      <div class="note">
+        <strong>常见现象：</strong>微信会把 <span class="mono">xxx.apk</span> 改成 <span class="mono">xxx.apk.1</span>、<span class="mono">xxx.apk.bak</span>，或直接不让点开安装。群聊/朋友圈更容易被拦，私聊文件也可能失败。
+      </div>
+
+      <h2>一、收到文件后怎么装（安卓）</h2>
+      <ol>
+        <li>在微信里打开该文件，选「用其他应用打开」或「保存到手机」，保存到「下载」或「文件」目录。</li>
+        <li>打开手机自带的<strong>文件管理</strong>，找到这个文件。</li>
+        <li>看后缀：如果不是 <span class="mono">.apk</span>，长按 → 改名，去掉多余部分，只保留 <span class="mono">.apk</span>。<br />
+          例如：<span class="mono">app-debug.apk.1</span> → <span class="mono">app-debug.apk</span>。</li>
+        <li>点这个 <span class="mono">.apk</span> 开始安装。</li>
+        <li>若提示「禁止安装未知应用」：到系统设置里，给<strong>文件管理</strong>（或你用来打开 APK 的应用）打开「允许安装未知应用」，再回来点一次安装。</li>
+      </ol>
+
+      <h2>二、包名换过之后要注意</h2>
+      <ul>
+        <li>新包名是 <span class="mono">com.tudoudou.aienglish</span>（显示名「土豆豆AI英语」）。</li>
+        <li>如果手机上还装着旧的「Fruit Forest」/ <span class="mono">com.aienglish.fruitforest</span>，建议<strong>先卸载旧版</strong>再装新包，避免装不上或桌面图标、数据混乱。</li>
+      </ul>
+
+      <h2>三、更稳的传文件方式（推荐）</h2>
+      <p>想少被微信改名或拦截，可以改用：</p>
+      <ul>
+        <li>网盘发链接（夸克、百度网盘、坚果云等）</li>
+        <li>QQ 传文件</li>
+        <li>蓝牙 / 数据线</li>
+      </ul>
+      <div class="ok">开发者本机调试也可用 <span class="mono">adb install xxx.apk</span>，那是给你自己用的，不用发给朋友。</div>
+
+      <h2>四、安装仍失败时</h2>
+      <ul>
+        <li>确认文件大小完整（下载没中断）。</li>
+        <li>确认已改回 <span class="mono">.apk</span> 后缀。</li>
+        <li>确认已允许「未知来源 / 未知应用」安装。</li>
+        <li>换一台文件管理器再试，或换网盘下载后再装。</li>
+      </ul>
+
+      <footer>土豆豆AI英语 · 侧载安装说明（临时 HTTP 页面，域名备案完成后可迁到正式站）</footer>
+    </div>
+  </main>
+</body>
+</html>
