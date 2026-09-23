@@ -76,6 +76,7 @@ public class DiaryWhisperPlugin extends Plugin {
                 10_000_000L,
                 57_000_000L,
                 new String[] {
+                    "http://118.24.164.40/models/ggml-base-q5_1.bin",
                     "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
                     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
                 }
@@ -88,6 +89,7 @@ public class DiaryWhisperPlugin extends Plugin {
                 50_000_000L,
                 181_000_000L,
                 new String[] {
+                    "http://118.24.164.40/models/ggml-small-q5_1.bin",
                     "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
                     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
                 }
