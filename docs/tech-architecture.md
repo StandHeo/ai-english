@@ -243,7 +243,7 @@
 
 | 项 | 现状 |
 |----|------|
-| 配置 | `apps/web/capacitor.config.ts`：`com.aienglish.fruitforest` / `Fruit Forest` / `webDir: dist` |
+| 配置 | `apps/web/capacitor.config.ts`：`com.tudoudou.aienglish` / `土豆豆AI英语` / `webDir: dist` |
 | 工程 | 仓库通常**不含**完整 `android/`、`ios/`，需本机 `npx cap add …` + `cap sync` |
 | Android 产物 | Android Studio 打 debug/release APK |
 | iOS 产物 | Mac + Xcode 真机侧载（不上架）；见 `docs/ios-phone-guide.md` |
