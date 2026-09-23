@@ -6,32 +6,95 @@ import { WebPlugin } from '@capacitor/core'
  */
 export class DiaryWhisperWeb extends WebPlugin {
   async listModels(): Promise<{
-    models: Array<{ id: string; label: string; ready: boolean; packaged: boolean }>
+    models: Array<{
+      id: string
+      label: string
+      ready: boolean
+      packaged: boolean
+      needsDownload?: boolean
+      downloadBytes?: number
+    }>
     defaultId: string
   }> {
     return {
       models: [
-        { id: 'tiny', label: 'Tiny（更快）', ready: false, packaged: false },
-        { id: 'base', label: 'Base（更准，稍慢）', ready: false, packaged: false },
-        { id: 'small', label: 'Small（更准，较慢）', ready: false, packaged: false },
+        {
+          id: 'tiny',
+          label: 'Tiny（更快）',
+          ready: false,
+          packaged: false,
+          needsDownload: false,
+          downloadBytes: 31_000_000,
+        },
+        {
+          id: 'base',
+          label: 'Base（更准，稍慢）',
+          ready: false,
+          packaged: false,
+          needsDownload: true,
+          downloadBytes: 57_000_000,
+        },
+        {
+          id: 'small',
+          label: 'Small（更准，较慢）',
+          ready: false,
+          packaged: false,
+          needsDownload: true,
+          downloadBytes: 181_000_000,
+        },
       ],
       defaultId: 'tiny',
     }
   }
 
-  async isReady(_options?: { modelId?: string }): Promise<{ ready: boolean; detail?: string; modelId?: string }> {
+  async isReady(_options?: {
+    modelId?: string
+  }): Promise<{
+    ready: boolean
+    detail?: string
+    modelId?: string
+    packaged?: boolean
+    needsDownload?: boolean
+    downloadBytes?: number
+  }> {
     return {
       ready: false,
       detail: 'web_unavailable',
+      needsDownload: false,
     }
   }
 
   async prepareModel(_options?: {
     modelId?: string
-  }): Promise<{ ready: boolean; detail?: string; modelId?: string }> {
+  }): Promise<{
+    ready: boolean
+    detail?: string
+    modelId?: string
+    packaged?: boolean
+    needsDownload?: boolean
+    downloadBytes?: number
+  }> {
     return {
       ready: false,
       detail: 'web_unavailable',
+      needsDownload: false,
+    }
+  }
+
+  async downloadModel(_options?: {
+    modelId?: string
+  }): Promise<{
+    ready: boolean
+    detail?: string
+    modelId?: string
+    packaged?: boolean
+    needsDownload?: boolean
+    downloadBytes?: number
+  }> {
+    return {
+      ready: false,
+      detail: 'web_unavailable',
+      needsDownload: false,
     }
   }
 

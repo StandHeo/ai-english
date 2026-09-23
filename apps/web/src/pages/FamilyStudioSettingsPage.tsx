@@ -33,7 +33,7 @@ import {
   setMinLevelKeywords,
   setTongyiKey,
 } from '../family/store'
-import { prepareDiaryWhisperModel } from '../voice/diaryAsr'
+import { prepareDiaryWhisperModel, downloadDiaryWhisperModel, listDiaryWhisperModels } from '../voice/diaryAsr'
 import {
   DIARY_WHISPER_MODELS,
   diaryWhisperModelLabel,
@@ -66,6 +66,9 @@ export function FamilyStudioSettingsPage() {
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
     getDiaryWhisperModelId(),
   )
+  const [whisperReady, setWhisperReady] = useState<Record<string, boolean>>({})
+  const [whisperNeedsDownload, setWhisperNeedsDownload] = useState<Record<string, boolean>>({})
+  const [downloadPct, setDownloadPct] = useState<number | null>(null)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -79,6 +82,21 @@ export function FamilyStudioSettingsPage() {
     setMinKeywords(getMinLevelKeywords())
     setApiBaseInput(getStoredApiBase())
     setWhisperModel(getDiaryWhisperModelId())
+    if (!isNativeApp()) return
+    void listDiaryWhisperModels()
+      .then((res) => {
+        const ready: Record<string, boolean> = {}
+        const need: Record<string, boolean> = {}
+        for (const m of res.models) {
+          ready[m.id] = Boolean(m.ready)
+          need[m.id] = Boolean(m.needsDownload)
+        }
+        setWhisperReady(ready)
+        setWhisperNeedsDownload(need)
+      })
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
 
   function saveProviders() {
@@ -134,13 +152,28 @@ export function FamilyStudioSettingsPage() {
     setWhisperModel(next)
     setDiaryWhisperModelId(next)
     setBusy(true)
+    setDownloadPct(null)
     setStatus(`正在切换到 ${diaryWhisperModelLabel(next)}…`)
     try {
       if (!isNativeApp()) {
         setStatus(`已选择 ${diaryWhisperModelLabel(next)}（浏览器无法端侧转写）`)
         return
       }
-      const s = await prepareDiaryWhisperModel(next)
+      let s = await prepareDiaryWhisperModel(next)
+      if (!s.modelReady && s.needsDownload) {
+        const mb = s.downloadBytes ? Math.round(s.downloadBytes / (1024 * 1024)) : '?'
+        setStatus(`正在下载 ${diaryWhisperModelLabel(next)}（约 ${mb}MB）…`)
+        s = await downloadDiaryWhisperModel(next, (p) => {
+          if (p.modelId !== next) return
+          const pct = Math.max(0, Math.min(100, Math.round((p.fraction || 0) * 100)))
+          setDownloadPct(pct)
+          if (p.phase === 'progress' || p.phase === 'start') {
+            setStatus(`正在下载 ${diaryWhisperModelLabel(next)}… ${pct}%`)
+          }
+        })
+      }
+      setWhisperReady((prev) => ({ ...prev, [next]: Boolean(s.modelReady) }))
+      setWhisperNeedsDownload((prev) => ({ ...prev, [next]: Boolean(s.needsDownload && !s.modelReady) }))
       if (!s.modelReady) {
         setStatus(s.detail || '模型未就绪')
       } else {
@@ -148,6 +181,7 @@ export function FamilyStudioSettingsPage() {
       }
     } finally {
       setBusy(false)
+      setDownloadPct(null)
     }
   }
 
@@ -344,7 +378,9 @@ export function FamilyStudioSettingsPage() {
         </div>
 
         <h2>语音转写模型</h2>
-        <p className="muted">仅 App 生效。可切换 Tiny / Base / Small 对比识别效果。</p>
+        <p className="muted">
+          仅 App 生效。APK 默认只带 Tiny；选 Base / Small 时会自动下载模型包（需联网）。
+        </p>
         <div className="model-switch" role="radiogroup" aria-label="语音转写模型">
           {DIARY_WHISPER_MODELS.map((m) => (
             <button
@@ -356,11 +392,23 @@ export function FamilyStudioSettingsPage() {
               disabled={busy}
               onClick={() => void onWhisperModelChange(m.id)}
             >
-              <strong>{m.label}</strong>
+              <strong>
+                {m.label}
+                {whisperReady[m.id]
+                  ? ' · 已就绪'
+                  : whisperNeedsDownload[m.id]
+                    ? ' · 需下载'
+                    : ''}
+              </strong>
               <span>{m.hint}</span>
             </button>
           ))}
         </div>
+        {downloadPct != null && (
+          <p className="muted" role="status">
+            下载进度 {downloadPct}%
+          </p>
+        )}
       </section>
 
       {status && <p className="status">{status}</p>}

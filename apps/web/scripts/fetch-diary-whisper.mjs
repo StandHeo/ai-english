@@ -17,6 +17,7 @@ import {
   mkdirSync,
   chmodSync,
   copyFileSync,
+  readdirSync,
   statSync,
   cpSync,
   rmSync,
@@ -40,9 +41,9 @@ const cliPath = join(androidDestDir, 'whisper-cli')
 const modelOnly = process.argv.includes('--model-only')
 const tinyOnly = process.argv.includes('--tiny-only')
 const baseOnly = process.argv.includes('--base-only')
-const androidOnly = process.argv.includes('--android-only')
 const iosOnly = process.argv.includes('--ios-only')
 const withIos = process.argv.includes('--with-ios') || iosOnly
+// `--android-only` is accepted by npm scripts for clarity; default is Android when not ios-only
 const wantAndroid = !iosOnly
 const wantIosFramework = withIos
 const wantIosModels = withIos || wantAndroid
@@ -110,9 +111,24 @@ function downloadOne(destDir, modelName, minBytes) {
   return false
 }
 
+function pruneOtherModels(destDir) {
+  if (!existsSync(destDir)) return
+  const keep = new Set(models.map((m) => m.name))
+  for (const name of readdirSync(destDir)) {
+    if (!name.endsWith('.bin')) continue
+    if (keep.has(name)) continue
+    const path = join(destDir, name)
+    rmSync(path, { force: true })
+    console.log(`已移除未选中的模型：${path}`)
+  }
+}
+
 function downloadModels(destDir) {
   for (const m of models) {
     if (!downloadOne(destDir, m.name, m.minBytes)) return false
+  }
+  if (tinyOnly || baseOnly || process.argv.includes('--small-only')) {
+    pruneOtherModels(destDir)
   }
   return true
 }

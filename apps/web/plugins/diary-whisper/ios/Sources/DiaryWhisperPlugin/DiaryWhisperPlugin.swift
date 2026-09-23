@@ -14,20 +14,47 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "listModels", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isReady", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "prepareModel", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "downloadModel", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "transcribe", returnType: CAPPluginReturnPromise),
     ]
 
     private let defaultModelId = "tiny"
     private let resourceRoot = "diary-whisper"
+    private let downloadEvent = "diaryWhisperDownload"
     private let modelFiles: [String: [String]] = [
         "tiny": ["ggml-tiny-q5_1.bin", "ggml-tiny.bin", "ggml-tiny-int8.bin"],
         "base": ["ggml-base-q5_1.bin", "ggml-base.bin"],
         "small": ["ggml-small-q5_1.bin", "ggml-small.bin"],
     ]
+    private let modelMinBytes: [String: Int64] = [
+        "tiny": 1_000_000,
+        "base": 10_000_000,
+        "small": 50_000_000,
+    ]
+    private let modelApproxBytes: [String: Int64] = [
+        "tiny": 31_000_000,
+        "base": 57_000_000,
+        "small": 181_000_000,
+    ]
+    private let modelUrls: [String: [String]] = [
+        "tiny": [
+            "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
+        ],
+        "base": [
+            "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
+        ],
+        "small": [
+            "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+        ],
+    ]
 
     private let queue = DispatchQueue(label: "com.aienglish.diarywhisper", qos: .userInitiated)
     private var context: OpaquePointer?
     private var loadedModelId: String?
+    private var downloading = false
 
     deinit {
         if let context {
@@ -46,7 +73,9 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
                 "label": modelLabel(id),
                 "fileName": names.first ?? "",
                 "ready": ready,
-                "packaged": packaged || ready,
+                "packaged": packaged,
+                "needsDownload": !ready && !packaged,
+                "downloadBytes": modelApproxBytes[id] ?? 0,
             ])
         }
         call.resolve([
@@ -58,13 +87,17 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func isReady(_ call: CAPPluginCall) {
         let modelId = resolveModelId(call.getString("modelId"))
         let file = findModelURL(id: modelId)
+        let packaged = (modelFiles[modelId] ?? []).contains { bundleModelURL($0) != nil }
         let ready = file != nil
         var ret: [String: Any] = [
             "ready": ready,
             "modelId": modelId,
+            "packaged": packaged,
+            "needsDownload": !ready && !packaged,
+            "downloadBytes": modelApproxBytes[modelId] ?? 0,
         ]
         if !ready {
-            ret["detail"] = describeMissing(modelId: modelId)
+            ret["detail"] = describeMissing(modelId: modelId, packaged: packaged)
         }
         call.resolve(ret)
     }
@@ -73,15 +106,93 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
         let modelId = resolveModelId(call.getString("modelId"))
         queue.async { [weak self] in
             guard let self else { return }
+            // Copy packaged tiny (or others) into Documents if needed so downloads share one dir.
+            self.copyPackagedIfNeeded(modelId: modelId)
             let ok = self.ensureContext(modelId: modelId)
+            let packaged = (self.modelFiles[modelId] ?? []).contains { self.bundleModelURL($0) != nil }
             var ret: [String: Any] = [
                 "ready": ok,
                 "modelId": modelId,
+                "packaged": packaged,
+                "needsDownload": !ok && !packaged,
+                "downloadBytes": self.modelApproxBytes[modelId] ?? 0,
             ]
             if !ok {
-                ret["detail"] = self.describeMissing(modelId: modelId)
+                ret["detail"] = self.describeMissing(modelId: modelId, packaged: packaged)
             }
             call.resolve(ret)
+        }
+    }
+
+    @objc func downloadModel(_ call: CAPPluginCall) {
+        let modelId = resolveModelId(call.getString("modelId"))
+        guard modelFiles[modelId] != nil else {
+            call.reject("未知模型：\(modelId)", "model_not_ready")
+            return
+        }
+        queue.async { [weak self] in
+            guard let self else { return }
+            if self.downloading {
+                call.reject("已有模型正在下载，请稍候", "download_busy")
+                return
+            }
+            self.downloading = true
+            defer { self.downloading = false }
+
+            self.copyPackagedIfNeeded(modelId: modelId)
+            if let existing = self.findModelURL(id: modelId) {
+                let size = (try? existing.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) } ?? 0
+                self.emitProgress(modelId: modelId, received: size, total: size, fraction: 1, phase: "done")
+                call.resolve([
+                    "ready": true,
+                    "modelId": modelId,
+                    "packaged": (self.modelFiles[modelId] ?? []).contains { self.bundleModelURL($0) != nil },
+                    "needsDownload": false,
+                    "downloadBytes": self.modelApproxBytes[modelId] ?? 0,
+                ])
+                return
+            }
+
+            let fileName = self.modelFiles[modelId]?.first ?? "ggml-\(modelId).bin"
+            let dest = self.downloadedModelsDir().appendingPathComponent(fileName)
+            let partial = dest.appendingPathExtension("partial")
+            let urls = self.modelUrls[modelId] ?? []
+            let minBytes = self.modelMinBytes[modelId] ?? 1_000_000
+            let approx = self.modelApproxBytes[modelId] ?? minBytes
+            var lastError: Error?
+            var ok = false
+            for urlString in urls {
+                do {
+                    self.emitProgress(modelId: modelId, received: 0, total: approx, fraction: 0, phase: "start")
+                    try self.download(urlString: urlString, to: partial, modelId: modelId, approxTotal: approx)
+                    let size = (try? FileManager.default.attributesOfItem(atPath: partial.path)[.size] as? NSNumber)?.int64Value ?? 0
+                    guard size >= minBytes else {
+                        throw NSError(domain: "DiaryWhisper", code: 3, userInfo: [NSLocalizedDescriptionKey: "下载文件过小：\(size)"])
+                    }
+                    try? FileManager.default.removeItem(at: dest)
+                    try FileManager.default.moveItem(at: partial, to: dest)
+                    ok = true
+                    break
+                } catch {
+                    lastError = error
+                    try? FileManager.default.removeItem(at: partial)
+                }
+            }
+            if !ok {
+                self.emitProgress(modelId: modelId, received: 0, total: approx, fraction: 0, phase: "error")
+                call.reject(lastError?.localizedDescription ?? "模型下载失败", "download_failed")
+                return
+            }
+            let ready = self.findModelURL(id: modelId) != nil
+            let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? NSNumber)?.int64Value ?? approx
+            self.emitProgress(modelId: modelId, received: size, total: approx, fraction: 1, phase: "done")
+            call.resolve([
+                "ready": ready,
+                "modelId": modelId,
+                "packaged": false,
+                "needsDownload": !ready,
+                "downloadBytes": approx,
+            ])
         }
     }
 
@@ -97,11 +208,13 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
         queue.async { [weak self] in
             guard let self else { return }
             if !self.ensureContext(modelId: modelId) {
-                call.reject(self.describeMissing(modelId: modelId), "model_not_ready")
+                let packaged = (self.modelFiles[modelId] ?? []).contains { self.bundleModelURL($0) != nil }
+                call.reject(self.describeMissing(modelId: modelId, packaged: packaged), "model_not_ready")
                 return
             }
             guard let context = self.context else {
-                call.reject(self.describeMissing(modelId: modelId), "model_not_ready")
+                let packaged = (self.modelFiles[modelId] ?? []).contains { self.bundleModelURL($0) != nil }
+                call.reject(self.describeMissing(modelId: modelId, packaged: packaged), "model_not_ready")
                 return
             }
 
@@ -179,12 +292,31 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    private func describeMissing(modelId: String) -> String {
-        "缺少 Whisper \(modelId) 模型（ios/Resources/diary-whisper/*.bin）。详见 docs/family-diary-whisper.md"
+    private func describeMissing(modelId: String, packaged: Bool) -> String {
+        if packaged {
+            return "缺少 Whisper \(modelId) 模型（需先 prepare 解包）。详见 docs/family-diary-whisper.md"
+        }
+        return "缺少 Whisper \(modelId) 模型，请先下载（设置 → 语音转写模型）。详见 docs/family-diary-whisper.md"
+    }
+
+    private func downloadedModelsDir() -> URL {
+        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent(resourceRoot, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
     }
 
     private func findModelURL(id: String) -> URL? {
         guard let names = modelFiles[id] else { return nil }
+        // Prefer downloaded / copied files in Documents
+        for name in names {
+            let local = downloadedModelsDir().appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: local.path) {
+                let size = (try? local.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                if size > 1024 { return local }
+            }
+        }
         for name in names {
             if let url = bundleModelURL(name) {
                 let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
@@ -192,6 +324,85 @@ public class DiaryWhisperPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         return nil
+    }
+
+    @discardableResult
+    private func copyPackagedIfNeeded(modelId: String) -> Bool {
+        guard let names = modelFiles[modelId] else { return false }
+        if findModelURL(id: modelId) != nil {
+            // already have downloaded or will resolve from bundle
+            if downloadedModelsDir().path.contains(resourceRoot) {
+                for name in names {
+                    let local = downloadedModelsDir().appendingPathComponent(name)
+                    if FileManager.default.fileExists(atPath: local.path) { return true }
+                }
+            }
+        }
+        for name in names {
+            guard let src = bundleModelURL(name) else { continue }
+            let dest = downloadedModelsDir().appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: dest.path) { return true }
+            do {
+                try FileManager.default.copyItem(at: src, to: dest)
+                return true
+            } catch {
+                continue
+            }
+        }
+        return false
+    }
+
+    private func emitProgress(modelId: String, received: Int64, total: Int64, fraction: Double, phase: String) {
+        notifyListeners(downloadEvent, data: [
+            "modelId": modelId,
+            "received": received,
+            "total": total,
+            "fraction": fraction,
+            "phase": phase,
+        ])
+    }
+
+    private func download(urlString: String, to dest: URL, modelId: String, approxTotal: Int64) throws {
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "DiaryWhisper", code: 4, userInfo: [NSLocalizedDescriptionKey: "无效下载地址"])
+        }
+        let semaphore = DispatchSemaphore(value: 0)
+        var resultError: Error?
+        let task = URLSession.shared.downloadTask(with: url) { tempURL, response, error in
+            defer { semaphore.signal() }
+            if let error {
+                resultError = error
+                return
+            }
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                resultError = NSError(
+                    domain: "DiaryWhisper",
+                    code: http.statusCode,
+                    userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"]
+                )
+                return
+            }
+            guard let tempURL else {
+                resultError = NSError(domain: "DiaryWhisper", code: 5, userInfo: [NSLocalizedDescriptionKey: "空下载结果"])
+                return
+            }
+            do {
+                try? FileManager.default.removeItem(at: dest)
+                try FileManager.default.moveItem(at: tempURL, to: dest)
+                let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? NSNumber)?.int64Value ?? approxTotal
+                self.emitProgress(modelId: modelId, received: size, total: max(approxTotal, size), fraction: 1, phase: "progress")
+            } catch {
+                resultError = error
+            }
+        }
+        // Coarse progress: start + done (URLSession downloadTask has limited hooks without delegate)
+        emitProgress(modelId: modelId, received: 0, total: approxTotal, fraction: 0.05, phase: "progress")
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + 1200)
+        if let resultError { throw resultError }
+        if !FileManager.default.fileExists(atPath: dest.path) {
+            throw NSError(domain: "DiaryWhisper", code: 6, userInfo: [NSLocalizedDescriptionKey: "下载未完成"])
+        }
     }
 
     /// SPM 资源在 `Bundle.module`（如 DiaryWhisper_DiaryWhisperPlugin.bundle）；CocoaPods 可能在主 Bundle。

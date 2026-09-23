@@ -193,7 +193,7 @@
 ### 7.2 端侧 Whisper（日记）
 
 - 插件路径：`apps/web/plugins/diary-whisper`。
-- 资源（需本地放入，不进 git 大文件）：`ggml-tiny*.bin` + arm64 `whisper-cli` → assets 首次解包。
+- 资源（需本地放入，不进 git 大文件）：默认仅 `ggml-tiny*.bin` + arm64 `whisper-cli` → assets 首次解包；Base/Small 运行时按需下载。
 - 详见 `docs/family-diary-whisper.md`。
 
 ---

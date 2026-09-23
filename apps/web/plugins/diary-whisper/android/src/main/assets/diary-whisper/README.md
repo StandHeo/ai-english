@@ -1,9 +1,9 @@
-# diary-whisper 资源
+# diary-whisper Android assets
 
-- 模型（本目录，随 APK assets 打包）：
-  - `ggml-tiny-q5_1.bin`（默认，更快）
-  - `ggml-base-q5_1.bin`（更准，稍慢；设置里可切换）
-  - `ggml-small-q5_1.bin`（更准，较慢；设置里可切换）
-- CLI：`../../jniLibs/arm64-v8a/libwhisper_cli.so`（必须放 jniLibs；Android 10+ 不能从 files/ 执行二进制）
+默认只打包 **Tiny** 模型（`ggml-tiny-q5_1.bin`），用于减小 APK。
 
-若缺失可运行：`npm run fetch-diary-whisper`
+- Base / Small：App 内首次选择时从 Hugging Face / hf-mirror **按需下载**到应用私有目录。
+- 准备 Tiny：`cd apps/web && npm run fetch-diary-whisper -- --tiny-only --android-only`
+- 打 Android 包：`npm run build:android`（会自动 `--tiny-only` + `patch-android-slim` 仅保留 arm64）
+
+详见 `docs/family-diary-whisper.md`。

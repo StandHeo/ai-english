@@ -13,9 +13,10 @@
     "build": "npm run sync-content && tsc -b && vite build",
     "test:family": "tsx --test src/family/**/*.test.ts src/api/**/*.test.ts src/progress/**/*.test.ts",
     "test": "npm run test:family",
-    "build:android": "npm run fetch-vosk-model && npm run fetch-diary-whisper && npm run fetch-piper-tts && npm run build && npx cap sync android",
-    "build:ios": "npm run fetch-diary-whisper -- --ios-only && npm run fetch-piper-tts -- --ios-only && npm run build && npx cap sync ios && node scripts/patch-ios-info-plist.mjs",
+    "build:android": "npm run fetch-vosk-model && npm run fetch-diary-whisper -- --tiny-only --android-only && npm run fetch-piper-tts && npm run build && npx cap sync android && node scripts/patch-android-slim.mjs",
+    "build:ios": "npm run fetch-diary-whisper -- --tiny-only --ios-only && npm run fetch-piper-tts -- --ios-only && npm run build && npx cap sync ios && node scripts/patch-ios-info-plist.mjs",
     "patch:ios-plist": "node scripts/patch-ios-info-plist.mjs",
+    "patch:android-slim": "node scripts/patch-android-slim.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

@@ -9,9 +9,9 @@ export type DiaryWhisperModelOption = {
 }
 
 export const DIARY_WHISPER_MODELS: DiaryWhisperModelOption[] = [
-  { id: 'tiny', label: 'Tiny', hint: '最快，体积小；识别可能不准' },
-  { id: 'base', label: 'Base', hint: '更准一些，转写稍慢' },
-  { id: 'small', label: 'Small', hint: '更准，体积大，转写更慢' },
+  { id: 'tiny', label: 'Tiny', hint: '最快，体积小；识别可能不准（随包装入）' },
+  { id: 'base', label: 'Base', hint: '更准一些；首次选用约下载 57MB' },
+  { id: 'small', label: 'Small', hint: '更准；首次选用约下载 181MB' },
 ]
 
 const KEY = 'ai-english-diary-whisper-model-v1'
