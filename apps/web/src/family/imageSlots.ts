@@ -1,6 +1,34 @@
+import {
+  defaultImagePromptConfig,
+  renderKidsPrompt,
+  renderPromptAt,
+  type ImagePromptConfig,
+  type RenderKidsPromptOpts,
+} from './imagePromptDefaults'
+
+export type { ImagePromptConfig, RenderKidsPromptOpts }
+
 export type ImageSlot = {
   subject: string
   role?: 'scene' | 'item'
+  /** 干扰图。单张重画时标上，避免被当成主词。 */
+  distractor?: boolean
+  /** 干扰图要避开的主词。 */
+  targetWord?: string
+}
+
+let activePromptConfig: ImagePromptConfig = defaultImagePromptConfig()
+
+export function getActiveImagePromptConfig(): ImagePromptConfig {
+  return activePromptConfig
+}
+
+export function setActiveImagePromptConfig(next: ImagePromptConfig): void {
+  activePromptConfig = { ...next }
+}
+
+export function resetActiveImagePromptConfig(): void {
+  activePromptConfig = defaultImagePromptConfig()
 }
 
 /** 含 CJK/谚文/假名等非拉丁脚本时需要翻译成英文再喂给图片模型 */
@@ -13,9 +41,6 @@ export function sceneNeedsTranslation(text: string): boolean {
   )
 }
 
-const SAFETY_PREFIX =
-  '儿童绘本插画，厚实友好描边，扁平柔和暖色，温暖明亮，画面简洁干净，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，正方形构图，'
-
 export function clampImageSlots(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
   if (!Number.isFinite(v)) return 9
@@ -27,12 +52,28 @@ export function slotSubjectKey(subject: string): string {
   return subject.trim().toLowerCase()
 }
 
-export function buildKidsPrompt(slot: ImageSlot): string {
-  const subject = slot.subject.trim()
-  if (slot.role === 'scene') {
-    return `${SAFETY_PREFIX}作为游戏主场景的远景环境背景，开阔画面，展示地点与氛围，道具少量点缀即可，不要出现任何巨大招牌或横幅，主题：${subject}`
-  }
-  return `${SAFETY_PREFIX}画面中心只画一个主体：${subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框`
+export function buildKidsPrompt(slot: ImageSlot, opts?: RenderKidsPromptOpts): string {
+  return renderKidsPrompt(slot, {
+    ...opts,
+    config: opts?.config ?? activePromptConfig,
+  })
+}
+
+/** 按一批槽位的位置套模板：场景、第一张道具（主词）、其后的干扰图。 */
+export function promptForSlotAt(slots: ImageSlot[], index: number, config?: ImagePromptConfig): string {
+  return renderPromptAt(slots, index, config ?? activePromptConfig)
+}
+
+/** 给干扰图标上主词，单张或补缺重画时模板仍然避开目标词。 */
+export function annotatePromptSlots(slots: ImageSlot[]): ImageSlot[] {
+  const mainIndex = slots.findIndex((s) => s.role !== 'scene')
+  const targetWord = mainIndex >= 0 ? slots[mainIndex]!.subject.trim() : ''
+  return slots.map((slot, index) => {
+    if (slot.role === 'scene' || mainIndex < 0 || index === mainIndex) {
+      return { subject: slot.subject, role: slot.role }
+    }
+    return { subject: slot.subject, role: slot.role ?? 'item', distractor: true, targetWord }
+  })
 }
 
 function sceneSettingOf(level: Record<string, unknown>): string {

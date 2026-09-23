@@ -6,6 +6,7 @@ import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { fetchMe } from '../api/membership'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
+import { refreshImagePromptConfig } from '../family/imagePromptConfig'
 import { generateFamilyPackDirect, llmBusyLabel, translateSceneToEnglish } from '../family/generateLevelClient'
 import {
   familyLlmLabel,
@@ -14,6 +15,7 @@ import {
 } from '../family/providers'
 import { pickAlbumImage, processAlbumImage } from '../family/albumImage'
 import {
+  annotatePromptSlots,
   buildKidsPrompt,
   miniLevelMissingImageSlots,
   sceneNeedsTranslation,
@@ -148,6 +150,7 @@ export function FamilyStudioPage() {
   const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [pickingSlot, setPickingSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
   const [levelFilter, setLevelFilter] = useState('')
+  const [promptNonce, setPromptNonce] = useState(0)
   const [plusActive, setPlusActive] = useState(false)
   const [plusChecked, setPlusChecked] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -217,6 +220,16 @@ export function FamilyStudioPage() {
     return () => {
       clearToastTimer()
       clearJobDoneTimer()
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void refreshImagePromptConfig().then(() => {
+      if (!cancelled) setPromptNonce((n) => n + 1)
+    })
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -490,11 +503,13 @@ export function FamilyStudioPage() {
         const word = mini.level.target_words?.[0] || 'item'
         // 优先英文场景词（配图模型对英文更稳）；无缓存则用原文
         const scenePrompt = mini.scenePromptEn?.trim() || effectiveScenePrompt(mini)
-        const slots = slotsForMiniLevel(
-          mini.level as unknown as Record<string, unknown>,
-          scenePrompt,
-          5,
-          mini.itemPrompts,
+        const slots = annotatePromptSlots(
+          slotsForMiniLevel(
+            mini.level as unknown as Record<string, unknown>,
+            scenePrompt,
+            5,
+            mini.itemPrompts,
+          ),
         )
         try {
           let list: string[]
@@ -903,11 +918,13 @@ export function FamilyStudioPage() {
       return
     }
     const sceneFinal = cur.scenePromptEn?.trim() || effectiveScenePrompt(cur)
-    const slots = slotsForMiniLevel(
-      cur.level as unknown as Record<string, unknown>,
-      sceneFinal,
-      5,
-      cur.itemPrompts,
+    const slots = annotatePromptSlots(
+      slotsForMiniLevel(
+        cur.level as unknown as Record<string, unknown>,
+        sceneFinal,
+        5,
+        cur.itemPrompts,
+      ),
     )
     const slot = slots[slotIndex]
     if (!slot) return
@@ -1398,11 +1415,13 @@ export function FamilyStudioPage() {
                       </button>
                     </div>
                     {(() => {
-                      const slots = slotsForMiniLevel(
-                        m.level as unknown as Record<string, unknown>,
-                        effectiveScenePrompt(m),
-                        5,
-                        m.itemPrompts,
+                      const slots = annotatePromptSlots(
+                        slotsForMiniLevel(
+                          m.level as unknown as Record<string, unknown>,
+                          effectiveScenePrompt(m),
+                          5,
+                          m.itemPrompts,
+                        ),
                       )
                       const slotImages = [m.imageBg || '', ...(m.itemImages || [])]
                       return (
@@ -1453,7 +1472,7 @@ export function FamilyStudioPage() {
                                     相册选图
                                   </button>
                                 </div>
-                                <details className="slot-prompt-box">
+                                <details className="slot-prompt-box" data-prompt-nonce={promptNonce}>
                                   <summary>画图提示词</summary>
                                   <p className="slot-prompt-full">{finalPrompt}</p>
                                   <label className="muted" style={{ fontSize: 12 }}>

@@ -5,12 +5,25 @@
 
 import sharp from 'sharp'
 import { runAgnesCall } from './agnesRateLimit'
+import {
+  defaultImagePromptConfig,
+  renderKidsPrompt,
+  renderPromptAt,
+  type ImagePromptConfig,
+  type RenderKidsPromptOpts,
+} from './imagePromptDefaults.js'
+
+export type { ImagePromptConfig, RenderKidsPromptOpts }
 
 export type ImageSlot = {
   /** 用于 prompt 的主体描述（英文词或中文场景） */
   subject: string
   /** 可选角色标签 */
   role?: 'scene' | 'item'
+  /** 干扰图。单张重画时由客户端标上，避免被当成主词。 */
+  distractor?: boolean
+  /** 干扰图要避开的主词。 */
+  targetWord?: string
 }
 
 export type GenerateFamilyImagesInput = {
@@ -24,6 +37,8 @@ export type GenerateFamilyImagesInput = {
   maxSlots?: number
   /** tongyi | agnes | mock；缺省用 FAMILY_IMAGE_PROVIDER */
   imageProvider?: string
+  /** 缺省用内置默认；路由层传入数据库里的配置。 */
+  promptConfig?: ImagePromptConfig
 }
 
 export type GenerateFamilyImagesResult = {
@@ -40,12 +55,6 @@ export type GenerateFamilyImagesResult = {
     }>
   }
 }
-
-const SAFETY_PREFIX =
-  '儿童绘本插画，厚实友好描边，扁平柔和暖色，温暖明亮，画面简洁干净，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，正方形构图，'
-
-const NEGATIVE =
-  '文字,字母,数字,乱码,招牌,标志,水印,签名,卡通兔子,兔子,小白兔,暴力,恐怖,血腥,写实照片,成人内容,畸形,低清晰度,复杂背景,杂物堆砌'
 
 /** 压缩后 data URL 上限（约 550KB raw ≈ 750KB base64） */
 const MAX_COMPRESSED_BYTES = 550_000
@@ -81,12 +90,8 @@ function slotSubjectKey(subject: string): string {
   return subject.trim().toLowerCase()
 }
 
-export function buildKidsPrompt(slot: ImageSlot): string {
-  const subject = slot.subject.trim()
-  if (slot.role === 'scene') {
-    return `${SAFETY_PREFIX}作为游戏主场景的远景环境背景，开阔画面，展示地点与氛围，道具少量点缀即可，不要出现任何巨大招牌或横幅，主题：${subject}`
-  }
-  return `${SAFETY_PREFIX}画面中心只画一个主体：${subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框`
+export function buildKidsPrompt(slot: ImageSlot, opts?: RenderKidsPromptOpts): string {
+  return renderKidsPrompt(slot, opts)
 }
 
 function mockDataUrl(label: string): string {
@@ -195,6 +200,7 @@ async function urlToDataUrl(url: string): Promise<string> {
 async function callTongyiOnce(
   apiKey: string,
   prompt: string,
+  negativePrompt: string,
 ): Promise<{ dataUrl: string; rawPreview: string }> {
   const endpoint =
     process.env.TONGYI_IMAGE_ENDPOINT?.trim() ||
@@ -214,7 +220,7 @@ async function callTongyiOnce(
       prompt_extend: false,
       watermark: false,
       n: 1,
-      negative_prompt: NEGATIVE,
+      negative_prompt: negativePrompt,
       size: '1280*1280',
     },
   }
@@ -268,13 +274,14 @@ async function callTongyiOnce(
 async function callTongyiWithRetry(
   apiKey: string,
   prompt: string,
+  negativePrompt: string,
 ): Promise<{ dataUrl: string; rawPreview: string }> {
   try {
-    return await callTongyiOnce(apiKey, prompt)
+    return await callTongyiOnce(apiKey, prompt, negativePrompt)
   } catch (err) {
     if (!isTimeoutError(err)) throw err
     console.log('[tongyi] retry after timeout', prompt.slice(0, 80))
-    return await callTongyiOnce(apiKey, prompt)
+    return await callTongyiOnce(apiKey, prompt, negativePrompt)
   }
 }
 
@@ -394,17 +401,18 @@ export async function generateFamilyImages(
     }
   }
 
+  const promptConfig = input.promptConfig ?? defaultImagePromptConfig()
   const imageKind = resolveImageProvider(input.imageProvider)
   const wantMock = Boolean(input.forceMock) || imageKind === 'mock'
   if (wantMock) {
-    for (const s of slots) {
+    slots.forEach((s, i) => {
       debugCalls.push({
         subject: s.subject,
-        prompt: `(mock) ${s.subject}`,
+        prompt: renderPromptAt(slots, i, promptConfig),
         ok: true,
         detail: 'mock_svg_placeholder',
       })
-    }
+    })
     return {
       images: slots.map((s) => mockDataUrl(s.subject)),
       warnings: ['using_mock_images'],
@@ -424,13 +432,13 @@ export async function generateFamilyImages(
 
   // 同请求内多槽位并行出图（顺序与 slots 一致）
   const settled = await Promise.all(
-    slots.map(async (slot) => {
-      const prompt = buildKidsPrompt(slot)
+    slots.map(async (slot, index) => {
+      const prompt = renderPromptAt(slots, index, promptConfig)
       try {
         const { dataUrl, rawPreview } =
           imageKind === 'agnes'
             ? await callAgnesOnce(key, prompt)
-            : await callTongyiWithRetry(key, prompt)
+            : await callTongyiWithRetry(key, prompt, promptConfig.negativePrompt)
         return {
           dataUrl,
           warning: null as string | null,

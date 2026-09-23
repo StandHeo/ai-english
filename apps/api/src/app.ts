@@ -10,6 +10,7 @@ import { judgeTranscript } from './voiceJudge.js'
 import { generateFamilyLevel } from './familyGenerate.js'
 import { generateFamilyPack } from './familyPackGenerate.js'
 import { generateFamilyImages, slotsFromLevel } from './tongyiImage.js'
+import { readImagePromptConfig, writeImagePromptConfig } from './imagePromptConfig.js'
 import { openDatabase } from './db.js'
 import {
   ADMIN_TABLES,
@@ -360,13 +361,25 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       const normalized = slots
         .map((s: unknown) => {
           if (!s || typeof s !== 'object') return null
-          const o = s as { subject?: unknown; role?: unknown }
+          const o = s as { subject?: unknown; role?: unknown; distractor?: unknown; targetWord?: unknown }
           const subject = String(o.subject || '').trim()
           if (!subject) return null
           const role = o.role === 'scene' || o.role === 'item' ? o.role : undefined
-          return { subject, role }
+          const distractor = o.distractor === true
+          const targetWord = typeof o.targetWord === 'string' ? o.targetWord.trim() : ''
+          return {
+            subject,
+            role,
+            ...(distractor ? { distractor: true as const } : {}),
+            ...(targetWord ? { targetWord } : {}),
+          }
         })
-        .filter(Boolean) as { subject: string; role?: 'scene' | 'item' }[]
+        .filter(Boolean) as {
+        subject: string
+        role?: 'scene' | 'item'
+        distractor?: boolean
+        targetWord?: string
+      }[]
 
       if (!normalized.length) {
         res.status(400).json({ error: 'slots_or_level_required' })
@@ -390,6 +403,7 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
         forceMock,
         maxSlots,
         imageProvider,
+        promptConfig: readImagePromptConfig(db),
       })
       console.log(
         '[family/generate-images] result',
@@ -408,6 +422,19 @@ export function createApp(options: { databasePath?: string } = {}): CreatedApp {
       console.error('[family/generate-images]', message)
       res.status(status).json({ error: message })
     }
+  })
+
+  app.get('/api/family/image-prompt-config', (_req, res) => {
+    res.json(readImagePromptConfig(db))
+  })
+
+  app.put('/api/admin/family/image-prompt-config', requireAdmin, (req, res) => {
+    const saved = writeImagePromptConfig(db, req.body)
+    if (!saved.ok) {
+      res.status(400).json({ error: saved.error })
+      return
+    }
+    res.json(saved.config)
   })
 
   app.get('/api/auth/config', (_req, res) => {

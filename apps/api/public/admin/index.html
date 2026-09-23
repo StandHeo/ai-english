@@ -46,7 +46,7 @@
       box-shadow: 0 8px 24px rgba(70, 48, 20, 0.05);
     }
     label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    input, select, button {
+    input, select, button, textarea {
       font: inherit;
       border-radius: 10px;
       border: 1px solid var(--line);
@@ -54,7 +54,9 @@
       background: #fff;
       color: var(--ink);
     }
-    input { width: 100%; }
+    input, textarea { width: 100%; }
+    textarea { min-height: 84px; resize: vertical; display: block; }
+    .stack { display: flex; flex-direction: column; gap: 8px; }
     button {
       cursor: pointer;
       background: var(--accent);
@@ -155,6 +157,7 @@
         <button type="button" data-tab="entitlements">会员</button>
         <button type="button" data-tab="orders">订单</button>
         <button type="button" data-tab="tables">表数据</button>
+        <button type="button" data-tab="prompts">配图提示词</button>
       </nav>
       <div class="toolbar">
         <div class="sub" id="updated">尚未加载</div>
@@ -172,6 +175,7 @@
       <section id="panel-entitlements" class="card hidden"></section>
       <section id="panel-orders" class="card hidden"></section>
       <section id="panel-tables" class="card hidden"></section>
+      <section id="panel-prompts" class="card hidden"></section>
     </section>
   </main>
   <script>
@@ -298,7 +302,7 @@
     async function loadTab() {
       const err = $('appErr')
       show(err, false)
-      const panels = ['overview', 'users', 'sessions', 'entitlements', 'orders', 'tables']
+      const panels = ['overview', 'users', 'sessions', 'entitlements', 'orders', 'tables', 'prompts']
       for (const name of panels) show($('panel-' + name), name === state.tab)
       try {
         if (state.tab === 'overview') await loadOverview()
@@ -306,6 +310,7 @@
         else if (state.tab === 'sessions') await loadSessions()
         else if (state.tab === 'entitlements') await loadEntitlements()
         else if (state.tab === 'orders') await loadOrders()
+        else if (state.tab === 'prompts') await loadPrompts()
         else await loadTables()
         setUpdated()
       } catch (ex) {
@@ -412,6 +417,49 @@
         ]),
       )
       bindPager($('panel-orders'), data.total)
+    }
+
+    async function loadPrompts() {
+      const cfg = await api('/api/family/image-prompt-config')
+      const field = (id, label, value, hint) => `<div>
+        <label for="${id}">${label}</label>
+        ${hint ? `<p class="note">${hint}</p>` : ''}
+        <textarea id="${id}">${escapeHtml(value || '')}</textarea>
+      </div>`
+      $('panel-prompts').innerHTML = `
+        <p class="note">改完即对之后的配图生效，不用发 App。场景、主词、干扰模板都要包含 <code>{subject}</code>。干扰模板里的 <code>{targetWord}</code> 是主词；留空时会去掉那一句。</p>
+        <p class="note">版本 ${escapeHtml(cfg.version)}${cfg.updatedAt ? ' · 更新于 ' + escapeHtml(fmtTime(cfg.updatedAt)) : ' · 尚未保存，当前是内置默认'}</p>
+        <form id="promptForm" class="stack">
+          ${field('ipcSafety', '安全与风格前缀', cfg.safetyPrefix, '')}
+          ${field('ipcScene', '场景模板', cfg.sceneTemplate, '竖版游戏背景，不要写正方形。')}
+          ${field('ipcItem', '主词模板', cfg.itemTemplate, '一张闪卡，只画这一个主体。')}
+          ${field('ipcDistractor', '干扰图模板', cfg.distractorTemplate, '和主词相同，并避开 {targetWord}。')}
+          ${field('ipcNegative', '通义负向词', cfg.negativePrompt, '默认不要写兔子，以免和绘本风格冲突。')}
+          <div><button type="submit">保存</button></div>
+        </form>
+        <p class="note" id="promptMsg"></p>`
+      $('promptForm').addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const msg = $('promptMsg')
+        msg.textContent = '保存中…'
+        try {
+          const data = await api('/api/admin/family/image-prompt-config', {
+            method: 'PUT',
+            body: {
+              safetyPrefix: $('ipcSafety').value,
+              sceneTemplate: $('ipcScene').value,
+              itemTemplate: $('ipcItem').value,
+              distractorTemplate: $('ipcDistractor').value,
+              negativePrompt: $('ipcNegative').value,
+            },
+          })
+          await loadPrompts()
+          const saved = $('promptMsg')
+          if (saved) saved.textContent = '已保存，版本 ' + data.version
+        } catch (ex) {
+          msg.textContent = ex.message
+        }
+      })
     }
 
     async function loadTables() {
