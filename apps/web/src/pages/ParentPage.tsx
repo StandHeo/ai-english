@@ -39,6 +39,7 @@ import {
   fetchSmsCaptcha,
   formatFen,
   logoutParent,
+  PLUS_ADMIN_WECHAT_HINT,
   sendParentEmail,
   verifyParentEmail,
   type BillingPlans,
@@ -79,9 +80,17 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [accountBusy, setAccountBusy] = useState(false)
   const [sendWait, setSendWait] = useState(0)
   const [apiHint, setApiHint] = useState('')
+  const [plusDetailsOpen, setPlusDetailsOpen] = useState(false)
   const [accountManageOpen, setAccountManageOpen] = useState(false)
   const codeInputRef = useRef<HTMLInputElement>(null)
   const plusActive = Boolean(me?.plus)
+  const planList = plans?.plans || [
+    { id: 'month' as const, priceFen: 1800, days: 30 },
+    { id: 'year' as const, priceFen: 14800, days: 365 },
+  ]
+  const monthPlan = planList.find((p) => p.id === 'month')
+  const yearPlan = planList.find((p) => p.id === 'year')
+  const manualPay = plans?.provider !== 'wechat'
 
   useEffect(() => {
     listPackIds()
@@ -283,75 +292,73 @@ export function ParentPage({ progress, onProgress }: Props) {
 
       <section className="parent-plus">
         <h2>账号与 Plus</h2>
-        <div className="plus-benefits">
-          <p>免费：官方主题包都能玩；做好的日记关卡，日历里接着玩。</p>
-          <p>Plus：语音或文字记下今天，生成新的英语关卡，还有更好的模型配置向导。</p>
-          <p>模型费另算，用自己的 Key。</p>
-        </div>
-        {me ? (
-          <>
-            <div className="plus-status">
-              <p>
-                {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
-                {me.expiresAt ? ` · ${me.expiresAt.slice(0, 10)} 到期` : ''}
+        <div className="plus-status-bar">
+          {me ? (
+            <>
+              <p className="plus-account-line">{me.email || me.phone || '已登录'}</p>
+              <p className={`plus-badge ${plusActive ? 'on' : 'off'}`}>
+                {plusActive
+                  ? `Plus 有效${me.expiresAt ? ` · ${me.expiresAt.slice(0, 10)} 到期` : ''}`
+                  : '尚未开通 Plus'}
               </p>
-              <div className="plus-account-manage">
-                <button
-                  type="button"
-                  className="plus-details-toggle"
-                  aria-expanded={accountManageOpen}
-                  onClick={() => setAccountManageOpen((v) => !v)}
-                >
-                  {accountManageOpen ? '▾' : '▸'} 账户管理
-                </button>
-                {accountManageOpen && (
-                  <div className="plus-account-manage-body">
-                    <button
-                      type="button"
-                      className="plus-account-link"
-                      onClick={() => void onLogout()}
-                    >
-                      退出登录
-                    </button>
-                    <button
-                      type="button"
-                      className="plus-account-link danger"
-                      onClick={() => void onDeleteAccount()}
-                    >
-                      注销账号
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="plus-plans">
-              {(plans?.plans || [
-                { id: 'month' as const, priceFen: 1800, days: 30 },
-                { id: 'year' as const, priceFen: 14800, days: 365 },
-              ]).map((p) => (
-                <div key={p.id} className="plus-plan-card">
-                  <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
-                  <span>
-                    {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
-                  </span>
-                  {plans?.provider === 'wechat' ? (
+            </>
+          ) : (
+            <p className="plus-badge off">未登录 · 生成新关需要 Plus</p>
+          )}
+          {accountMsg ? <p className={`plus-feedback ${accountTone}`}>{accountMsg}</p> : null}
+        </div>
+
+        {me ? (
+          <div className="plus-account-actions">
+            {!plusActive && manualPay && (
+              <p className="plus-activate-hint">开通请加{PLUS_ADMIN_WECHAT_HINT}</p>
+            )}
+            {!plusActive && !manualPay && (
+              <div className="plus-plans">
+                {planList.map((p) => (
+                  <div key={p.id} className="plus-plan-card">
+                    <strong>{p.id === 'year' ? '包年' : '包月'}</strong>
+                    <span>
+                      {formatFen(p.priceFen)} / {p.id === 'year' ? '年' : '月'}
+                    </span>
                     <button type="button" disabled={accountBusy} onClick={() => void onBuy(p.id)}>
                       开通
                     </button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            {plans?.provider !== 'wechat' && (
-              <p className="muted plus-pay-note">在线支付尚未开放，开通请联系管理员。</p>
+                  </div>
+                ))}
+              </div>
             )}
-            {accountMsg ? <p className={`plus-feedback ${accountTone}`}>{accountMsg}</p> : null}
-          </>
+            <div className="plus-account-manage">
+              <button
+                type="button"
+                className="plus-details-toggle"
+                aria-expanded={accountManageOpen}
+                onClick={() => setAccountManageOpen((v) => !v)}
+              >
+                {accountManageOpen ? '▾' : '▸'} 账户管理
+              </button>
+              {accountManageOpen && (
+                <div className="plus-account-manage-body">
+                  <button
+                    type="button"
+                    className="plus-account-link"
+                    onClick={() => void onLogout()}
+                  >
+                    退出登录
+                  </button>
+                  <button
+                    type="button"
+                    className="plus-account-link danger"
+                    onClick={() => void onDeleteAccount()}
+                  >
+                    注销账号
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="plus-login">
-            <p className="muted plus-lead">
-              语音或文字记今天，就能生成新关卡。开通请先登录，在线支付稍后开放。
-            </p>
             <label>
               邮箱
               <input
@@ -414,7 +421,6 @@ export function ParentPage({ progress, onProgress }: Props) {
             >
               登录
             </button>
-            {accountMsg ? <p className={`plus-feedback ${accountTone}`}>{accountMsg}</p> : null}
             {apiHint ? (
               <p className="plus-server">
                 当前连接的服务器 {apiHint}{' '}
@@ -437,6 +443,35 @@ export function ParentPage({ progress, onProgress }: Props) {
             ) : null}
           </div>
         )}
+
+        <div className="plus-details">
+          <button
+            type="button"
+            className="plus-details-toggle"
+            aria-expanded={plusDetailsOpen}
+            onClick={() => setPlusDetailsOpen((v) => !v)}
+          >
+            {plusDetailsOpen ? '▾' : '▸'} 权益说明与开通方式
+          </button>
+          {plusDetailsOpen && (
+            <div className="plus-details-body">
+              <p>免费：官方主题包都能玩；做好的日记关卡，日历里接着玩。</p>
+              <p>Plus：语音或文字记下今天，生成新的英语关卡，还有更好的模型配置向导。</p>
+              <p>模型费另算，用自己的 Key。</p>
+              {manualPay ? (
+                <p className="plus-pay-note">
+                  在线支付尚未开放。开通请加{PLUS_ADMIN_WECHAT_HINT}。
+                </p>
+              ) : null}
+              <p className="plus-price-ref">
+                参考价：
+                {monthPlan ? `包月 ${formatFen(monthPlan.priceFen)}` : '包月 ¥18'}
+                {' · '}
+                {yearPlan ? `包年 ${formatFen(yearPlan.priceFen)}` : '包年 ¥148'}
+              </p>
+            </div>
+          )}
+        </div>
       </section>
 
       <div className="parent-card-grid">

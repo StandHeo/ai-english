@@ -72,8 +72,8 @@ Rules:
 
 export function clampPackLevelCount(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
-  if (!Number.isFinite(v)) return 4
-  return Math.min(5, Math.max(3, Math.floor(v)))
+  if (!Number.isFinite(v)) return 6
+  return Math.min(9, Math.max(5, Math.floor(v)))
 }
 
 function extractJson(text: string): unknown {
@@ -109,7 +109,7 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
   if (Array.isArray(parsed.levels)) rawLevels = parsed.levels
   else if (parsed.level) rawLevels = [{ level: parsed.level }]
 
-  if (rawLevels.length < 3) {
+  if (rawLevels.length < 5) {
     throw new Error(`pack_levels_insufficient:${rawLevels.length}:${want}`)
   }
 
@@ -161,7 +161,7 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
     levels.push(level)
   }
 
-  if (levels.length < 3) {
+  if (levels.length < 5) {
     throw new Error(`pack_levels_insufficient:${levels.length}:${want}`)
   }
 
@@ -176,7 +176,8 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
 
 function mockPack(story: string, date: string, levelCount: number): GeneratedFamilyPackPayload {
   const n = clampPackLevelCount(levelCount)
-  const words = ['park', 'slide', 'ball', 'bus', 'home'].slice(0, n)
+  const pool = ['park', 'slide', 'ball', 'bus', 'home', 'duck', 'tree', 'cake', 'friend']
+  const words = pool.slice(0, n)
   const idDate = date.replace(/-/g, '')
   const levels = words.map((word) => ({
     id: `family-${idDate}-${word}`,
@@ -286,7 +287,7 @@ export async function generateFamilyPack(input: {
   const story = input.story.trim()
   if (!story) throw new Error('story_required')
   const date = input.date || new Date().toISOString().slice(0, 10)
-  const levelCount = clampPackLevelCount(input.levelCount ?? input.minKeywords ?? 4)
+  const levelCount = clampPackLevelCount(input.levelCount ?? input.minKeywords ?? 6)
   const llm = resolveLlm(input.llm)
 
   if (llm === 'mock') {

@@ -72,13 +72,13 @@ const sampleLevel = (id: string, word: string): LevelScript => ({
   reward: { sticker: `sticker-${word}`, stickerImage: 'placeholder', stars: 1 },
 })
 
-test('getPackLevelCount clamps settings to 3-5', () => {
-  setMinLevelKeywords(9)
-  assert.equal(getPackLevelCount(), 5)
+test('getPackLevelCount clamps settings to 5-9', () => {
+  setMinLevelKeywords(12)
+  assert.equal(getPackLevelCount(), 9)
   setMinLevelKeywords(3)
-  assert.equal(getPackLevelCount(), 3)
-  setMinLevelKeywords(4)
-  assert.equal(getPackLevelCount(), 4)
+  assert.equal(getPackLevelCount(), 5)
+  setMinLevelKeywords(7)
+  assert.equal(getPackLevelCount(), 7)
 })
 
 test('saveGeneratedPack writes miniLevels and clears legacy level', () => {

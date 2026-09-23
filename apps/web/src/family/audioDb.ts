@@ -63,6 +63,20 @@ export async function deleteAudioClip(id: string): Promise<void> {
   }
 }
 
+export async function clearAllAudioClips(): Promise<void> {
+  const db = await openDb()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error || new Error('clearAllAudioClips failed'))
+      tx.objectStore(STORE).clear()
+    })
+  } finally {
+    db.close()
+  }
+}
+
 export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl)
   return res.blob()

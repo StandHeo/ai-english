@@ -1,8 +1,8 @@
 export type FamilyLlmProvider = 'deepseek' | 'agnes'
 export type FamilyImageCloudProvider = 'tongyi' | 'agnes'
 
-export const DEFAULT_FAMILY_LLM: FamilyLlmProvider = 'deepseek'
-export const DEFAULT_IMAGE_CLOUD: FamilyImageCloudProvider = 'tongyi'
+export const DEFAULT_FAMILY_LLM: FamilyLlmProvider = 'agnes'
+export const DEFAULT_IMAGE_CLOUD: FamilyImageCloudProvider = 'agnes'
 
 export const AGNES_CHAT_URL = 'https://apihub.agnes-ai.com/v1/chat/completions'
 export const AGNES_IMAGE_URL = 'https://apihub.agnes-ai.com/v1/images/generations'

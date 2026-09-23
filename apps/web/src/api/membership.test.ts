@@ -38,22 +38,33 @@ describe('parent plus copy', () => {
     assert.match(parentSrc, /语音或文字记下今天/)
     assert.match(parentSrc, /模型配置向导/)
     assert.match(parentSrc, /模型费另算，用自己的 Key/)
-    assert.match(parentSrc, /语音或文字记今天，就能生成新关卡/)
     assert.match(parentSrc, /Plus：语音或文字生成新关/)
     assert.match(parentSrc, /发送验证码/)
     assert.match(parentSrc, /注销账号/)
     assert.match(parentSrc, /验证码已发送到邮箱/)
+    assert.match(parentSrc, /权益说明与开通方式/)
     assert.match(parentSrc, /账户管理/)
+    assert.match(parentSrc, /plusDetailsOpen/)
     assert.match(parentSrc, /accountManageOpen/)
+    assert.match(parentSrc, /未登录 · 生成新关需要 Plus/)
     assert.equal(/不含第三方模型调用费|腾讯云 SES|个人实名|SMTP/.test(parentSrc), false)
   })
 
   it('studio lock banner explains voice or text diary without prices', () => {
     const studioSrc = readFileSync(join(pages, 'FamilyStudioPage.tsx'), 'utf8')
-    assert.match(studioSrc, /语音或文字记下今天/)
+    assert.match(studioSrc, /生成新关需要 Plus/)
     assert.match(studioSrc, /已有关卡可玩/)
     assert.match(studioSrc, /去家长中心/)
+    assert.match(studioSrc, /PLUS_ADMIN_WECHAT_HINT/)
+    assert.match(studioSrc, /生成新关卡需要开通 Plus/)
     assert.equal(/¥18|¥148|包月|包年/.test(studioSrc), false)
+  })
+
+  it('shows WeChat contact for manual Plus activation', () => {
+    assert.match(membershipSrc, /PLUS_ADMIN_WECHAT = '17775566806'/)
+    assert.match(membershipSrc, /备注土豆豆/)
+    assert.match(parentSrc, /PLUS_ADMIN_WECHAT_HINT/)
+    assert.match(parentSrc, /开通请加\{PLUS_ADMIN_WECHAT_HINT\}/)
   })
 
   it('keeps suggested starter prices as fen', () => {

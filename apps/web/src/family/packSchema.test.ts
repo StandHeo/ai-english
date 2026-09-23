@@ -31,6 +31,8 @@ const oneLevel = (word: string) => ({
       {
         type: 'find',
         npc_say: `Find ${word}`,
+        hint_say: word,
+        success_say: 'Yes!',
         options: [
           { id: word, image: 'placeholder', correct: true },
           { id: 'cake', image: 'placeholder', correct: false },
@@ -41,21 +43,24 @@ const oneLevel = (word: string) => ({
   },
 })
 
-test('clampPackLevelCount stays within 3-5', () => {
-  assert.equal(clampPackLevelCount(2), 3)
-  assert.equal(clampPackLevelCount(9), 5)
-  assert.equal(clampPackLevelCount(4), 4)
+const fiveWords = ['park', 'slide', 'ball', 'duck', 'tree'] as const
+
+test('clampPackLevelCount stays within 5-9', () => {
+  assert.equal(clampPackLevelCount(2), 5)
+  assert.equal(clampPackLevelCount(12), 9)
+  assert.equal(clampPackLevelCount(7), 7)
+  assert.equal(clampPackLevelCount(4), 5)
 })
 
-test('parseValidatedFamilyPack accepts 3 levels', () => {
+test('parseValidatedFamilyPack accepts 5 levels', () => {
   const content = JSON.stringify({
     pack: { title: 'Fun Day' },
-    levels: [oneLevel('park'), oneLevel('slide'), oneLevel('ball')],
+    levels: fiveWords.map((w) => oneLevel(w)),
   })
-  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 3)
+  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 5)
   assert.equal(parsed.title, 'Fun Day')
-  assert.equal(parsed.levels.length, 3)
-  assert.deepEqual(parsed.mainWords, ['park', 'slide', 'ball'])
+  assert.equal(parsed.levels.length, 5)
+  assert.deepEqual(parsed.mainWords, [...fiveWords])
 })
 
 test('parseValidatedFamilyPack guarantees an intro show beat first', () => {
@@ -98,25 +103,25 @@ test('parseValidatedFamilyPack guarantees an intro show beat first', () => {
   })
   const content = JSON.stringify({
     pack: { title: 'Fun' },
-    levels: [findFirst('park'), findFirst('slide'), findFirst('ball')],
+    levels: fiveWords.map((w) => findFirst(w)),
   })
-  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 3)
-  assert.equal(parsed.levels.length, 3)
+  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 5)
+  assert.equal(parsed.levels.length, 5)
   for (const { level } of parsed.levels) {
     const beats = level.beats as Record<string, unknown>[]
     assert.equal(beats[0]?.type, 'introduce')
     assert.equal(beats[0]?.show, 'placeholder')
-    // 拍数上限 6：插入 intro 后不能超
     assert.ok(beats.length <= 6)
   }
 })
 
-test('parseValidatedFamilyPack rejects fewer than 3 levels', () => {  const content = JSON.stringify({
+test('parseValidatedFamilyPack rejects fewer than 5 levels', () => {
+  const content = JSON.stringify({
     pack: { title: 'X' },
-    levels: [oneLevel('park'), oneLevel('slide')],
+    levels: [oneLevel('park'), oneLevel('slide'), oneLevel('ball')],
   })
   assert.throws(
-    () => parseValidatedFamilyPack(content, '2026-09-02', 4),
+    () => parseValidatedFamilyPack(content, '2026-09-02', 6),
     /pack_levels_insufficient/,
   )
 })
@@ -125,13 +130,12 @@ test('parseValidatedFamilyPack rejects invalid level shape', () => {
   const bad = {
     pack: { title: 'X' },
     levels: [
-      oneLevel('park'),
-      oneLevel('slide'),
+      ...fiveWords.slice(0, 4).map((w) => oneLevel(w)),
       { level: { id: 'x', approved: true, title: 't', target_words: ['a'] } },
     ],
   }
   assert.throws(
-    () => parseValidatedFamilyPack(JSON.stringify(bad), '2026-09-02', 3),
+    () => parseValidatedFamilyPack(JSON.stringify(bad), '2026-09-02', 5),
     /invalid_level/,
   )
 })
@@ -176,10 +180,10 @@ test('parseValidatedFamilyPack repairs Agnes-style question/correct_id beats', (
   })
   const content = JSON.stringify({
     pack: { title: 'Fun' },
-    levels: [agnesStyle('park'), agnesStyle('slide'), agnesStyle('ball')],
+    levels: fiveWords.map((w) => agnesStyle(w)),
   })
-  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 3)
-  assert.equal(parsed.levels.length, 3)
+  const parsed = parseValidatedFamilyPack(content, '2026-09-02', 5)
+  assert.equal(parsed.levels.length, 5)
   const ask = (parsed.levels[0]!.level.beats as Record<string, unknown>[])[1]!
   assert.equal(ask.npc_say, 'Say park?')
   assert.deepEqual(ask.expect, ['park'])

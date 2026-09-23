@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getApiBase,
-  getStoredApiBase,
   isNativeApp,
   PRODUCTION_API_BASE,
-  setStoredApiBase,
   switchToOfficialApiBase,
 } from '../api/base'
 import {
+  DEFAULT_FAMILY_LLM,
+  DEFAULT_IMAGE_CLOUD,
   familyLlmLabel,
   imageCloudLabel,
   type FamilyImageCloudProvider,
@@ -33,6 +33,13 @@ import {
   setMinLevelKeywords,
   setTongyiKey,
 } from '../family/store'
+import {
+  buildFamilyBackupZip,
+  peekFamilyBackup,
+  readFileAsUint8Array,
+  restoreFamilyBackup,
+  shareOrDownloadBackup,
+} from '../family/backup'
 import { prepareDiaryWhisperModel, downloadDiaryWhisperModel, listDiaryWhisperModels } from '../voice/diaryAsr'
 import {
   DIARY_WHISPER_MODELS,
@@ -44,25 +51,29 @@ import {
 import './family-studio.css'
 
 const LLM_OPTIONS: { id: FamilyLlmProvider; hint: string }[] = [
-  { id: 'deepseek', hint: '现有路径，JSON 较稳' },
   { id: 'agnes', hint: 'agnes-2.5-flash，试用对比；免费档约 20 次/分钟' },
+  { id: 'deepseek', hint: '现有路径，JSON 较稳' },
 ]
 
 const IMAGE_CLOUD_OPTIONS: { id: FamilyImageCloudProvider; hint: string }[] = [
-  { id: 'tongyi', hint: '万相，按张计费' },
   { id: 'agnes', hint: 'agnes-image-2.1-flash；免费档约 20 次/分钟，多图会排队' },
+  { id: 'tongyi', hint: '万相，按张计费' },
 ]
+
+function apiKeyGuideUrl(provider: FamilyLlmProvider): string {
+  const base = (getApiBase() || PRODUCTION_API_BASE).replace(/\/$/, '')
+  return `${base}/agnes-api-key.html#${provider}`
+}
 
 export function FamilyStudioSettingsPage() {
   const navigate = useNavigate()
   const [apiKey, setApiKey] = useState('')
   const [tongyiKey, setTongyiKeyInput] = useState('')
   const [agnesKey, setAgnesKeyInput] = useState('')
-  const [llm, setLlm] = useState<FamilyLlmProvider>('deepseek')
-  const [imageCloud, setImageCloud] = useState<FamilyImageCloudProvider>('tongyi')
+  const [llm, setLlm] = useState<FamilyLlmProvider>(DEFAULT_FAMILY_LLM)
+  const [imageCloud, setImageCloud] = useState<FamilyImageCloudProvider>(DEFAULT_IMAGE_CLOUD)
   const [autoTongyi, setAutoTongyi] = useState(false)
-  const [minKeywords, setMinKeywords] = useState(9)
-  const [apiBaseInput, setApiBaseInput] = useState(() => getStoredApiBase())
+  const [minKeywordsText, setMinKeywordsText] = useState('6')
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
     getDiaryWhisperModelId(),
   )
@@ -71,16 +82,19 @@ export function FamilyStudioSettingsPage() {
   const [downloadPct, setDownloadPct] = useState<number | null>(null)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const [includeKeysInBackup, setIncludeKeysInBackup] = useState(false)
+  const [backupPct, setBackupPct] = useState<number | null>(null)
+  const backupFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    switchToOfficialApiBase()
     setApiKey(getDeepseekKey())
     setTongyiKeyInput(getTongyiKey())
     setAgnesKeyInput(getAgnesKey())
     setLlm(getLlmProvider())
     setImageCloud(getImageCloudProvider())
     setAutoTongyi(getAutoTongyiImages())
-    setMinKeywords(getMinLevelKeywords())
-    setApiBaseInput(getStoredApiBase())
+    setMinKeywordsText(String(getMinLevelKeywords()))
     setWhisperModel(getDiaryWhisperModelId())
     if (!isNativeApp()) return
     void listDiaryWhisperModels()
@@ -111,10 +125,11 @@ export function FamilyStudioSettingsPage() {
   }
 
   function saveMinKeywords() {
-    setMinLevelKeywords(minKeywords)
+    const parsed = Number(minKeywordsText.trim())
+    setMinLevelKeywords(Number.isFinite(parsed) ? parsed : 6)
     const n = getMinLevelKeywords()
-    setMinKeywords(n)
-    setStatus(`已保存：至少 ${n} 个关键词，配图最多 ${n} 张（含 1 张场景背景）`)
+    setMinKeywordsText(String(n))
+    setStatus(`已保存：今日约生成 ${n} 个主词（范围 5–9）`)
   }
 
   function saveImageSettings() {
@@ -130,21 +145,102 @@ export function FamilyStudioSettingsPage() {
     )
   }
 
-  function saveApiBase() {
-    const next = apiBaseInput.trim()
-    if (!next) {
-      useOfficialApi()
-      return
-    }
-    setStoredApiBase(next)
-    setApiBaseInput(getStoredApiBase())
-    setStatus(`已保存 API 地址：${getStoredApiBase()}`)
+  function openApiKeyGuide(provider: FamilyLlmProvider) {
+    window.open(apiKeyGuideUrl(provider), '_blank', 'noopener,noreferrer')
   }
 
-  function useOfficialApi() {
-    switchToOfficialApiBase()
-    setApiBaseInput('')
-    setStatus(`已切换到官方服务器 ${PRODUCTION_API_BASE}`)
+  function clearCurrentLlmKey() {
+    if (llm === 'agnes') {
+      clearAgnesKey()
+      setAgnesKeyInput('')
+      setStatus('已清除 Agnes Key')
+      return
+    }
+    clearDeepseekKey()
+    setApiKey('')
+    setStatus('已清除 DeepSeek Key')
+  }
+
+  async function onExportBackup() {
+    if (busy) return
+    setBusy(true)
+    setBackupPct(0)
+    setStatus('正在打包完整备份（含录音与配图）…')
+    try {
+      const { blob, filename, manifest } = await buildFamilyBackupZip({
+        includeKeys: includeKeysInBackup,
+        onProgress: (p) => {
+          const pct =
+            p.total > 0 ? Math.max(0, Math.min(100, Math.round((p.current / p.total) * 100))) : 0
+          setBackupPct(pct)
+          setStatus(`正在打包备份… ${pct}%`)
+        },
+      })
+      const mode = await shareOrDownloadBackup(blob, filename)
+      const miss = manifest.missing.length
+      setStatus(
+        `${mode === 'share' ? '请在系统分享面板中选择「保存到文件」或网盘/微信' : '已开始下载'}：${filename}` +
+          `（${manifest.counts.days} 天，录音 ${manifest.counts.audio}，配图 ${manifest.counts.images}` +
+          (miss ? `，缺媒体 ${miss}` : '') +
+          '）。',
+      )
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : ''
+      const msg = err instanceof Error ? err.message : String(err)
+      if (name === 'AbortError' || /cancel|取消|dismiss/i.test(msg)) {
+        setStatus('已取消分享')
+      } else {
+        setStatus(err instanceof Error ? err.message : '导出失败')
+      }
+    } finally {
+      setBusy(false)
+      setBackupPct(null)
+    }
+  }
+
+  async function onRestoreBackupFile(file: File | null) {
+    if (!file || busy) return
+    setBusy(true)
+    setBackupPct(0)
+    setStatus('正在读取备份…')
+    try {
+      const bytes = await readFileAsUint8Array(file)
+      const peek = await peekFamilyBackup(bytes)
+      const ok = window.confirm(
+        `将用备份覆盖本机全部家庭日记数据（不可撤销）。\n\n` +
+          `导出时间：${peek.manifest.exportedAt || '未知'}\n` +
+          `天数：${peek.dayCount}\n` +
+          `录音约 ${peek.manifest.counts.audio}，配图约 ${peek.manifest.counts.images}\n` +
+          `含密钥：${peek.manifest.includeKeys ? '是' : '否'}\n\n` +
+          `确认恢复？`,
+      )
+      if (!ok) {
+        setStatus('已取消恢复')
+        return
+      }
+      const result = await restoreFamilyBackup(bytes, {
+        onProgress: (p) => {
+          const pct =
+            p.total > 0 ? Math.max(0, Math.min(100, Math.round((p.current / p.total) * 100))) : 0
+          setBackupPct(pct)
+          setStatus(`正在恢复备份… ${pct}%`)
+        },
+      })
+      setApiKey(getDeepseekKey())
+      setTongyiKeyInput(getTongyiKey())
+      setAgnesKeyInput(getAgnesKey())
+      setLlm(getLlmProvider())
+      setImageCloud(getImageCloudProvider())
+      setAutoTongyi(getAutoTongyiImages())
+      setMinKeywordsText(String(getMinLevelKeywords()))
+      setStatus(`已恢复：${result.dayCount} 天日记与媒体已写入本机`)
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : '恢复失败')
+    } finally {
+      setBusy(false)
+      setBackupPct(null)
+      if (backupFileRef.current) backupFileRef.current.value = ''
+    }
   }
 
   async function onWhisperModelChange(next: DiaryWhisperModelId) {
@@ -196,129 +292,85 @@ export function FamilyStudioSettingsPage() {
       </header>
 
       <section>
-        {isNativeApp() && (
-          <>
-            <h2>服务器地址</h2>
-            <p className="muted">
-              正式 App 默认连 {PRODUCTION_API_BASE}（家长登录 / Plus）。只有同一 Wi‑Fi
-              调试电脑 API 时才改成局域网，例如 http://192.168.x.x:8787。
-            </p>
-            <p className="muted">当前：{getApiBase() || '本机开发代理'}</p>
-            <input
-              type="url"
-              value={apiBaseInput}
-              onChange={(e) => setApiBaseInput(e.target.value)}
-              placeholder="留空即官方服务器"
-              autoComplete="off"
-            />
-            <div className="row api-base-actions">
-              <button type="button" onClick={saveApiBase}>
-                保存地址
-              </button>
-              <button type="button" className="ghost" onClick={useOfficialApi}>
-                使用官方服务器
-              </button>
-            </div>
-          </>
-        )}
-
         <h2>关卡生成模型</h2>
         <p className="muted">同一段日记可切换后重新生成，对比短词和能不能过校验。</p>
         <div className="model-switch" role="radiogroup" aria-label="关卡生成模型">
           {LLM_OPTIONS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={llm === m.id}
-              className={`model-option ${llm === m.id ? 'active' : ''}`}
-              onClick={() => {
-                setLlm(m.id)
-                setLlmProvider(m.id)
-              }}
-            >
-              <strong>{familyLlmLabel(m.id)}</strong>
-              <span>{m.hint}</span>
-            </button>
+            <div key={m.id} className="model-option-row">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={llm === m.id}
+                className={`model-option ${llm === m.id ? 'active' : ''}`}
+                onClick={() => {
+                  setLlm(m.id)
+                  setLlmProvider(m.id)
+                }}
+              >
+                <strong>{familyLlmLabel(m.id)}</strong>
+                <span>{m.hint}</span>
+              </button>
+              <button
+                type="button"
+                className="ghost model-guide-link"
+                onClick={() => openApiKeyGuide(m.id)}
+              >
+                获取指引
+              </button>
+            </div>
           ))}
         </div>
 
-        <h2>DeepSeek API Key</h2>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="sk-…（选 DeepSeek 时需要）"
-          autoComplete="off"
-        />
+        <h2>API Key（{familyLlmLabel(llm)}）</h2>
+        <p className="muted">
+          {llm === 'agnes'
+            ? '关卡选 Agnes、或配图选 Agnes 图时使用同一把 Key。'
+            : '选 DeepSeek 生成关卡时需要。'}
+        </p>
+        {llm === 'agnes' ? (
+          <input
+            type="password"
+            value={agnesKey}
+            onChange={(e) => setAgnesKeyInput(e.target.value)}
+            placeholder="Agnes Key"
+            autoComplete="off"
+          />
+        ) : (
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk-…（选 DeepSeek 时需要）"
+            autoComplete="off"
+          />
+        )}
         <div className="row">
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              clearDeepseekKey()
-              setApiKey('')
-              setStatus('已清除 DeepSeek Key')
-            }}
-          >
-            清除 DeepSeek Key
-          </button>
-        </div>
-
-        <h2>Agnes API Key</h2>
-        <p className="muted">关卡选 Agnes、或配图选 Agnes 图时使用同一把 Key。</p>
-        <input
-          type="password"
-          value={agnesKey}
-          onChange={(e) => setAgnesKeyInput(e.target.value)}
-          placeholder="Agnes Key"
-          autoComplete="off"
-        />
-        <div className="row">
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              window.open(
-                'http://118.24.164.40/agnes-api-key.html',
-                '_blank',
-                'noopener,noreferrer',
-              )
-            }}
-          >
-            如何获取 API Key（Agnes / DeepSeek）
-          </button>
           <button type="button" onClick={saveProviders}>
             保存模型与 Key
           </button>
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              clearAgnesKey()
-              setAgnesKeyInput('')
-              setStatus('已清除 Agnes Key')
-            }}
-          >
-            清除 Agnes Key
+          <button type="button" className="ghost" onClick={clearCurrentLlmKey}>
+            清除 {llm === 'agnes' ? 'Agnes' : 'DeepSeek'} Key
           </button>
         </div>
 
-        <h2>今日迷你关卡数（3–5）</h2>
+        <h2>今日主词数量（5–9）</h2>
         <p className="muted">
-          生成「一天一个迷你 pack」时的关数目标；实际会夹紧到 3–5 关。每关约一个英文主词 + 专属场景背景（像水果关）。
-          设置里仍可填 3–12，大于 5 时按 5 关生成。
+          控制「一天一个迷你 pack」里要学的主要英文单词个数。例如今天主题是水果，填 6
+          就会大约生成 apple、banana 等 6 个主词——每个主词一关，并带专属场景。可填 5–9，超出范围会自动夹紧。
         </p>
         <input
-          type="number"
-          min={3}
-          max={12}
-          value={minKeywords}
-          onChange={(e) => setMinKeywords(Number(e.target.value) || 4)}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          value={minKeywordsText}
+          onChange={(e) => setMinKeywordsText(e.target.value.replace(/[^\d]/g, ''))}
+          placeholder="例如 6"
+          aria-label="今日主词数量"
         />
         <div className="row">
           <button type="button" onClick={saveMinKeywords}>
-            保存今日关数
+            保存主词数量
           </button>
         </div>
 
@@ -353,29 +405,101 @@ export function FamilyStudioSettingsPage() {
             </button>
           ))}
         </div>
-        <input
-          type="password"
-          value={tongyiKey}
-          onChange={(e) => setTongyiKeyInput(e.target.value)}
-          placeholder="通义 / 百炼 API Key（选万相时）"
-          autoComplete="off"
-        />
+        {imageCloud === 'agnes' && llm === 'agnes' && (
+          <p className="muted">使用上方 Agnes API Key（关卡与配图共用）。</p>
+        )}
+        {imageCloud === 'agnes' && llm !== 'agnes' && (
+          <>
+            <p className="muted">关卡与配图共用同一把 Agnes Key。</p>
+            <input
+              type="password"
+              value={agnesKey}
+              onChange={(e) => setAgnesKeyInput(e.target.value)}
+              placeholder="Agnes Key"
+              autoComplete="off"
+            />
+          </>
+        )}
+        {imageCloud === 'tongyi' && (
+          <input
+            type="password"
+            value={tongyiKey}
+            onChange={(e) => setTongyiKeyInput(e.target.value)}
+            placeholder="通义 / 百炼 API Key（选万相时）"
+            autoComplete="off"
+          />
+        )}
         <div className="row">
           <button type="button" onClick={saveImageSettings}>
             保存配图设置
           </button>
+          {imageCloud === 'agnes' && llm !== 'agnes' && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                clearAgnesKey()
+                setAgnesKeyInput('')
+                setStatus('已清除 Agnes Key')
+              }}
+            >
+              清除 Agnes Key
+            </button>
+          )}
+          {imageCloud === 'tongyi' && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                clearTongyiKey()
+                setTongyiKeyInput('')
+                setStatus('已清除通义 Key')
+              }}
+            >
+              清除通义 Key
+            </button>
+          )}
+        </div>
+
+        <h2>数据备份</h2>
+        <p className="muted">
+          导出完整备份（日记、每日关卡、录音与配图）到文件，换机或重装后可恢复。默认不含 API
+          Key。大文件请用文件管理器或网盘保存；微信可能有大小限制。
+        </p>
+        <label className="toggle-row">
+          <input
+            type="checkbox"
+            checked={includeKeysInBackup}
+            disabled={busy}
+            onChange={(e) => setIncludeKeysInBackup(e.target.checked)}
+          />
+          <span>备份中包含 API Key（勿分享给他人）</span>
+        </label>
+        <div className="row">
+          <button type="button" disabled={busy} onClick={() => void onExportBackup()}>
+            导出完整备份
+          </button>
           <button
             type="button"
             className="ghost"
-            onClick={() => {
-              clearTongyiKey()
-              setTongyiKeyInput('')
-              setStatus('已清除通义 Key')
-            }}
+            disabled={busy}
+            onClick={() => backupFileRef.current?.click()}
           >
-            清除通义 Key
+            从备份恢复
           </button>
         </div>
+        <input
+          ref={backupFileRef}
+          type="file"
+          accept=".zip,application/zip"
+          hidden
+          onChange={(e) => void onRestoreBackupFile(e.target.files?.[0] ?? null)}
+        />
+        {backupPct != null && (
+          <p className="muted" role="status">
+            备份进度 {backupPct}%
+          </p>
+        )}
 
         <h2>语音转写模型</h2>
         <p className="muted">

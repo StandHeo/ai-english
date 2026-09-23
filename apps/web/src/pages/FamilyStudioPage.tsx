@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { LevelScript } from '../types'
 import type { FamilyDayRecord } from '../family/store'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
-import { fetchMe } from '../api/membership'
+import { fetchMe, PLUS_ADMIN_WECHAT_HINT } from '../api/membership'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
 import { refreshImagePromptConfig } from '../family/imagePromptConfig'
@@ -234,7 +234,10 @@ export function FamilyStudioPage() {
   }, [])
 
   function plusLockedToast() {
-    showToast('需要 Plus 才能用语音或文字生成新关。请到家长中心（模型费另算）')
+    const go = window.confirm(
+      `生成新关卡需要开通 Plus。\n\n在线支付尚未开放，请添加${PLUS_ADMIN_WECHAT_HINT}。\n\n是否前往家长中心查看开通说明？`,
+    )
+    if (go) navigate('/parent')
   }
 
   async function persistVoiceCapture(result: DiaryRecordCapture) {
@@ -688,14 +691,14 @@ export function FamilyStudioPage() {
         if (!res.ok) {
           if (data.error === 'pack_levels_insufficient') {
             clearJobNow()
-            showToast('迷你关卡包关数不足。请再追加几句今日故事，或把设置里「今日关数」调低后重试。')
+            showToast('迷你关卡包主词不足。请再追加几句今日故事，或把设置里「今日主词数量」调低后重试。')
             return
           }
           const err = String(data.error || res.error || res.status)
           clearJobNow()
           if (/timeout|deepseek_timeout|llm_timeout|Socket closed|SocketTimeout/i.test(err)) {
             showToast(
-              `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把「今日关数」调低。`,
+              `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把「今日主词数量」调低。`,
             )
             return
           }
@@ -737,7 +740,7 @@ export function FamilyStudioPage() {
       const msg = err instanceof Error ? err.message : String(err)
       clearJobNow()
       if (msg.startsWith('pack_levels_insufficient:')) {
-        showToast('迷你关卡包关数不足。请再追加几句今日故事后重试。')
+        showToast('迷你关卡包主词不足。请再追加几句今日故事后重试。')
         return
       }
       if (msg.startsWith('invalid_level')) {
@@ -746,7 +749,7 @@ export function FamilyStudioPage() {
       }
       if (/timeout|llm_timeout|Socket closed|SocketTimeout/i.test(msg)) {
         showToast(
-          `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把今日关数调低。`,
+          `生成超时：${familyLlmLabel(llm)} 在约 4 分钟内无响应。请确认外网后重试，或把今日主词数量调低。`,
         )
         return
       }
@@ -1114,7 +1117,7 @@ export function FamilyStudioPage() {
         {plusChecked && !plusActive && (
           <p className="plus-lock-banner">
             <span>
-              语音或文字记下今天，就能在这里生成新的英语关卡，需要 Plus。已有关卡可玩。模型费另算。
+              生成新关需要 Plus。已有关卡可玩。开通请加{PLUS_ADMIN_WECHAT_HINT}。模型费另算。
             </span>
             <button type="button" className="ghost" onClick={() => navigate('/parent')}>
               去家长中心

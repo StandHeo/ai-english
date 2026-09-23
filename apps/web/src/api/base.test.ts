@@ -53,7 +53,7 @@ describe('resolveApiBase', () => {
     assert.equal(isOfficialApiBase(PRODUCTION_API_BASE), true)
   })
 
-  it('keeps an explicit debug override (settings or VITE_API_BASE)', () => {
+  it('ignores stored overrides on native and production', () => {
     assert.equal(
       resolveApiBase({
         stored: 'http://192.168.2.104:8787',
@@ -61,42 +61,28 @@ describe('resolveApiBase', () => {
         native: true,
         prod: true,
       }),
-      'http://192.168.2.104:8787',
+      PRODUCTION_API_BASE,
     )
     assert.equal(
       resolveApiBase({
-        stored: '',
+        stored: 'https://staging.example.com',
         envBase: 'http://10.0.0.2:8787',
         native: true,
-        prod: true,
-      }),
-      'http://10.0.0.2:8787',
-    )
-  })
-
-  it('skips stale private IPs and falls back to production', () => {
-    assert.equal(
-      resolveApiBase({
-        stored: 'http://192.168.2.104:8787',
-        envBase: 'http://127.0.0.1:8787',
-        native: true,
-        prod: true,
-        skipPrivate: true,
+        prod: false,
       }),
       PRODUCTION_API_BASE,
     )
   })
 
-  it('does not skip a public custom override even when skipPrivate is set', () => {
+  it('allows VITE_API_BASE only in browser dev', () => {
     assert.equal(
       resolveApiBase({
-        stored: 'https://staging.example.com',
-        envBase: '',
-        native: true,
-        prod: true,
-        skipPrivate: true,
+        stored: '',
+        envBase: 'http://10.0.0.2:8787',
+        native: false,
+        prod: false,
       }),
-      'https://staging.example.com',
+      'http://10.0.0.2:8787',
     )
   })
 })

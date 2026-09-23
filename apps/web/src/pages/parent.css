@@ -90,6 +90,46 @@
   filter: grayscale(0.35) brightness(0.85);
 }
 
+.plus-status-bar {
+  margin: 0 0 12px;
+}
+
+.plus-account-line {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c241c;
+  word-break: break-all;
+}
+
+.plus-badge {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.plus-badge.on {
+  color: #2d6a4f;
+}
+
+.plus-badge.off {
+  color: #8a5a2b;
+}
+
+.plus-account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.plus-activate-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #4a3d32;
+}
+
 .plus-account-manage {
   margin-top: 2px;
 }
@@ -118,6 +158,12 @@
   color: #9a6a62 !important;
 }
 
+.plus-details {
+  margin-top: 12px;
+  border-top: 1px solid rgba(80, 60, 40, 0.1);
+  padding-top: 8px;
+}
+
 .plus-details-toggle {
   width: 100%;
   margin: 0 !important;
@@ -135,11 +181,29 @@
   filter: none;
 }
 
+.plus-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 4px;
+}
+
+.plus-details-body p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #4a3d32;
+}
+
+.plus-price-ref {
+  color: #7a6a58 !important;
+  font-size: 0.82rem !important;
+}
+
 .plus-plans {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 12px;
 }
 
 .plus-plan-card {
@@ -158,20 +222,6 @@
 .plus-plan-card span {
   font-size: 13px;
   color: #5a4a3a;
-}
-
-.plus-benefits {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0 0 12px;
-}
-
-.plus-benefits p {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: #4a3d32;
 }
 
 .plus-lead {
@@ -263,8 +313,11 @@
   font-size: 0.8rem;
 }
 
-.plus-status p {
-  margin: 4px 0 8px;
+.parent-plus .row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .parent-plus .row-actions button {
