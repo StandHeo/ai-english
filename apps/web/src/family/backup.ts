@@ -2,6 +2,9 @@
  * Full family diary backup: store.json + audio/ + images/ inside a zip.
  */
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
+import { Directory, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
+import { isNativeApp } from '../api/base'
 import { clearAllAudioClips, dataUrlToBlob, getAudioClip, putAudioClip } from './audioDb'
 import { clearAllImageBlobs, getImageBlob, putImageBlob } from './imageDb'
 import { loadFamilyStore, saveFamilyStore } from './store'
@@ -109,6 +112,17 @@ function u8ToBlob(u8: Uint8Array, type?: string): Blob {
   const copy = new Uint8Array(u8.byteLength)
   copy.set(u8)
   return type ? new Blob([copy], { type }) : new Blob([copy])
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  const chunk = 0x8000
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
 }
 
 function todayStamp(): string {
@@ -312,6 +326,28 @@ export async function restoreFamilyBackup(
 }
 
 export async function shareOrDownloadBackup(blob: Blob, filename: string): Promise<'share' | 'download'> {
+  if (isNativeApp()) {
+    const base64 = await blobToBase64(blob)
+    const path = `backups/${filename}`
+    await Filesystem.writeFile({
+      path,
+      data: base64,
+      directory: Directory.Cache,
+      recursive: true,
+    })
+    const { uri } = await Filesystem.getUri({
+      path,
+      directory: Directory.Cache,
+    })
+    await Share.share({
+      title: '家庭日记备份',
+      text: '土豆豆家庭日记完整备份（含录音）',
+      files: [uri],
+      dialogTitle: '保存或发送备份',
+    })
+    return 'share'
+  }
+
   const file = new File([blob], filename, { type: 'application/zip' })
   const nav = navigator as Navigator & {
     canShare?: (data: ShareData) => boolean

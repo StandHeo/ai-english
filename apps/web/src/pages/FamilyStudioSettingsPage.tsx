@@ -198,14 +198,15 @@ export function FamilyStudioSettingsPage() {
       const mode = await shareOrDownloadBackup(blob, filename)
       const miss = manifest.missing.length
       setStatus(
-        `${mode === 'share' ? '已打开分享' : '已开始下载'}：${filename}` +
+        `${mode === 'share' ? '请在系统分享面板中选择「保存到文件」或网盘/微信' : '已开始下载'}：${filename}` +
           `（${manifest.counts.days} 天，录音 ${manifest.counts.audio}，配图 ${manifest.counts.images}` +
           (miss ? `，缺媒体 ${miss}` : '') +
-          '）。大文件建议存到文件管理器或网盘。',
+          '）。',
       )
     } catch (err) {
       const name = err instanceof DOMException ? err.name : ''
-      if (name === 'AbortError') {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (name === 'AbortError' || /cancel|取消|dismiss/i.test(msg)) {
         setStatus('已取消分享')
       } else {
         setStatus(err instanceof Error ? err.message : '导出失败')
