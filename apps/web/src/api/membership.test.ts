@@ -33,12 +33,25 @@ describe('child path has no login or prices', () => {
 })
 
 describe('parent plus copy', () => {
-  it('keeps login first and a short Plus line', () => {
-    assert.match(parentSrc, /Plus 解锁家庭日记/)
+  it('explains free vs Plus in short parent copy', () => {
+    assert.match(parentSrc, /免费：官方主题包都能玩/)
+    assert.match(parentSrc, /语音或文字记下今天/)
+    assert.match(parentSrc, /模型配置向导/)
+    assert.match(parentSrc, /模型费另算，用自己的 Key/)
+    assert.match(parentSrc, /语音或文字记今天，就能生成新关卡/)
+    assert.match(parentSrc, /Plus：语音或文字生成新关/)
     assert.match(parentSrc, /发送验证码/)
     assert.match(parentSrc, /注销账号/)
     assert.match(parentSrc, /验证码已发送到邮箱/)
     assert.equal(/不含第三方模型调用费|腾讯云 SES|个人实名|SMTP/.test(parentSrc), false)
+  })
+
+  it('studio lock banner explains voice or text diary without prices', () => {
+    const studioSrc = readFileSync(join(pages, 'FamilyStudioPage.tsx'), 'utf8')
+    assert.match(studioSrc, /语音或文字记下今天/)
+    assert.match(studioSrc, /已有关卡可玩/)
+    assert.match(studioSrc, /去家长中心/)
+    assert.equal(/¥18|¥148|包月|包年/.test(studioSrc), false)
   })
 
   it('keeps suggested starter prices as fen', () => {

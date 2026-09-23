@@ -282,6 +282,11 @@ export function ParentPage({ progress, onProgress }: Props) {
 
       <section className="parent-plus">
         <h2>账号与 Plus</h2>
+        <div className="plus-benefits">
+          <p>免费：官方主题包都能玩；做好的日记关卡，日历里接着玩。</p>
+          <p>Plus：语音或文字记下今天，生成新的英语关卡，还有更好的模型配置向导。</p>
+          <p>模型费另算，用自己的 Key。</p>
+        </div>
         {me ? (
           <>
             <div className="plus-status">
@@ -323,7 +328,9 @@ export function ParentPage({ progress, onProgress }: Props) {
           </>
         ) : (
           <div className="plus-login">
-            <p className="muted plus-lead">Plus 解锁家庭日记 / 每日关卡。开通请先登录，在线支付稍后开放。</p>
+            <p className="muted plus-lead">
+              语音或文字记今天，就能生成新关卡。开通请先登录，在线支付稍后开放。
+            </p>
             <label>
               邮箱
               <input
@@ -421,7 +428,7 @@ export function ParentPage({ progress, onProgress }: Props) {
           <span className="card-label">
             <strong>家庭日记</strong>
             <small>
-              {plusActive ? '聊今天 · 生成英语小关' : '需 Plus 才能生成新关'}
+              {plusActive ? '语音或文字记今天，生成英语关' : 'Plus：语音或文字生成新关'}
             </small>
           </span>
         </button>
