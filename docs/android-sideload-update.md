@@ -1,54 +1,109 @@
 # Android 侧载升级
 
-App 内不接应用商店。服务器放一份静态清单和最新 APK，家长中心手动点「立即升级」。不做 iOS。不强制更新，失败时不弹错误。
+服务器放静态清单和最新 APK，家长在 App 里手动升级。iOS 暂不做。不强制，拉清单失败时不弹错误。
 
-清单地址（与会员 API 同一台机器，**不是** `/api`）：
+清单：`http://118.24.164.40/app/version.json`  
+安装包：`http://118.24.164.40/app/tudoudou-aienglish.apk`
 
-`http://118.24.164.40/app/version.json`
+`version.json` 不要长期缓存。两个文件放在静态目录，不要放进只反代 `/api/` 的位置。
 
-APK 示例：
+## 用户侧
 
-`http://118.24.164.40/app/tudoudou-aienglish.apk`
+1. 打开「土豆豆AI英语」，从首页进入家长入口，答对算术题后进入家长中心。儿童首页不会出现升级。
+2. App 用本机 `versionCode`（Capacitor `App.getInfo().build`）对比上面的 `version.json`。只有清单里的 `versionCode` 更大时，家长中心顶部才出现「有新版本」、版本名、可选说明、「下载后点安装」、「立即升级」和「稍后」。
+3. 点「稍后」只藏起这一次停留，下次再进家长中心仍会看到。
+4. 点「立即升级」后，App 下载 APK 并打开系统安装界面。
+5. Android 8 及以上若还没允许本应用安装未知应用，会先跳到系统设置。给「土豆豆AI英语」打开「允许安装未知应用」，返回家长中心，再点一次「立即升级」。
+6. 系统弹出安装确认后点安装。若没有自动弹出，按界面上的「下载后点安装」，在下载完成的文件上点安装。
+7. 装完再进家长中心：清单 `versionCode` 与已装包一致时，升级条消失。
 
-## version.json
+未知来源若从文件管理器安装被拦，另见 [`wechat-apk-install.md`](./wechat-apk-install.md)。
 
-```json
-{
-  "versionCode": 1,
-  "versionName": "1.0",
-  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
-  "notes": ""
-}
+## 开发者发布
+
+`apps/web/android/` 不入库。版本号写在本机工程的 `defaultConfig` 里，打进 APK 后家长中心读的就是它。
+
+### 1. 把版本号加一
+
+编辑 `apps/web/android/app/build.gradle`：
+
+```gradle
+versionCode 2
+versionName "1.1"
 ```
 
-| 字段 | 要求 |
-| --- | --- |
-| `versionCode` | 正整数。必须与打进 APK 的 `versionCode` 一致，且大于手机里已装的版本才会出现「有新版本」 |
-| `versionName` | 给人看的版本名，如 `1.1` |
-| `apkUrl` | `http` 或 `https` 的 APK 直链 |
-| `notes` | 可选，家长中心里跟在版本名后面 |
+`versionCode` 必须在上一版基础上 **+1**（当前默认包是 `1` / `1.0`，第一次发布新包写成 `2`）。只改 `versionName` 不会出现升级按钮。
 
-当前仓库默认包是 `versionCode=1` / `versionName=1.0`。清单也先写 `1`，已装这个包的手机不会被打扰。下次发新包再一起改成 `2`。
+还没有 `apps/web/android/` 时，先按 [`android-capacitor.md`](./android-capacitor.md) 生成工程，再改版本号。
 
-`version.json` 不要长期缓存。APK 可以用普通静态文件缓存。
-
-## 服务器目录
-
-与现有 `wechat-apk-install.html` 放在**同一站点根**下的 `app/`。该说明页是 `http://118.24.164.40/wechat-apk-install.html`，所以清单必须能用 `http://118.24.164.40/app/version.json` 打开。
-
-常见 nginx `root`：
-
-- `/var/www/html/app/`（站点根是 `/var/www/html`）
-- `/var/www/tudoudou/app/`（站点根是 `/var/www/tudoudou`）
-
-先在服务器上看静态文件实际落在哪：
+### 2. 打包
 
 ```bash
-# 找到 wechat-apk-install.html 所在目录，app/ 与它同级
+cd apps/web
+npm run build:android
+cd android
+./gradlew assembleRelease
+```
+
+只要调试包时，把最后一行换成 `./gradlew assembleDebug`。
+
+产物：
+
+| 命令 | 路径 |
+| --- | --- |
+| `assembleRelease`（已配置与旧包相同的签名） | `apps/web/android/app/build/outputs/apk/release/app-release.apk` |
+| `assembleRelease`（未签名） | `apps/web/android/app/build/outputs/apk/release/app-release-unsigned.apk` |
+| `assembleDebug` | `apps/web/android/app/build/outputs/apk/debug/app-debug.apk` |
+
+未签名的 release 包不能拿去覆盖安装。手机上已是 debug 包时，继续发 debug，或两边都用同一把 release 签名。
+
+### 3. 上传
+
+与 `http://118.24.164.40/wechat-apk-install.html` 放在同一站点根下的 `app/`。常见目录是 `/var/www/html/app/` 或 `/var/www/tudoudou/app/`。不确定时：
+
+```bash
 sudo find /var/www /usr/share/nginx -name 'wechat-apk-install.html' 2>/dev/null
 ```
 
-若站点根已经能直接吐 html，只要建 `app/` 子目录，不必改 nginx。若 `/app/` 被别的 `location` 抢走，再加一段（把 `alias` 换成上面找到的真实目录）：
+下面按 `/var/www/html/app/` 举例。文件名必须是 `tudoudou-aienglish.apk` 和 `version.json`。`versionCode` / `versionName` 与 gradle 里相同。
+
+```bash
+ssh user@118.24.164.40 'mkdir -p /var/www/html/app'
+
+scp apps/web/android/app/build/outputs/apk/release/app-release.apk \
+  user@118.24.164.40:/var/www/html/app/tudoudou-aienglish.apk
+```
+
+`version.json` 全文示例（发 `versionCode 2` 时）：
+
+```json
+{
+  "versionCode": 2,
+  "versionName": "1.1",
+  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
+  "notes": "本次更新说明"
+}
+```
+
+```bash
+cat > /tmp/version.json <<'EOF'
+{
+  "versionCode": 2,
+  "versionName": "1.1",
+  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
+  "notes": "本次更新说明"
+}
+EOF
+
+scp /tmp/version.json user@118.24.164.40:/var/www/html/app/version.json
+
+curl -fsS http://118.24.164.40/app/version.json
+curl -fsSI http://118.24.164.40/app/tudoudou-aienglish.apk
+```
+
+`notes` 可省略。`apkUrl` 保持这条直链。
+
+若 `/app/` 被别的 nginx `location` 抢走，再加（`alias` 换成真实目录）：
 
 ```nginx
 location /app/ {
@@ -62,66 +117,16 @@ location /app/ {
 }
 ```
 
-不要把这两个文件放到只反代 `/api/` 的目录里。清单不依赖 `apps/api` 代码。
+### 4. 校验
 
-上传后自测：
+1. 手机上留着旧包（`versionCode` 更小，例如 `1`）。
+2. 打开旧版，进入家长中心，应看到「有新版本」和「立即升级」。
+3. 装完新包再进家长中心，升级条消失。已装 `versionCode` 与 `version.json` 的 `versionCode` 一致。
+4. 清单仍写旧数字、或新包装出来的 `versionCode` 没加一，家长中心不会出现按钮。
 
-```bash
-curl -fsS http://118.24.164.40/app/version.json
-curl -fsSI http://118.24.164.40/app/tudoudou-aienglish.apk
-```
+## 注意
 
-## 本机打 APK 再传到服务器
-
-`android/` 不入库。版本号写在本机工程里，Capacitor `App.getInfo().build` 读的就是这个 `versionCode`。
-
-```bash
-cd apps/web
-npm install
-npm run build:android
-```
-
-用 Android Studio 打开 `apps/web/android`，先改 `android/app/build.gradle` 的 `defaultConfig`：
-
-```gradle
-versionCode 2
-versionName "1.1"
-```
-
-再 Build > Build APK(s)。产物一般是：
-
-`apps/web/android/app/build/outputs/apk/debug/app-debug.apk`
-
-然后在本机执行（路径按上一节 `find` 的结果替换；用户按服务器实际账号）：
-
-```bash
-ssh user@118.24.164.40 'mkdir -p /var/www/html/app'
-
-scp apps/web/android/app/build/outputs/apk/debug/app-debug.apk \
-  user@118.24.164.40:/var/www/html/app/tudoudou-aienglish.apk
-```
-
-同一目录写 `version.json`（`versionCode` / `versionName` 与 gradle 里相同）：
-
-```bash
-cat > /tmp/version.json <<'EOF'
-{
-  "versionCode": 2,
-  "versionName": "1.1",
-  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
-  "notes": "本次更新说明"
-}
-EOF
-
-scp /tmp/version.json user@118.24.164.40:/var/www/html/app/version.json
-```
-
-## App 行为
-
-- 只在 **Android** 上检查。进家长中心（通过算术门禁）时拉清单，约 8 秒超时；失败、JSON 坏、版本不更高，都不显示。
-- 有更新：家长中心顶部出现「有新版本」、版本名、可选 `notes`、「下载后点安装」、「立即升级」和「稍后」。不挡儿童首页，也不能跳过门禁。
-- 「稍后」只藏起这一次停留。不强制。
-- 「立即升级」：插件把 APK 下到应用缓存，用 FileProvider 打开系统安装界面。Android 8+ 若还没允许本应用安装未知应用，会先打开系统设置，返回后再点一次。下载失败则用浏览器打开 `apkUrl`，仍提示「下载后点安装」。
-- 未知来源的系统开关说明见 [`wechat-apk-install.md`](./wechat-apk-install.md)。
-
-插件源码在 `apps/web/plugins/apk-install`，`npm run build:android` 里的 `cap sync` 会带上。清单权限 `REQUEST_INSTALL_PACKAGES` 由插件合并进 APK，不用手改 `AndroidManifest.xml`。
+- 每次发布都必须涨 `versionCode`，并和 `version.json` 写成同一个整数。
+- 签名必须与手机里已装的包一致，否则系统拒绝覆盖安装。换签名要先卸载，本机日记等数据会丢。
+- iOS 暂不做，iPhone 上不检查这份清单。
+- 插件 `apps/web/plugins/apk-install` 会在 `npm run build:android` 时随 `cap sync` 进包，并带上 `REQUEST_INSTALL_PACKAGES`。不用手改 `AndroidManifest.xml`。

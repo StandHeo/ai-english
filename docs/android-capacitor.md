@@ -30,7 +30,7 @@ npx cap open android
 
 `apps/web/android/app/build/outputs/apk/debug/app-debug.apk`
 
-侧载更新（服务器 `version.json` + 家长中心「立即升级」）见 [`android-sideload-update.md`](./android-sideload-update.md)。发新包前把本机 `android/app/build.gradle` 的 `versionCode` 调高，并和清单写成同一个数。
+侧载更新见 [`android-sideload-update.md`](./android-sideload-update.md)。
 
 ## 应用图标
 
