@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.aienglish.fruitforest',
-  appName: 'Fruit Forest',
+  appId: 'com.tudoudou.aienglish',
+  appName: '土豆豆AI英语',
   webDir: 'dist',
   server: {
     // 允许 App(WebView) 访问局域网 HTTP API，避免 Mixed Content

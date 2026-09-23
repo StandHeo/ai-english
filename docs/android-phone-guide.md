@@ -187,7 +187,7 @@ npm run build
 ```bash
 cd apps/web
 npm install @capacitor/core @capacitor/cli @capacitor/android
-npx cap init "Fruit Forest" com.aienglish.fruitforest --web-dir dist
+npx cap init "土豆豆AI英语" com.tudoudou.aienglish --web-dir dist
 npx cap add android
 npx cap copy
 npx cap open android
@@ -241,7 +241,7 @@ App 需要录音权限。若说话没反应，在手机系统设置 → 应用 �
 
 直连走原生 `CapacitorHttp`。若 Logcat 出现 `SocketTimeoutException: timeout`（偶发还有 `Socket closed`），通常是手机到云端读超时，而不是 SurfaceFlinger 的 “Out of order buffers”（后者多为系统合成层噪声，可忽略）。可检查：手机外网、是否高峰限流、稍后再试。App 侧已加长连接/读超时，并对瞬时超时自动重试一次。
 
-**Clash / 代理：** 浏览器能打开 `https://apihub.agnes-ai.com`，不代表 App 一定走同一条路。App 用系统原生 HTTPS，需 Clash 开 **TUN/VPN 模式**，并把本 App（`com.aienglish.fruitforest`）纳入代理（不要排除、不要只代理浏览器）。配图等待时不要切到别的 App，否则常见 `Software caused connection abort`（连接被系统或代理掐断）。仍不稳时可暂时改用通义配图，或关 Clash 用可直连外网的网络再试。
+**Clash / 代理：** 浏览器能打开 `https://apihub.agnes-ai.com`，不代表 App 一定走同一条路。App 用系统原生 HTTPS，需 Clash 开 **TUN/VPN 模式**，并把本 App（`com.tudoudou.aienglish`）纳入代理（不要排除、不要只代理浏览器）。配图等待时不要切到别的 App，否则常见 `Software caused connection abort`（连接被系统或代理掐断）。仍不稳时可暂时改用通义配图，或关 Clash 用可直连外网的网络再试。
 
 **仍需要电脑 API 的情况：** 要用电脑 `.env` 里的 Key 做代理，或关卡口语识别等仍走 `/api` 的接口。此时：
 

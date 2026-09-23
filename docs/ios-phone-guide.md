@@ -126,7 +126,7 @@ npx cap open ios
 4. 第一次真机：iPhone 上 **设置 → 通用 → VPN 与设备管理**，信任你的开发者 App。
 5. 点左上角 **▶ Run**。
 
-装成功后，主屏幕会出现 **Fruit Forest**（或你改过的 App 名）。
+装成功后，主屏幕会出现 **土豆豆AI英语**（或你改过的 App 名）。
 
 ### 以后改了网页代码再装
 
@@ -180,7 +180,7 @@ npm run patch:ios-plist
 
 ### 2. Run 报 Signing / Team 错误？
 
-确认 Signing 里已登录 Apple ID，Bundle Identifier 与仓库一致：`com.aienglish.fruitforest`。若提示被占用，可在 Xcode 改成 `com.你的名字.fruitforest`（仅本机调试即可）。
+确认 Signing 里已登录 Apple ID，Bundle Identifier 与仓库一致：`com.tudoudou.aienglish`。若提示被占用，可在 Xcode 改成 `com.你的名字.aienglish`（仅本机调试即可）。
 
 ### 3. 手机提示「未受信任的开发者」？
 

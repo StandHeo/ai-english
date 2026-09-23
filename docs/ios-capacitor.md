@@ -46,8 +46,8 @@ npm run build:ios
 
 `appId` / 名称见 `capacitor.config.ts`：
 
-- `appId`: `com.aienglish.fruitforest`
-- `appName`: `Fruit Forest`
+- `appId`: `com.tudoudou.aienglish`
+- `appName`: `土豆豆AI英语`
 - `webDir`: `dist`
 
 ## 麦克风 Info.plist

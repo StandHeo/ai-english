@@ -20,7 +20,7 @@ npm run build
 
 # 首次
 npm install @capacitor/core @capacitor/cli @capacitor/android
-npx cap init "Fruit Forest" com.aienglish.fruitforest --web-dir dist
+npx cap init "土豆豆AI英语" com.tudoudou.aienglish --web-dir dist
 npx cap add android
 npx cap copy
 npx cap open android
