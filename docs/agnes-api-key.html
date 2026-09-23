@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>土豆豆AI英语 · API Key 获取说明（Agnes / DeepSeek）</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+      color: #1f2937;
+      background: #f8fafc;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 22px 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+    h1 { font-size: 1.45rem; margin: 0 0 8px; color: #0f172a; }
+    .sub { color: #64748b; margin: 0 0 20px; font-size: 0.95rem; }
+    h2 { font-size: 1.15rem; margin: 26px 0 10px; color: #0f172a; padding-top: 6px; border-top: 1px solid #f1f5f9; }
+    h2:first-of-type { border-top: none; padding-top: 0; }
+    h3 { font-size: 1.02rem; margin: 16px 0 8px; color: #334155; }
+    ol, ul { padding-left: 1.2em; margin: 8px 0; }
+    li { margin: 8px 0; }
+    a { color: #2563eb; word-break: break-all; }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: 0.92em;
+    }
+    .box {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    .toc {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 0 0 8px;
+    }
+    .toc a { display: block; margin: 4px 0; text-decoration: none; }
+    .note {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 18px;
+      font-size: 0.95rem;
+    }
+    .ok {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 0.95rem;
+    }
+    .warn {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 0.95rem;
+    }
+    footer { margin-top: 18px; color: #94a3b8; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>土豆豆AI英语 · API Key 获取说明</h1>
+      <p class="sub">家庭日记 / 每日关卡需要家长自备 AI 密钥（BYOK）。密钥只保存在你的手机里，不会由土豆豆代充算力。目前支持 <strong>Agnes</strong>（推荐免费入门）和 <strong>DeepSeek</strong>（脚本更稳）。</p>
+
+      <div class="toc">
+        <strong>本页目录</strong>
+        <a href="#agnes">一、Agnes API Key（推荐免费档）</a>
+        <a href="#deepseek">二、DeepSeek API Key</a>
+        <a href="#fill">三、填进土豆豆AI英语</a>
+        <a href="#safe">四、安全提醒</a>
+      </div>
+
+      <h2 id="agnes">一、Agnes API Key（推荐免费档）</h2>
+      <h3>注册并拿到 Key（约 2 分钟）</h3>
+      <ol>
+        <li>打开 Agnes 开发者平台：<br /><a href="https://platform.agnes-ai.com" target="_blank" rel="noopener">https://platform.agnes-ai.com</a></li>
+        <li>用邮箱注册，或使用 Google / GitHub 登录。</li>
+        <li>进入 <strong>设置 → API 密钥</strong>（英文界面多为 Settings → API Keys）。</li>
+        <li>点击 <strong>创建新密钥</strong>（Create new secret key）。</li>
+        <li>立刻复制并保存密钥（一般以 <span class="mono">sk-</span> 开头）。页面通常只显示一次，关掉就看不到了。</li>
+      </ol>
+      <div class="ok">免费档通常不需要绑卡或充值也能用。主要限制是每分钟请求次数；太快失败时稍等再试即可。配图也可选 Agnes 图，与日记共用同一把 Key。</div>
+      <div class="box">
+        <div><strong>Base URL</strong>：<span class="mono">https://apihub.agnes-ai.com/v1</span></div>
+        <div style="margin-top:8px"><strong>推荐文本模型</strong>：<span class="mono">agnes-2.5-flash</span>（以向导当前推荐为准）</div>
+      </div>
+
+      <h2 id="deepseek">二、DeepSeek API Key</h2>
+      <h3>注册并拿到 Key</h3>
+      <ol>
+        <li>打开 DeepSeek <strong>开放平台</strong>（不是 chat.deepseek.com 聊天站）：<br /><a href="https://platform.deepseek.com" target="_blank" rel="noopener">https://platform.deepseek.com</a></li>
+        <li>用手机号 / 邮箱注册并登录（和聊天 App 账号通常不通用，需要单独注册开放平台）。</li>
+        <li>左侧进入 <strong>API Keys</strong>，或直接打开：<br /><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">https://platform.deepseek.com/api_keys</a></li>
+        <li>点击 <strong>Create new API key</strong> / 创建新密钥，起个名字（如「土豆豆」）。</li>
+        <li>立刻复制密钥（一般以 <span class="mono">sk-</span> 开头）。同样只显示一次。</li>
+      </ol>
+      <div class="warn">DeepSeek API 一般是<strong>预付费</strong>：需要在开放平台 <strong>充值 / Billing</strong> 里有余额后，密钥才能正常调用。新用户偶有赠额，以平台当时规则为准。单价通常很低，生成一篇日记脚本大多远小于 ¥0.1。</div>
+      <div class="box">
+        <div><strong>接口地址（App 内置，一般不用手填）</strong>：<span class="mono">https://api.deepseek.com/chat/completions</span></div>
+        <div style="margin-top:8px"><strong>推荐模型</strong>：<span class="mono">deepseek-chat</span></div>
+      </div>
+
+      <h2 id="fill">三、填进土豆豆AI英语</h2>
+      <ol>
+        <li>打开 App → 进入家长设置 / 模型配置向导（需家长门禁）。</li>
+        <li>文本（关卡脚本）提供商选 <strong>Agnes</strong> 或 <strong>DeepSeek</strong>。</li>
+        <li>把对应的 <strong>API Key</strong> 粘贴进去：只粘贴密钥本身，不要加 <span class="mono">Bearer</span>，前后不要空格。</li>
+        <li>两家 Key 可以都填好，切换提供商时各自生效。</li>
+        <li>点保存 / 测试连通。成功后再去生成一篇家庭日记验证。</li>
+      </ol>
+
+      <h2 id="safe">四、安全提醒</h2>
+      <ul>
+        <li>Key 相当于密码：不要发到微信群、朋友圈或发给客服以外的人。</li>
+        <li>土豆豆 Plus 只解锁日记工作室和配置向导，<strong>不包含</strong> Agnes / DeepSeek 等第三方模型费用。</li>
+        <li>Agnes 文档：<a href="https://wiki.agnes-ai.com/zh-Hans/docs/quickstart" target="_blank" rel="noopener">https://wiki.agnes-ai.com/zh-Hans/docs/quickstart</a></li>
+        <li>DeepSeek 文档：<a href="https://api-docs.deepseek.com" target="_blank" rel="noopener">https://api-docs.deepseek.com</a></li>
+      </ul>
+
+      <div class="note">若打不开 platform.agnes-ai.com 或 platform.deepseek.com，多半是当前网络限制，可换 Wi‑Fi / 蜂窝网络后再试。</div>
+      <footer>土豆豆AI英语 · 家长自助说明（临时页面，可用 IP 访问）· <a href="/helper">返回帮助列表</a></footer>
+    </div>
+  </main>
+</body>
+</html>
