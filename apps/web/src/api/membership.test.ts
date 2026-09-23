@@ -4,8 +4,13 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 
-const pages = join(dirname(fileURLToPath(import.meta.url)), '..', 'pages')
-const membershipSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'membership.ts'), 'utf8')
+const dir = dirname(fileURLToPath(import.meta.url))
+const pages = join(dir, '..', 'pages')
+const membershipSrc = readFileSync(join(dir, 'membership.ts'), 'utf8')
+const parentSrc = readFileSync(join(pages, 'ParentPage.tsx'), 'utf8')
+const parentCss = readFileSync(join(pages, 'parent.css'), 'utf8')
+const parentMsgSrc = readFileSync(join(dir, 'parentAuthMessage.ts'), 'utf8')
+const baseSrc = readFileSync(join(dir, 'base.ts'), 'utf8')
 
 const CHILD_FILES = [
   'HomePage.tsx',
@@ -28,11 +33,12 @@ describe('child path has no login or prices', () => {
 })
 
 describe('parent plus copy', () => {
-  it('states Plus excludes third-party model fees', () => {
-    const src = readFileSync(join(pages, 'ParentPage.tsx'), 'utf8')
-    assert.match(src, /不含第三方模型调用费/)
-    assert.match(src, /发送验证码/)
-    assert.match(src, /注销账号/)
+  it('keeps login first and a short Plus line', () => {
+    assert.match(parentSrc, /Plus 解锁家庭日记/)
+    assert.match(parentSrc, /发送验证码/)
+    assert.match(parentSrc, /注销账号/)
+    assert.match(parentSrc, /验证码已发送到邮箱/)
+    assert.equal(/不含第三方模型调用费|腾讯云 SES|个人实名|SMTP/.test(parentSrc), false)
   })
 
   it('keeps suggested starter prices as fen', () => {
@@ -41,17 +47,29 @@ describe('parent plus copy', () => {
     assert.match(membershipSrc, /¥\$\{/)
   })
 
-  it('can fetch auth captcha config for parent login', () => {
+  it('shows captcha fields when config.captcha is on', () => {
     assert.match(membershipSrc, /\/api\/auth\/config/)
     assert.match(membershipSrc, /\/api\/auth\/email\/send/)
     assert.match(membershipSrc, /\/api\/auth\/captcha/)
     assert.match(membershipSrc, /captchaId/)
-    const src = readFileSync(join(pages, 'ParentPage.tsx'), 'utf8')
-    assert.match(src, /图形验证码/)
-    assert.match(src, /auth_ip_rate_limited/)
-    assert.match(src, /邮箱/)
-    assert.match(src, /sendParentEmail/)
-    assert.match(src, /腾讯云 SES/)
-    assert.match(src, /email_ses_not_configured/)
+    assert.match(parentSrc, /captchaOn/)
+    assert.match(parentSrc, /图形验证码/)
+    assert.match(parentSrc, /fetchAuthConfig/)
+    assert.match(parentCss, /\.plus-captcha/)
+  })
+
+  it('maps send errors without dumping ConnectException', () => {
+    assert.match(parentSrc, /parentSendErrorMessage/)
+    assert.match(parentMsgSrc, /cannot_reach_server/)
+    assert.match(parentMsgSrc, /auth_ip_rate_limited/)
+    assert.match(parentMsgSrc, /email_ses_not_configured/)
+    assert.equal(/发送失败：\$\{res\.error/.test(parentSrc), false)
+  })
+})
+
+describe('native production API default', () => {
+  it('points Capacitor/production builds at tudoudou-ai.site', () => {
+    assert.match(baseSrc, /https:\/\/tudoudou-ai\.site/)
+    assert.match(membershipSrc, /recoverFromUnreachablePrivateBase/)
   })
 })

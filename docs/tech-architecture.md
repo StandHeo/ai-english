@@ -106,7 +106,7 @@
 
 - Vite 将 `/api`、`/health` 代理到 `http://localhost:8787`。
 - `npm run dev:phone`：`VITE_PHONE=1` → HTTPS（`@vitejs/plugin-basic-ssl`）+ `0.0.0.0`，供真机麦克风。
-- App 包内不走 Vite 代理。家庭关卡生成/云端配图在已填云 Key 时直连厂商 HTTPS，不必 `VITE_API_BASE`。其它仍走 `/api` 的能力（如关卡口语）可配 `VITE_API_BASE` 或设置里的电脑 API 地址。
+- App 包内不走 Vite 代理。**正式 App / 生产构建默认连 `https://tudoudou-ai.site`**。家庭关卡生成/云端配图在已填云 Key 时直连厂商 HTTPS。仅同 Wi‑Fi 调试电脑 API 时才在设置里填局域网，或打包前设 `VITE_API_BASE`；连不上的私网地址会回退官方站。
 
 ---
 
@@ -274,7 +274,7 @@ cd apps/web && npm run dev:phone
 |------|------|------|
 | API | `ASR_PROVIDER` / `TTS_PROVIDER` | 语音能力 |
 | API | `FAMILY_LLM_PROVIDER` / `DEEPSEEK_*` | 家庭关卡生成 |
-| Web | `VITE_API_BASE` | API 根地址（空则同源 `/api`） |
+| Web | `VITE_API_BASE` | 调试用 API 根地址。电脑 `npm run dev` 为空则同源代理 `/api`；正式 App / 生产构建默认为 `https://tudoudou-ai.site` |
 | Web | `VITE_PHONE=1` | 启用 HTTPS 手机调试 |
 
 内容校验：`npm run validate:content` 或 `node content/validate.mjs`。

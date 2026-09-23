@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  getApiBase,
   getStoredApiBase,
   isNativeApp,
+  PRODUCTION_API_BASE,
   setStoredApiBase,
+  switchToOfficialApiBase,
 } from '../api/base'
 import {
   familyLlmLabel,
@@ -110,13 +113,20 @@ export function FamilyStudioSettingsPage() {
   }
 
   function saveApiBase() {
-    setStoredApiBase(apiBaseInput)
+    const next = apiBaseInput.trim()
+    if (!next) {
+      useOfficialApi()
+      return
+    }
+    setStoredApiBase(next)
     setApiBaseInput(getStoredApiBase())
-    setStatus(
-      getStoredApiBase()
-        ? `已保存 API 地址：${getStoredApiBase()}`
-        : '已清空 API 地址（App 有云 Key 时可直连；浏览器走同源代理）',
-    )
+    setStatus(`已保存 API 地址：${getStoredApiBase()}`)
+  }
+
+  function useOfficialApi() {
+    switchToOfficialApiBase()
+    setApiBaseInput('')
+    setStatus(`已切换到官方服务器 ${PRODUCTION_API_BASE}`)
   }
 
   async function onWhisperModelChange(next: DiaryWhisperModelId) {
@@ -154,21 +164,25 @@ export function FamilyStudioSettingsPage() {
       <section>
         {isNativeApp() && (
           <>
-            <h2>电脑 API 地址（可选）</h2>
+            <h2>服务器地址</h2>
             <p className="muted">
-              生成关卡和云端配图：App 里填了对应云 Key 后会直连 HTTPS，不必填局域网。仅当要用电脑
-              .env 里的 Key、或电脑浏览器联调时，再填例如 http://192.168.2.104:8787。
+              正式 App 默认连 {PRODUCTION_API_BASE}（家长登录 / Plus）。只有同一 Wi‑Fi
+              调试电脑 API 时才改成局域网，例如 http://192.168.x.x:8787。
             </p>
+            <p className="muted">当前：{getApiBase() || '本机开发代理'}</p>
             <input
               type="url"
               value={apiBaseInput}
               onChange={(e) => setApiBaseInput(e.target.value)}
-              placeholder="http://192.168.x.x:8787（可选）"
+              placeholder="留空即官方服务器"
               autoComplete="off"
             />
-            <div className="row">
+            <div className="row api-base-actions">
               <button type="button" onClick={saveApiBase}>
                 保存地址
+              </button>
+              <button type="button" className="ghost" onClick={useOfficialApi}>
+                使用官方服务器
               </button>
             </div>
           </>
