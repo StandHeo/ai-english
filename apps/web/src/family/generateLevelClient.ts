@@ -156,7 +156,7 @@ export async function generateFamilyPackDirect(input: {
   const apiKey = input.apiKey.trim()
   if (!apiKey) throw new Error('api_key_required')
   const date = input.date || new Date().toISOString().slice(0, 10)
-  const levelCount = clampPackLevelCount(input.levelCount ?? 4)
+  const levelCount = clampPackLevelCount(input.levelCount ?? 6)
   const llm = input.llm
 
   const attempt = () => callOnce(llm, apiKey, story, date, levelCount)
@@ -203,7 +203,7 @@ export async function generateFamilyLevelDirect(input: {
 
 export function llmBusyLabel(llm: FamilyLlmProvider): string {
   if (llm === 'agnes') {
-    return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 3–5 关）…`
+    return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 5–9 个主词）…`
   }
-  return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 3–5 关，可能需要 1–3 分钟）…`
+  return `正在生成今日迷你关卡包（${familyLlmLabel(llm)}，约 5–9 个主词，可能需要 1–3 分钟）…`
 }

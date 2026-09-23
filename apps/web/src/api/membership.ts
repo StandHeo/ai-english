@@ -11,6 +11,10 @@ import { sanitizeMembershipError } from './parentAuthMessage'
 
 const TOKEN_KEY = 'ai-english-parent-token-v1'
 
+/** 人工开通 Plus：添加好友时请备注「土豆豆」 */
+export const PLUS_ADMIN_WECHAT = '17775566806'
+export const PLUS_ADMIN_WECHAT_HINT = `微信 ${PLUS_ADMIN_WECHAT}（添加好友请备注土豆豆）`
+
 export type MeResponse = {
   plus: boolean
   expiresAt: string | null

@@ -1,5 +1,5 @@
 /**
- * 家庭迷你 pack：一次生成 3–5 关，每关约一词一景（对齐官方 fruit 单关结构）。
+ * 家庭迷你 pack：一次生成 5–9 关，每关约一词一景（对齐官方 fruit 单关结构）。
  */
 import {
   ensureIntroShowBeat,
@@ -89,10 +89,14 @@ ${story}
 Return JSON only with exactly ${n} levels.`
 }
 
+export const PACK_LEVEL_MIN = 5
+export const PACK_LEVEL_MAX = 9
+export const PACK_LEVEL_DEFAULT = 6
+
 export function clampPackLevelCount(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
-  if (!Number.isFinite(v)) return 4
-  return Math.min(5, Math.max(3, Math.floor(v)))
+  if (!Number.isFinite(v)) return PACK_LEVEL_DEFAULT
+  return Math.min(PACK_LEVEL_MAX, Math.max(PACK_LEVEL_MIN, Math.floor(v)))
 }
 
 export type ParsedFamilyPack = {
@@ -123,7 +127,7 @@ export function parseValidatedFamilyPack(
   if (Array.isArray(parsed.levels)) rawLevels = parsed.levels
   else if (parsed.level) rawLevels = [{ level: parsed.level }]
 
-  if (rawLevels.length < 3) {
+  if (rawLevels.length < PACK_LEVEL_MIN) {
     throw new Error(`pack_levels_insufficient:${rawLevels.length}:${want}`)
   }
 

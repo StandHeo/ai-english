@@ -8,9 +8,9 @@ const ENV_BASE = String(viteEnv.VITE_API_BASE || '')
   .replace(/\/$/, '')
 
 /**
- * 正式 App / 生产 Web 默认会员与 /api 地址。
+ * 正式 App / 生产 Web 的会员与 /api 地址。
  * 临时：域名被未备案 SNI 拦截，先走成都轻量公网 IP 的 HTTP。备案或迁出大陆后改回 https://tudoudou-ai.site。
- * 不要把开发者局域网 IP 写进仓库。设置里仍可覆盖。
+ * App / 生产包固定此地址，设置页不再提供修改入口。
  */
 export const PRODUCTION_API_BASE = 'http://118.24.164.40'
 
@@ -63,12 +63,12 @@ export function resolveApiBase(opts: {
   prod: boolean
   skipPrivate?: boolean
 }): string {
-  const skip = Boolean(opts.skipPrivate)
-  const stored = normalizeBase(opts.stored)
-  if (stored && !(skip && isPrivateApiBase(stored))) return stored
-  const envBase = normalizeBase(opts.envBase)
-  if (envBase && !(skip && isPrivateApiBase(envBase))) return envBase
+  // App / 生产固定官方服务器；本机 `npm run dev` 仍可走 Vite 代理或 VITE_API_BASE
   if (opts.native || opts.prod) return PRODUCTION_API_BASE
+  const envBase = normalizeBase(opts.envBase)
+  if (envBase) return envBase
+  void opts.stored
+  void opts.skipPrivate
   return ''
 }
 
@@ -81,27 +81,17 @@ function skipPrivateActive(): boolean {
   }
 }
 
-/** User override（家庭日记设置里填写电脑局域网 API）。 */
+/** 已废弃：设置页不再允许覆盖；保留函数以免旧调用报错，写入会被忽略。 */
 export function getStoredApiBase(): string {
-  try {
-    return normalizeBase(localStorage.getItem(KEY) || '')
-  } catch {
-    return ''
-  }
+  return ''
 }
 
-export function setStoredApiBase(url: string): void {
-  const n = normalizeBase(url)
-  sessionSkipPrivate = false
+/** 已废弃：不再持久化自定义 API 地址。 */
+export function setStoredApiBase(_url: string): void {
   try {
-    if (n) {
-      localStorage.setItem(KEY, n)
-      localStorage.removeItem(SKIP_PRIVATE_KEY)
-    } else {
-      localStorage.removeItem(KEY)
-    }
+    localStorage.removeItem(KEY)
   } catch {
-    /* ignore quota / private mode */
+    /* ignore */
   }
 }
 
@@ -140,12 +130,11 @@ export function isOfficialApiBase(url = getApiBase()): boolean {
 /**
  * API 根地址。
  * - 电脑浏览器 `npm run dev`：空字符串，走 Vite 同源代理 /api → localhost:8787
- * - Capacitor / 生产构建：默认 http://118.24.164.40（临时，见 PRODUCTION_API_BASE）
- * - 覆盖：设置里的电脑 API 地址，或打包时的 VITE_API_BASE（仅同 Wi‑Fi 调试）
+ * - Capacitor / 生产构建：固定 PRODUCTION_API_BASE
  */
 export function getApiBase(): string {
   return resolveApiBase({
-    stored: getStoredApiBase(),
+    stored: '',
     envBase: ENV_BASE,
     native: isNativeApp(),
     prod: Boolean(viteEnv.PROD),

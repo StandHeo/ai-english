@@ -22,6 +22,10 @@ import {
   type FamilyImageCloudProvider,
   type FamilyLlmProvider,
 } from './providers'
+import {
+  clampPackLevelCount,
+  PACK_LEVEL_DEFAULT,
+} from './packSchema'
 
 export type FamilyDiaryMessage = {
   id: string
@@ -99,14 +103,14 @@ type FamilyStore = {
   /** 生成关卡后自动云端配图；默认关以免误扣费 */
   autoTongyiImages: boolean
   /**
-   * 设置项：今日迷你 pack 关数目标（兼旧「最少关键词」）。
-   * 实际关数见 getPackLevelCount()，夹紧到 3–5。
+   * 设置项：今日主词数量目标（一词一关；兼旧「最少关键词」字段）。
+   * 实际生成数量见 getPackLevelCount()，夹紧到 5–9。
    */
   minLevelKeywords: number
 }
 
 const KEY = 'ai-english-family-v1'
-const DEFAULT_MIN_KEYWORDS = 4
+const DEFAULT_MIN_KEYWORDS = PACK_LEVEL_DEFAULT
 
 function emptyStore(): FamilyStore {
   return {
@@ -123,9 +127,7 @@ function emptyStore(): FamilyStore {
 }
 
 function clampMinKeywordsStored(n: unknown): number {
-  const v = typeof n === 'number' ? n : Number(n)
-  if (!Number.isFinite(v)) return DEFAULT_MIN_KEYWORDS
-  return Math.min(12, Math.max(3, Math.floor(v)))
+  return clampPackLevelCount(n)
 }
 
 export function getMinLevelKeywords(): number {
@@ -138,9 +140,9 @@ export function setMinLevelKeywords(n: number): void {
   saveFamilyStore(store)
 }
 
-/** 今日迷你 pack 关数（3–5） */
+/** 今日迷你 pack 主词数 / 关数（5–9，一词一关） */
 export function getPackLevelCount(): number {
-  return Math.min(5, Math.max(3, getMinLevelKeywords()))
+  return clampPackLevelCount(getMinLevelKeywords())
 }
 
 /** 配图张数上限 = 设置里的最少关键词数（legacy 扁平图）；pack 按关另算 */

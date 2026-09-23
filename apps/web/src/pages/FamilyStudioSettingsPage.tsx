@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getApiBase,
-  getStoredApiBase,
   isNativeApp,
   PRODUCTION_API_BASE,
-  setStoredApiBase,
   switchToOfficialApiBase,
 } from '../api/base'
 import {
@@ -75,8 +73,7 @@ export function FamilyStudioSettingsPage() {
   const [llm, setLlm] = useState<FamilyLlmProvider>(DEFAULT_FAMILY_LLM)
   const [imageCloud, setImageCloud] = useState<FamilyImageCloudProvider>(DEFAULT_IMAGE_CLOUD)
   const [autoTongyi, setAutoTongyi] = useState(false)
-  const [minKeywords, setMinKeywords] = useState(9)
-  const [apiBaseInput, setApiBaseInput] = useState(() => getStoredApiBase())
+  const [minKeywordsText, setMinKeywordsText] = useState('6')
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
     getDiaryWhisperModelId(),
   )
@@ -90,14 +87,14 @@ export function FamilyStudioSettingsPage() {
   const backupFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    switchToOfficialApiBase()
     setApiKey(getDeepseekKey())
     setTongyiKeyInput(getTongyiKey())
     setAgnesKeyInput(getAgnesKey())
     setLlm(getLlmProvider())
     setImageCloud(getImageCloudProvider())
     setAutoTongyi(getAutoTongyiImages())
-    setMinKeywords(getMinLevelKeywords())
-    setApiBaseInput(getStoredApiBase())
+    setMinKeywordsText(String(getMinLevelKeywords()))
     setWhisperModel(getDiaryWhisperModelId())
     if (!isNativeApp()) return
     void listDiaryWhisperModels()
@@ -128,10 +125,11 @@ export function FamilyStudioSettingsPage() {
   }
 
   function saveMinKeywords() {
-    setMinLevelKeywords(minKeywords)
+    const parsed = Number(minKeywordsText.trim())
+    setMinLevelKeywords(Number.isFinite(parsed) ? parsed : 6)
     const n = getMinLevelKeywords()
-    setMinKeywords(n)
-    setStatus(`已保存：至少 ${n} 个关键词，配图最多 ${n} 张（含 1 张场景背景）`)
+    setMinKeywordsText(String(n))
+    setStatus(`已保存：今日约生成 ${n} 个主词（范围 5–9）`)
   }
 
   function saveImageSettings() {
@@ -145,23 +143,6 @@ export function FamilyStudioSettingsPage() {
         ? `已保存：自动云端配图开（${cloudName}）；1 场景背景 + 关键词道具图`
         : `已保存：自动云端配图关；可手动「云端配图」（${cloudName}）或相册`,
     )
-  }
-
-  function saveApiBase() {
-    const next = apiBaseInput.trim()
-    if (!next) {
-      useOfficialApi()
-      return
-    }
-    setStoredApiBase(next)
-    setApiBaseInput(getStoredApiBase())
-    setStatus(`已保存 API 地址：${getStoredApiBase()}`)
-  }
-
-  function useOfficialApi() {
-    switchToOfficialApiBase()
-    setApiBaseInput('')
-    setStatus(`已切换到官方服务器 ${PRODUCTION_API_BASE}`)
   }
 
   function openApiKeyGuide(provider: FamilyLlmProvider) {
@@ -251,7 +232,7 @@ export function FamilyStudioSettingsPage() {
       setLlm(getLlmProvider())
       setImageCloud(getImageCloudProvider())
       setAutoTongyi(getAutoTongyiImages())
-      setMinKeywords(getMinLevelKeywords())
+      setMinKeywordsText(String(getMinLevelKeywords()))
       setStatus(`已恢复：${result.dayCount} 天日记与媒体已写入本机`)
     } catch (err) {
       setStatus(err instanceof Error ? err.message : '恢复失败')
@@ -311,32 +292,6 @@ export function FamilyStudioSettingsPage() {
       </header>
 
       <section>
-        {isNativeApp() && (
-          <>
-            <h2>服务器地址</h2>
-            <p className="muted">
-              正式 App 默认连 {PRODUCTION_API_BASE}（家长登录 / Plus）。只有同一 Wi‑Fi
-              调试电脑 API 时才改成局域网，例如 http://192.168.x.x:8787。
-            </p>
-            <p className="muted">当前：{getApiBase() || '本机开发代理'}</p>
-            <input
-              type="url"
-              value={apiBaseInput}
-              onChange={(e) => setApiBaseInput(e.target.value)}
-              placeholder="留空即官方服务器"
-              autoComplete="off"
-            />
-            <div className="row api-base-actions">
-              <button type="button" onClick={saveApiBase}>
-                保存地址
-              </button>
-              <button type="button" className="ghost" onClick={useOfficialApi}>
-                使用官方服务器
-              </button>
-            </div>
-          </>
-        )}
-
         <h2>关卡生成模型</h2>
         <p className="muted">同一段日记可切换后重新生成，对比短词和能不能过校验。</p>
         <div className="model-switch" role="radiogroup" aria-label="关卡生成模型">
@@ -398,21 +353,24 @@ export function FamilyStudioSettingsPage() {
           </button>
         </div>
 
-        <h2>今日迷你关卡数（3–5）</h2>
+        <h2>今日主词数量（5–9）</h2>
         <p className="muted">
-          生成「一天一个迷你 pack」时的关数目标；实际会夹紧到 3–5 关。每关约一个英文主词 + 专属场景背景（像水果关）。
-          设置里仍可填 3–12，大于 5 时按 5 关生成。
+          控制「一天一个迷你 pack」里要学的主要英文单词个数。例如今天主题是水果，填 6
+          就会大约生成 apple、banana 等 6 个主词——每个主词一关，并带专属场景。可填 5–9，超出范围会自动夹紧。
         </p>
         <input
-          type="number"
-          min={3}
-          max={12}
-          value={minKeywords}
-          onChange={(e) => setMinKeywords(Number(e.target.value) || 4)}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          value={minKeywordsText}
+          onChange={(e) => setMinKeywordsText(e.target.value.replace(/[^\d]/g, ''))}
+          placeholder="例如 6"
+          aria-label="今日主词数量"
         />
         <div className="row">
           <button type="button" onClick={saveMinKeywords}>
-            保存今日关数
+            保存主词数量
           </button>
         </div>
 

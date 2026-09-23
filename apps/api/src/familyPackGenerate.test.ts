@@ -2,26 +2,26 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { clampPackLevelCount, generateFamilyPack } from './familyPackGenerate.ts'
 
-test('clampPackLevelCount stays within 3-5', () => {
-  assert.equal(clampPackLevelCount(1), 3)
-  assert.equal(clampPackLevelCount(9), 5)
-  assert.equal(clampPackLevelCount(4), 4)
+test('clampPackLevelCount stays within 5-9', () => {
+  assert.equal(clampPackLevelCount(1), 5)
+  assert.equal(clampPackLevelCount(12), 9)
+  assert.equal(clampPackLevelCount(7), 7)
 })
 
-test('mock pack generate returns 3-5 valid levels', async () => {
+test('mock pack generate returns 5-9 valid levels', async () => {
   const prev = process.env.FAMILY_LLM_PROVIDER
   process.env.FAMILY_LLM_PROVIDER = 'mock'
   try {
     const payload = await generateFamilyPack({
       story: '今天去了公园玩滑梯',
       date: '2026-09-02',
-      levelCount: 4,
+      levelCount: 6,
       llm: 'mock',
     })
-    assert.equal(payload.levelCount, 4)
-    assert.equal(payload.levels.length, 4)
+    assert.equal(payload.levelCount, 6)
+    assert.equal(payload.levels.length, 6)
     assert.ok(payload.pack.title)
-    assert.equal(payload.mainWords.length, 4)
+    assert.equal(payload.mainWords.length, 6)
 
     // 每关对齐官方节奏：intro(show) → find(1 个正确) → ask(expect 变体) → 收尾 intro
     const mainWords = payload.mainWords as string[]
