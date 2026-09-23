@@ -79,6 +79,7 @@ export function ParentPage({ progress, onProgress }: Props) {
   const [accountBusy, setAccountBusy] = useState(false)
   const [sendWait, setSendWait] = useState(0)
   const [apiHint, setApiHint] = useState('')
+  const [accountManageOpen, setAccountManageOpen] = useState(false)
   const codeInputRef = useRef<HTMLInputElement>(null)
   const plusActive = Boolean(me?.plus)
 
@@ -294,13 +295,33 @@ export function ParentPage({ progress, onProgress }: Props) {
                 {me.email || me.phone || ''} · {plusActive ? 'Plus 有效' : '尚未开通 Plus'}
                 {me.expiresAt ? ` · ${me.expiresAt.slice(0, 10)} 到期` : ''}
               </p>
-              <div className="row-actions">
-                <button type="button" className="linkish" onClick={() => void onLogout()}>
-                  退出登录
+              <div className="plus-account-manage">
+                <button
+                  type="button"
+                  className="plus-details-toggle"
+                  aria-expanded={accountManageOpen}
+                  onClick={() => setAccountManageOpen((v) => !v)}
+                >
+                  {accountManageOpen ? '▾' : '▸'} 账户管理
                 </button>
-                <button type="button" className="linkish" onClick={() => void onDeleteAccount()}>
-                  注销账号
-                </button>
+                {accountManageOpen && (
+                  <div className="plus-account-manage-body">
+                    <button
+                      type="button"
+                      className="plus-account-link"
+                      onClick={() => void onLogout()}
+                    >
+                      退出登录
+                    </button>
+                    <button
+                      type="button"
+                      className="plus-account-link danger"
+                      onClick={() => void onDeleteAccount()}
+                    >
+                      注销账号
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="plus-plans">

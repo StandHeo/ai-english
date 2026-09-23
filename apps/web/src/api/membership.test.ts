@@ -43,6 +43,8 @@ describe('parent plus copy', () => {
     assert.match(parentSrc, /发送验证码/)
     assert.match(parentSrc, /注销账号/)
     assert.match(parentSrc, /验证码已发送到邮箱/)
+    assert.match(parentSrc, /账户管理/)
+    assert.match(parentSrc, /accountManageOpen/)
     assert.equal(/不含第三方模型调用费|腾讯云 SES|个人实名|SMTP/.test(parentSrc), false)
   })
 
