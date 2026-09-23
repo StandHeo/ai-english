@@ -7,8 +7,12 @@ const ENV_BASE = String(viteEnv.VITE_API_BASE || '')
   .trim()
   .replace(/\/$/, '')
 
-/** 正式 App / 生产 Web 默认会员与 /api 地址。不要把开发者局域网 IP 写进仓库。 */
-export const PRODUCTION_API_BASE = 'https://tudoudou-ai.site'
+/**
+ * 正式 App / 生产 Web 默认会员与 /api 地址。
+ * 临时：域名被未备案 SNI 拦截，先走成都轻量公网 IP 的 HTTP。备案或迁出大陆后改回 https://tudoudou-ai.site。
+ * 不要把开发者局域网 IP 写进仓库。设置里仍可覆盖。
+ */
+export const PRODUCTION_API_BASE = 'http://118.24.164.40'
 
 /** 本会话内跳过已失败的局域网地址（localStorage 之外再挡一层）。 */
 let sessionSkipPrivate = false
@@ -136,7 +140,7 @@ export function isOfficialApiBase(url = getApiBase()): boolean {
 /**
  * API 根地址。
  * - 电脑浏览器 `npm run dev`：空字符串，走 Vite 同源代理 /api → localhost:8787
- * - Capacitor / 生产构建：默认 https://tudoudou-ai.site
+ * - Capacitor / 生产构建：默认 http://118.24.164.40（临时，见 PRODUCTION_API_BASE）
  * - 覆盖：设置里的电脑 API 地址，或打包时的 VITE_API_BASE（仅同 Wi‑Fi 调试）
  */
 export function getApiBase(): string {

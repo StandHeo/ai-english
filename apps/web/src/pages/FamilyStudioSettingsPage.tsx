@@ -1,3 +1,4 @@
+import { Browser } from '@capacitor/browser'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -241,6 +242,15 @@ export function FamilyStudioSettingsPage() {
           autoComplete="off"
         />
         <div className="row">
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              void Browser.open({ url: 'http://118.24.164.40/agnes-api-key.html' })
+            }}
+          >
+            如何获取 Agnes API Key
+          </button>
           <button type="button" onClick={saveProviders}>
             保存模型与 Key
           </button>

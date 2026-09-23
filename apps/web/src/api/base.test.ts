@@ -21,6 +21,9 @@ describe('private LAN API hosts', () => {
   })
 
   it('does not flag the production site or public IPs', () => {
+    assert.equal(PRODUCTION_API_BASE, 'http://118.24.164.40')
+    assert.equal(isPrivateLanHost('118.24.164.40'), false)
+    assert.equal(isPrivateApiBase(PRODUCTION_API_BASE), false)
     assert.equal(isPrivateLanHost('tudoudou-ai.site'), false)
     assert.equal(isPrivateLanHost('8.8.8.8'), false)
     assert.equal(isPrivateLanHost('172.32.0.1'), false)
