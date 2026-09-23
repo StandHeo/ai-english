@@ -221,7 +221,7 @@ export function FamilyStudioPage() {
   }, [])
 
   function plusLockedToast() {
-    showToast('需要 Plus 才能生成新关。请到家长中心开通（Plus 不含第三方模型费）')
+    showToast('需要 Plus 才能用语音或文字生成新关。请到家长中心（模型费另算）')
   }
 
   async function persistVoiceCapture(result: DiaryRecordCapture) {
@@ -1096,9 +1096,11 @@ export function FamilyStudioPage() {
         )}
         {plusChecked && !plusActive && (
           <p className="plus-lock-banner">
-            工作室生成已锁定。请到家长中心登录并开通 Plus（不含第三方模型调用费）。已有关卡仍可在家庭日历游玩。
+            <span>
+              语音或文字记下今天，就能在这里生成新的英语关卡，需要 Plus。已有关卡可玩。模型费另算。
+            </span>
             <button type="button" className="ghost" onClick={() => navigate('/parent')}>
-              去开通
+              去家长中心
             </button>
           </p>
         )}

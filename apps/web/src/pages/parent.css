@@ -115,8 +115,23 @@
   color: #5a4a3a;
 }
 
+.plus-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.plus-benefits p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #4a3d32;
+}
+
 .plus-lead {
   margin: 0 0 2px;
+  line-height: 1.45;
 }
 
 .plus-login {
@@ -231,7 +246,8 @@
 
 .parent-feature-card .card-label small {
   font-size: 12px;
-  opacity: 0.9;
+  line-height: 1.35;
+  opacity: 0.92;
   font-weight: 400;
 }
 
