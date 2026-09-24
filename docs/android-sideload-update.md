@@ -7,6 +7,8 @@
 
 `version.json` 不要长期缓存。两个文件放在静态目录，不要放进只反代 `/api/` 的位置。
 
+当前服务器已放 **debug 基线**（`versionCode` 1 / `1.0`），与默认工程一致；有更高 `versionCode` 时再改清单并覆盖 APK。
+
 ## 用户侧
 
 1. 打开「土豆豆AI英语」，从首页进入家长入口，答对算术题后进入家长中心。儿童首页不会出现升级。
@@ -38,40 +40,77 @@ versionName "1.1"
 
 ### 2. 打包
 
-```bash
-cd apps/web
-npm run build:android
-cd android
-./gradlew assembleRelease
+本机需要 **JDK 11+**（推荐 21）。默认若还是 Java 8，AGP 8 会直接失败。可在本机 `apps/web/android/gradle.properties` 固定：
+
+```properties
+org.gradle.java.home=/Users/你的用户名/Library/Java/JavaVirtualMachines/jbr-21.0.11/Contents/Home
 ```
 
-只要调试包时，把最后一行换成 `./gradlew assembleDebug`。
+路径按 ` /usr/libexec/java_home -V ` 里实际 JDK 21/17 调整。开着 Clash 时若拉依赖 TLS 失败，可在同一文件加：
 
-产物：
+```properties
+systemProp.http.proxyHost=127.0.0.1
+systemProp.http.proxyPort=7897
+systemProp.https.proxyHost=127.0.0.1
+systemProp.https.proxyPort=7897
+```
+
+端口改成你本机代理端口。
+
+**当前侧载基线用 debug 包**（和手机上已装的 debug 签名一致，才能覆盖安装）。推荐命令：
+
+```bash
+export JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/jbr-21.0.11/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+# 若开着 Clash，可顺便：
+# export http_proxy=http://127.0.0.1:7897 https_proxy=http://127.0.0.1:7897
+
+cd apps/web
+git pull
+npm install
+npm run build
+npx cap sync android
+node scripts/patch-android-slim.mjs
+cd android
+./gradlew :app:assembleDebug
+```
+
+产物：`apps/web/android/app/build/outputs/apk/debug/app-debug.apk`
+
+注意用 **`:app:assembleDebug`**，不要裸跑 `assembleDebug` / `assembleRelease` 打到根工程：会顺带组装 `piper-tts` 等 library AAR，容易报 “Direct local .aar file dependencies are not supported”。
+
+完整拉模型再同步也可用 `npm run build:android`，然后再：
+
+```bash
+cd android && ./gradlew :app:assembleDebug
+```
+
+以后若全面改用 release 签名，再改成 `./gradlew :app:assembleRelease`，产物在：
 
 | 命令 | 路径 |
 | --- | --- |
-| `assembleRelease`（已配置与旧包相同的签名） | `apps/web/android/app/build/outputs/apk/release/app-release.apk` |
-| `assembleRelease`（未签名） | `apps/web/android/app/build/outputs/apk/release/app-release-unsigned.apk` |
-| `assembleDebug` | `apps/web/android/app/build/outputs/apk/debug/app-debug.apk` |
+| `:app:assembleDebug`（当前基线） | `apps/web/android/app/build/outputs/apk/debug/app-debug.apk` |
+| `:app:assembleRelease`（已配置与旧包相同的签名） | `apps/web/android/app/build/outputs/apk/release/app-release.apk` |
+| `:app:assembleRelease`（未签名） | `apps/web/android/app/build/outputs/apk/release/app-release-unsigned.apk` |
 
-未签名的 release 包不能拿去覆盖安装。手机上已是 debug 包时，继续发 debug，或两边都用同一把 release 签名。
+未签名的 release 包不能拿去覆盖安装。手机上已是 debug 包时继续发 debug；一旦改发 release，签名必须与已装包一致，否则要先卸载。
 
 ### 3. 上传
 
-与 `http://118.24.164.40/wechat-apk-install.html` 放在同一站点根下的 `app/`。常见目录是 `/var/www/html/app/` 或 `/var/www/tudoudou/app/`。不确定时：
+与 `http://118.24.164.40/wechat-apk-install.html` 放在同一站点根下的 `app/`。当前服务器实际目录是：
+
+`/var/www/tudoudou-static/app/`
+
+（本机可用 `ssh tencent` 连上）。文件名必须是 `tudoudou-aienglish.apk` 和 `version.json`。`versionCode` / `versionName` 与 gradle 里相同。
 
 ```bash
-sudo find /var/www /usr/share/nginx -name 'wechat-apk-install.html' 2>/dev/null
-```
+# debug 基线 / 日常侧载
+scp apps/web/android/app/build/outputs/apk/debug/app-debug.apk \
+  tencent:/var/www/tudoudou-static/app/tudoudou-aienglish.apk
 
-下面按 `/var/www/html/app/` 举例。文件名必须是 `tudoudou-aienglish.apk` 和 `version.json`。`versionCode` / `versionName` 与 gradle 里相同。
-
-```bash
-ssh user@118.24.164.40 'mkdir -p /var/www/html/app'
-
-scp apps/web/android/app/build/outputs/apk/release/app-release.apk \
-  user@118.24.164.40:/var/www/html/app/tudoudou-aienglish.apk
+# 若已改用 release：
+# scp apps/web/android/app/build/outputs/apk/release/app-release.apk \
+#   tencent:/var/www/tudoudou-static/app/tudoudou-aienglish.apk
 ```
 
 `version.json` 全文示例（发 `versionCode 2` 时）：
@@ -95,7 +134,7 @@ cat > /tmp/version.json <<'EOF'
 }
 EOF
 
-scp /tmp/version.json user@118.24.164.40:/var/www/html/app/version.json
+scp /tmp/version.json tencent:/var/www/tudoudou-static/app/version.json
 
 curl -fsS http://118.24.164.40/app/version.json
 curl -fsSI http://118.24.164.40/app/tudoudou-aienglish.apk
@@ -107,7 +146,7 @@ curl -fsSI http://118.24.164.40/app/tudoudou-aienglish.apk
 
 ```nginx
 location /app/ {
-  alias /var/www/html/app/;
+  alias /var/www/tudoudou-static/app/;
   types {
     application/json json;
     application/vnd.android.package-archive apk;
