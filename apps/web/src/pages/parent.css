@@ -52,6 +52,31 @@
   margin-bottom: 8px;
 }
 
+.parent-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.parent-guide h2,
+.parent-guide p {
+  margin: 0;
+}
+
+.parent-guide p {
+  margin-top: 4px;
+  font-size: 0.92rem;
+}
+
+.parent-screen .parent-guide-open {
+  margin-top: 0;
+  flex-shrink: 0;
+  background: #fff;
+  color: #9a3412;
+  border: 1px solid #f0c9a0;
+}
+
 .parent-update h2 {
   color: #9a3412;
 }
