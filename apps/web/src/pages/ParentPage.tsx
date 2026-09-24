@@ -60,6 +60,10 @@ import './parent.css'
 
 const SEND_COOLDOWN_SEC = 60
 
+function openBeginnerGuide() {
+  window.open(`${PRODUCTION_API_BASE}/helper`, '_blank', 'noopener,noreferrer')
+}
+
 type Props = {
   progress: ProgressState
   onProgress: (p: ProgressState) => void
@@ -328,6 +332,16 @@ export function ParentPage({ progress, onProgress }: Props) {
           <p className="muted">今日已玩约 {todayMin} 分钟 · 星星 {progress.stars}</p>
         </div>
       </header>
+
+      <section className="parent-guide" aria-label="新手指引">
+        <div>
+          <h2>新手指引</h2>
+          <p className="muted">手机操作说明。语音或文字记下的内容可以搜索，并能进入当天。</p>
+        </div>
+        <button type="button" className="parent-guide-open" onClick={openBeginnerGuide}>
+          打开新手指引
+        </button>
+      </section>
 
       {updateOffer && !updateDismissed ? (
         <section className="parent-update" aria-label={UPDATE_AVAILABLE_LABEL}>

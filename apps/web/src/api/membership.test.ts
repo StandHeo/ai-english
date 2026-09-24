@@ -47,6 +47,8 @@ describe('parent plus copy', () => {
     assert.match(parentSrc, /plusDetailsOpen/)
     assert.match(parentSrc, /accountManageOpen/)
     assert.match(parentSrc, /未登录 · 生成新关需要 Plus/)
+    assert.match(parentSrc, /新手指引/)
+    assert.match(parentSrc, /window\.open\(`\$\{PRODUCTION_API_BASE\}\/helper`, '_blank', 'noopener,noreferrer'\)/)
     assert.equal(/不含第三方模型调用费|腾讯云 SES|个人实名|SMTP/.test(parentSrc), false)
   })
 
