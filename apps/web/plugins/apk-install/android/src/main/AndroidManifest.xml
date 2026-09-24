@@ -10,15 +10,4 @@
             <action android:name="android.settings.MANAGE_UNKNOWN_APP_SOURCES" />
         </intent>
     </queries>
-    <application>
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.apkinstall.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/apk_install_paths" />
-        </provider>
-    </application>
 </manifest>

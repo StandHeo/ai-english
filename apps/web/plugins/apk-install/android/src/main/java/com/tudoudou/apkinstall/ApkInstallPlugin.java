@@ -151,7 +151,7 @@ public class ApkInstallPlugin extends Plugin {
     }
 
     private static void startInstall(Context context, File apk) {
-        String authority = context.getPackageName() + ".apkinstall.fileprovider";
+        String authority = context.getPackageName() + ".fileprovider";
         Uri uri = FileProvider.getUriForFile(context, authority, apk);
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
