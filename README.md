@@ -13,6 +13,8 @@ openspec/         # 产品规格与变更
 docs/             # 使用说明与技术方案
 ```
 
+**新用户手机操作指引：** [`docs/helper.html`](docs/helper.html)（静态站路径 `/helper`）
+
 **整体技术方案（架构 / 双轨语音 / 家庭日记 / 本地存储）：**  
 → **[`docs/tech-architecture.md`](docs/tech-architecture.md)**  
 → 家长视角体验与待定：[`docs/parent-child-ux-notes.md`](docs/parent-child-ux-notes.md)  
