@@ -49,7 +49,7 @@ describe('sideload version compare', () => {
   })
 
   it('parses the static manifest and ignores broken payloads', () => {
-    assert.equal(APP_VERSION_MANIFEST_URL, 'http://118.24.164.40/app/version.json')
+    assert.equal(APP_VERSION_MANIFEST_URL, 'https://tudoudou-ai.site/app/version.json')
     const parsed = parseAppVersionManifest(JSON.stringify(sample))
     assert.equal(parsed?.versionCode, 2)
     assert.equal(parsed?.notes, '修复朗读')

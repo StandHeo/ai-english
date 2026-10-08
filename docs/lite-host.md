@@ -1,6 +1,6 @@
 # 轻量主机部署草图（会员切片）
 
-单机腾讯云轻量（成都、Ubuntu）即可跑 `apps/api` + SQLite。域名与证书可后补；未上 TLS 前不要把短信 / 支付密钥打到公网明文。
+单机腾讯云轻量（成都、Ubuntu）即可跑 `apps/api` + SQLite。生产域名 `https://tudoudou-ai.site`（已备案 HTTPS）。未上 TLS 的调试环境不要把短信 / 支付密钥打到公网明文。
 
 ## 进程
 
@@ -23,9 +23,13 @@ location /api/ {
 location /health {
   proxy_pass http://127.0.0.1:8787;
 }
+# 侧载清单、Whisper 模型、家长指引等静态文件（与 HTTP 站点根同一目录）
+# location /app/ { alias /var/www/tudoudou/; }
+# location /models/ { alias /var/www/tudoudou/models/; }
+# location /helper { try_files /helper.html =404; }
 ```
 
-Web 静态资源另配站点根；开发期 Vite 仍把 `/api` 代理到 `:8787`。
+Web 静态资源需挂到同一域名站点根（`/app/`、`/models/`、`/helper` 等）；开发期 Vite 仍把 `/api` 代理到 `:8787`。
 
 Express 默认 `trust proxy` 为一跳（可用 `TRUST_PROXY` 覆盖；直连公网设 `0`）。邮箱与短信发送共用客户端 IP 滑动窗口限流（默认 60 秒 10 次，可选 `SMS_IP_DAILY_MAX` 日限额）。邮箱超限返回 `auth_ip_rate_limited`，短信超限仍为 `sms_ip_rate_limited`；按目标间隔分别是 `email_rate_limited` / `sms_rate_limited`。生产可设 `AUTH_CAPTCHA=on`（或兼容 `SMS_CAPTCHA=on`）打开内置图形验证码，两通道发送都要校验；未设置时 mock 开发流程不变。Nginx 必须覆盖 `X-Real-IP` / `X-Forwarded-For`，不要把客户端自带的转发头原样传给 API。
 

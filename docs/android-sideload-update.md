@@ -2,8 +2,8 @@
 
 服务器放静态清单和最新 APK，家长在 App 里手动升级。iOS 暂不做。不强制，拉清单失败时不弹错误。
 
-清单：`http://118.24.164.40/app/version.json`  
-安装包：`http://118.24.164.40/app/tudoudou-aienglish.apk`
+清单：`https://tudoudou-ai.site/app/version.json`  
+安装包：`https://tudoudou-ai.site/app/tudoudou-aienglish.apk`
 
 `version.json` 不要长期缓存。两个文件放在静态目录，不要放进只反代 `/api/` 的位置。
 
@@ -97,7 +97,7 @@ cd android && ./gradlew :app:assembleDebug
 
 ### 3. 上传
 
-与 `http://118.24.164.40/wechat-apk-install.html` 放在同一站点根下的 `app/`。当前服务器实际目录是：
+与 `https://tudoudou-ai.site/wechat-apk-install.html` 放在同一站点根下的 `app/`。当前服务器实际目录是：
 
 `/var/www/tudoudou-static/app/`
 
@@ -119,7 +119,7 @@ scp apps/web/android/app/build/outputs/apk/debug/app-debug.apk \
 {
   "versionCode": 2,
   "versionName": "1.1",
-  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
+  "apkUrl": "https://tudoudou-ai.site/app/tudoudou-aienglish.apk",
   "notes": "本次更新说明"
 }
 ```
@@ -129,15 +129,15 @@ cat > /tmp/version.json <<'EOF'
 {
   "versionCode": 2,
   "versionName": "1.1",
-  "apkUrl": "http://118.24.164.40/app/tudoudou-aienglish.apk",
+  "apkUrl": "https://tudoudou-ai.site/app/tudoudou-aienglish.apk",
   "notes": "本次更新说明"
 }
 EOF
 
 scp /tmp/version.json tencent:/var/www/tudoudou-static/app/version.json
 
-curl -fsS http://118.24.164.40/app/version.json
-curl -fsSI http://118.24.164.40/app/tudoudou-aienglish.apk
+curl -fsS https://tudoudou-ai.site/app/version.json
+curl -fsSI https://tudoudou-ai.site/app/tudoudou-aienglish.apk
 ```
 
 `notes` 可省略。`apkUrl` 保持这条直链。
