@@ -275,8 +275,8 @@ export function FamilyStudioSettingsPage() {
     setAsrProvider('paraformer-v2')
     setStatus(
       paraformerKey.trim()
-        ? '已保存：云端 Paraformer-v2 与 API Key'
-        : '已选择云端 Paraformer，但 Key 为空（也可复用上方通义/百炼 Key）',
+        ? '已保存：云端 Paraformer 实时与 API Key（边说边出字）'
+        : '已选择云端 Paraformer 实时，但 Key 为空（也可复用上方通义/百炼 Key）',
     )
   }
 
@@ -540,7 +540,8 @@ export function FamilyStudioSettingsPage() {
 
         <h2>语音转写方式</h2>
         <p className="muted">
-          日记语音转文字。端侧 Whisper 不上传录音；云端 Paraformer-v2（阿里云百炼）需联网与 API Key。
+          日记语音转文字。端侧 Whisper 不上传录音；云端 Paraformer 实时（阿里云百炼）边说边出字，需联网与
+          API Key。
         </p>
         <div className="model-switch" role="radiogroup" aria-label="语音转写方式">
           {DIARY_ASR_PROVIDERS.map((m) => (
@@ -561,17 +562,18 @@ export function FamilyStudioSettingsPage() {
 
         {asrProvider === 'paraformer-v2' && (
           <>
-            <h2>百炼 API Key（Paraformer-v2）</h2>
+            <h2>百炼 API Key（Paraformer 实时）</h2>
             <p className="muted">
               在{' '}
               <a
-                href="https://bailian.console.aliyun.com/?tab=model#/model-market/detail/paraformer-v2"
+                href="https://docs.bailian.console.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                阿里云百炼控制台
+                阿里云百炼实时语音识别
               </a>{' '}
-              开通 Paraformer-v2 并创建 API Key。未单独填写时会尝试复用上方「通义 / 百炼」Key。
+              开通并创建 API Key（模型 paraformer-realtime-v2）。未单独填写时会尝试复用上方「通义 /
+              百炼」Key。
             </p>
             <input
               type="password"

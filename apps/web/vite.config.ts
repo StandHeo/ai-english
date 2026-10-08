@@ -13,7 +13,10 @@ export default defineConfig({
   server: {
     host: phone ? '0.0.0.0' : undefined,
     proxy: {
-      '/api': 'http://localhost:8787',
+      '/api': {
+        target: 'http://localhost:8787',
+        ws: true,
+      },
       '/health': 'http://localhost:8787',
     },
   },

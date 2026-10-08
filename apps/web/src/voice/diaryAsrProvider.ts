@@ -16,8 +16,8 @@ export const DIARY_ASR_PROVIDERS: DiaryAsrProviderOption[] = [
   },
   {
     id: 'paraformer-v2',
-    label: '云端 Paraformer-v2',
-    hint: '阿里云百炼；需填 API Key；录音会上传临时存储后转写',
+    label: '云端 Paraformer 实时',
+    hint: '阿里云百炼实时识别；边说边出字；需填 API Key 与联网',
   },
 ]
 

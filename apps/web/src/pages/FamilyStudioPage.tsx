@@ -43,6 +43,7 @@ import {
   getLlmApiKey,
   getLlmProvider,
   getPackLevelCount,
+  getParaformerApiKeyResolved,
   hydrateFamilyDayImages,
   mergeStoryFromMessages,
   removeDayImage,
@@ -64,6 +65,10 @@ import {
   diaryWhisperModelLabel,
   getDiaryWhisperModelId,
 } from '../voice/diaryWhisperModel'
+import {
+  startParaformerLive,
+  type ParaformerLiveSession,
+} from '../voice/paraformerLive'
 import {
   DIARY_MAX_RECORD_MS,
   formatClock,
@@ -146,6 +151,8 @@ export function FamilyStudioPage() {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [asrHint, setAsrHint] = useState('')
   const [asrReady, setAsrReady] = useState(false)
+  const [liveAsrText, setLiveAsrText] = useState('')
+  const liveSessionRef = useRef<ParaformerLiveSession | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
@@ -260,13 +267,31 @@ export function FamilyStudioPage() {
 
     const modelId = getDiaryWhisperModelId()
     const blob = result.blob
+    const liveSession = liveSessionRef.current
+    liveSessionRef.current = null
+    let liveText = ''
+    if (liveSession) {
+      try {
+        liveText = (await liveSession.stop()).trim()
+      } catch {
+        liveText = liveSession.getText().trim()
+      }
+    }
+    setLiveAsrText('')
+
     let messageId = ''
     try {
-      const day = await appendVoiceMessage(date, { text: '', blob })
+      const day = await appendVoiceMessage(date, { text: liveText || '', blob })
       const last = day.messages[day.messages.length - 1]
       messageId = last?.id || ''
       setMessages(day.messages)
       if (!messageId) return
+      if (liveText) {
+        setAsrReady(true)
+        setAsrHint('')
+        showToast('语音已转写（云端 Paraformer 实时），可点「改字」微调')
+        return
+      }
       setPendingAsrIds((prev) => ({ ...prev, [messageId]: true }))
       setTranscribePending((n) => n + 1)
     } catch {
@@ -303,6 +328,30 @@ export function FamilyStudioPage() {
     onAutoStop: (cap) => {
       void persistVoiceCapture(cap)
     },
+    onStreamReady: (stream) => {
+      if (getDiaryAsrProvider() !== 'paraformer-v2') return
+      if (!getParaformerApiKeyResolved()) {
+        setAsrHint('云端 Paraformer 需在设置中填写百炼 API Key。')
+        return
+      }
+      setLiveAsrText('')
+      void startParaformerLive(stream, {
+        onPartial: (text) => setLiveAsrText(text),
+        onError: (message) => {
+          showToast(`实时转写：${message}`)
+        },
+      })
+        .then((session) => {
+          liveSessionRef.current = session
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err)
+          showToast(`实时转写未启动：${msg}`)
+        })
+    },
+    onStreamEnded: () => {
+      /* stop happens in persistVoiceCapture */
+    },
   })
 
   function reloadDay() {
@@ -333,14 +382,15 @@ export function FamilyStudioPage() {
       setAsrReady(s.available && s.modelReady)
       if (engine === 'paraformer-v2') {
         if (!s.modelReady) {
-          setAsrHint('云端 Paraformer 需在设置中填写百炼 API Key。')
+          setAsrHint('云端 Paraformer 实时需在设置中填写百炼 API Key。')
         } else {
-          setAsrHint('')
+          setAsrHint('已启用边说边出字（云端实时）。')
+          setAsrReady(true)
         }
         return
       }
       if (!s.available) {
-        setAsrHint('浏览器请用打字，或设置里改用云端 Paraformer；安装 App 可用端侧 Whisper。')
+        setAsrHint('浏览器请用打字，或设置里改用云端 Paraformer 实时；安装 App 可用端侧 Whisper。')
       } else if (!s.modelReady) {
         setAsrHint(`语音模型 ${diaryWhisperModelLabel(modelId)} 准备中或未装齐，可先打字。`)
       } else {
@@ -1154,8 +1204,15 @@ export function FamilyStudioPage() {
               <span>
                 {nearLimit
                   ? `还剩 ${formatClock(remainingMs)}，将自动结束并保存`
-                  : '说完后点下方「结束录音」'}
+                  : liveAsrText
+                    ? '识别中…'
+                    : '说完后点下方「结束录音」'}
               </span>
+              {liveAsrText ? (
+                <p className="live-asr-text" aria-live="polite">
+                  {liveAsrText}
+                </p>
+              ) : null}
             </div>
           </div>
         )}

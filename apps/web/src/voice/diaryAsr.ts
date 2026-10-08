@@ -282,8 +282,9 @@ export async function isDiaryAsrAvailable(): Promise<boolean> {
 }
 
 /**
- * Transcribe diary audio.
- * Default: on-device Whisper (never OpenAI). Optional: DashScope Paraformer-v2 when user selects cloud ASR.
+ * Transcribe diary audio (post-hoc fallback).
+ * Default: on-device Whisper (never OpenAI).
+ * Cloud Paraformer primarily streams live via WebSocket; this path is fallback if live text is empty.
  */
 export async function transcribeDiaryAudio(
   wavBase64: string,

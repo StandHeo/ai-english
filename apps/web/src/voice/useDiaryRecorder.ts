@@ -16,6 +16,9 @@ export const DIARY_WARN_REMAINING_MS = 20_000
 type Options = {
   /** Fired when the max-duration timer ends the take (so UI can still save). */
   onAutoStop?: (capture: DiaryRecordCapture) => void
+  /** Live MediaStream after mic opens (for parallel realtime ASR). */
+  onStreamReady?: (stream: MediaStream) => void
+  onStreamEnded?: () => void
 }
 
 /**
@@ -33,6 +36,10 @@ export function useDiaryRecorder(opts: Options = {}) {
   const tickRef = useRef<number | null>(null)
   const onAutoStopRef = useRef(opts.onAutoStop)
   onAutoStopRef.current = opts.onAutoStop
+  const onStreamReadyRef = useRef(opts.onStreamReady)
+  onStreamReadyRef.current = opts.onStreamReady
+  const onStreamEndedRef = useRef(opts.onStreamEnded)
+  onStreamEndedRef.current = opts.onStreamEnded
 
   const release = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -82,6 +89,7 @@ export function useDiaryRecorder(opts: Options = {}) {
           }
         })) || undefined
     }
+    onStreamEndedRef.current?.()
     release()
     setRecording(false)
     setElapsedMs(0)
@@ -123,6 +131,11 @@ export function useDiaryRecorder(opts: Options = {}) {
       mediaRef.current = recorder
       startedAtRef.current = Date.now()
       recorder.start(250)
+      try {
+        onStreamReadyRef.current?.(stream)
+      } catch {
+        /* live ASR attach must not block recording */
+      }
       clearTimer()
       clearTick()
       tickRef.current = window.setInterval(() => {
@@ -138,6 +151,7 @@ export function useDiaryRecorder(opts: Options = {}) {
       activeRef.current = false
       setRecording(false)
       setElapsedMs(0)
+      onStreamEndedRef.current?.()
       release()
       const name = err instanceof DOMException ? err.name : ''
       if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {

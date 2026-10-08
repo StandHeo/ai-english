@@ -14,7 +14,8 @@
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "nodemailer": "^10.0.10",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -23,6 +24,7 @@
     "@types/node": "^26.1.2",
     "@types/nodemailer": "^8.0.2",
     "@types/sharp": "^0.31.1",
+    "@types/ws": "^8.18.2",
     "tsx": "^4.23.5",
     "typescript": "^7.0.2"
   }

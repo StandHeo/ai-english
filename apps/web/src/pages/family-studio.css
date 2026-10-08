@@ -514,6 +514,18 @@
   color: #7a6a58;
 }
 
+.live-asr-text {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #3a2f28;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .composer {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   padding: 10px 12px 12px;
