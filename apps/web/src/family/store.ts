@@ -241,7 +241,7 @@ function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
         : {}),
       ...(typeof o.imageBgId === 'string' && o.imageBgId ? { imageBgId: o.imageBgId } : {}),
       ...(Array.isArray(o.itemImageIds)
-        ? { itemImageIds: o.itemImageIds.map(String).filter(Boolean) }
+        ? { itemImageIds: o.itemImageIds.map((x) => (x == null ? '' : String(x))) }
         : {}),
       // 仅保留非巨型内联引用；data URL 留给 hydrate / 迁移，不进 normalize 持久化路径
       ...(typeof o.imageBg === 'string' && o.imageBg && !isInlineImageRef(o.imageBg)
@@ -249,8 +249,9 @@ function normalizeMiniLevels(raw: unknown): FamilyMiniLevel[] {
         : typeof o.imageBg === 'string' && o.imageBg.startsWith('data:image')
           ? { imageBg: o.imageBg }
           : {}),
+      // 保留空位，与配图槽下标对齐（勿 filter 掉中间缺图）
       ...(Array.isArray(o.itemImages)
-        ? { itemImages: o.itemImages.map(String).filter(Boolean) }
+        ? { itemImages: o.itemImages.map((x) => (x == null ? '' : String(x))) }
         : {}),
       completed: Boolean(o.completed),
     })
@@ -273,8 +274,9 @@ function slimMiniLevelForPersist(m: FamilyMiniLevel): FamilyMiniLevel {
   // 兼容：尚无 id 的旧短引用可留；data URL 一律丢掉（应已迁入 IDB）
   if (m.imageBg && !isInlineImageRef(m.imageBg) && !m.imageBgId) next.imageBg = m.imageBg
   if (m.itemImages?.length && !m.itemImageIds?.length) {
-    const small = m.itemImages.filter((u) => u && !isInlineImageRef(u))
-    if (small.length) next.itemImages = small
+    // 保留下标（含空串），避免缺图被压掉后「只补缺图」对错槽
+    const kept = m.itemImages.map((u) => (u && !isInlineImageRef(u) ? u : ''))
+    if (kept.some(Boolean)) next.itemImages = kept
   }
   return next
 }
@@ -866,17 +868,24 @@ export async function setMiniLevelImages(
 
   if (opts.itemImages !== undefined) {
     for (const oldId of cur.itemImageIds || []) {
-      void deleteImageBlob(oldId).catch(() => undefined)
+      if (oldId) void deleteImageBlob(oldId).catch(() => undefined)
     }
-    const incoming = opts.itemImages.filter(Boolean)
+    // 与道具槽下标一一对应；空串表示该槽仍缺图
+    const incoming = opts.itemImages.map((u) => (typeof u === 'string' ? u : '') || '')
     itemImageIds = []
     itemImagesResolved = []
     for (const img of incoming) {
+      if (!img) {
+        itemImageIds.push('')
+        itemImagesResolved.push('')
+        continue
+      }
       if (isInlineImageRef(img) || img.startsWith('data:')) {
         const id = await storeImageDataUrl(img, `item_${levelId}`)
         itemImageIds.push(id)
         itemImagesResolved.push(img)
       } else {
+        itemImageIds.push('')
         itemImagesResolved.push(img)
       }
     }
@@ -893,7 +902,8 @@ export async function setMiniLevelImages(
         itemImagesResolved ?? (opts.itemImages === undefined ? m.itemImages : undefined),
     }
     if (!next.imageBgId) delete next.imageBgId
-    if (!next.itemImageIds?.length) delete next.itemImageIds
+    if (!next.itemImageIds?.some(Boolean)) delete next.itemImageIds
+    if (next.itemImages && !next.itemImages.some(Boolean)) delete next.itemImages
     return next
   })
 
@@ -979,8 +989,10 @@ export async function hydrateFamilyDayImages(day: FamilyDayRecord): Promise<Fami
         try {
           itemImageIds = []
           for (const img of itemImages) {
-            if (isInlineImageRef(img)) {
+            if (img && isInlineImageRef(img)) {
               itemImageIds.push(await storeImageDataUrl(img, `item_${m.id}`))
+            } else {
+              itemImageIds.push('')
             }
           }
           dirty = true
@@ -994,11 +1006,15 @@ export async function hydrateFamilyDayImages(day: FamilyDayRecord): Promise<Fami
       }
       if (itemImageIds?.length) {
         const resolved: string[] = []
-        for (const id of itemImageIds) {
-          const url = await resolveImageRef(id)
-          if (url) resolved.push(url)
+        for (let i = 0; i < itemImageIds.length; i++) {
+          const id = itemImageIds[i]
+          if (!id) {
+            resolved.push(itemImages?.[i] || '')
+            continue
+          }
+          resolved.push((await resolveImageRef(id)) || itemImages?.[i] || '')
         }
-        if (resolved.length) itemImages = resolved
+        itemImages = resolved
       }
 
       const out: FamilyMiniLevel = {

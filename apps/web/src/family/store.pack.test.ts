@@ -239,6 +239,23 @@ test('buildKidsPrompt composes final prompt and slotRoleLabel names slots', () =
   assert.equal(slotRoleLabel(slots, 2), '干扰图')
 })
 
+test('setMiniLevelImages keeps empty holes aligned to item slots', async () => {
+  const date = '2099-02-08'
+  saveGeneratedPack(date, {
+    title: 'T',
+    levels: [sampleLevel('family-20990208-park', 'park')],
+    force: true,
+  })
+  await setMiniLevelImages(date, 'family-20990208-park', {
+    imageBg: 'https://example.com/bg.png',
+    itemImages: ['https://example.com/a.png', '', 'https://example.com/c.png'],
+  })
+  const mini = getDay(date)!.miniLevels![0]
+  assert.equal(mini.itemImages?.[0], 'https://example.com/a.png')
+  assert.equal(mini.itemImages?.[1], '')
+  assert.equal(mini.itemImages?.[2], 'https://example.com/c.png')
+})
+
 test('setMiniLevelSlotImage replaces only the target slot', async () => {
   const date = '2099-02-07'
   saveGeneratedPack(date, {

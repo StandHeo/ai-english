@@ -119,7 +119,9 @@ export async function fillLevelSlotImages(
       cache
         .getOrLoad(key, async () => {
           const got = await fetchSlots([slot])
-          return got[0] || ''
+          const url = got[0] || ''
+          if (!url) throw new Error(`slot_empty:${key}`)
+          return url
         })
         .then((url) => {
           images[i] = url
@@ -131,7 +133,9 @@ export async function fillLevelSlotImages(
     sceneSlots.length
       ? fetchSlots(sceneSlots).then((got) => {
           sceneIdx.forEach((idx, j) => {
-            if (got[j]) images[idx] = got[j]!
+            const url = got[j] || ''
+            if (!url) throw new Error(`slot_empty:scene`)
+            images[idx] = url
           })
         })
       : Promise.resolve(),

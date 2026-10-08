@@ -85,7 +85,7 @@ import './family-studio.css'
 
 type ImageSlotLike = { word?: string; subject: string; role?: 'scene' | 'item' }
 
-type StudioJobKind = 'image' | 'generate' | 'translate'
+type StudioJobKind = 'image' | 'generate' | 'translate' | 'redraw'
 type StudioJob = {
   kind: StudioJobKind
   label: string
@@ -94,6 +94,10 @@ type StudioJob = {
 
 const TOAST_MS = 2000
 const JOB_DONE_HOLD_MS = 2000
+
+function slotRedrawKey(levelId: string, slotIndex: number): string {
+  return `${levelId}#${slotIndex}`
+}
 
 /** 一组槽位 → 一组图（App 直连云或走电脑 API），供整关/单张配图共用 */
 async function fetchSlotImages(
@@ -160,8 +164,13 @@ export function FamilyStudioPage() {
   const liveSessionRef = useRef<ParaformerLiveSession | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
-  const [redrawSlot, setRedrawSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
+  /** 进行中的单槽云端配图：key = levelId#slotIndex，可并发 */
+  const [redrawingSlots, setRedrawingSlots] = useState<Record<string, true>>({})
   const [pickingSlot, setPickingSlot] = useState<{ levelId: string; slotIndex: number } | null>(null)
+  const redrawInflightRef = useRef(0)
+  const redrawFailRef = useRef(0)
+  const redrawingKeysRef = useRef(new Set<string>())
+  const slotPersistTailRef = useRef(Promise.resolve())
   const [levelFilter, setLevelFilter] = useState('')
   const [promptNonce, setPromptNonce] = useState(0)
   const [plusActive, setPlusActive] = useState(false)
@@ -172,16 +181,33 @@ export function FamilyStudioPage() {
   const jobDoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const generating = activeJob?.kind === 'generate' && activeJob.phase === 'running'
+  /** 批量配图（全部/补缺/本关），不含单槽并发重画 */
   const imaging = activeJob?.kind === 'image'
   const imagingRunning = activeJob?.kind === 'image' && activeJob.phase === 'running'
   const translating = activeJob?.kind === 'translate' && activeJob.phase === 'running'
+  const slotRedrawBusy = Object.keys(redrawingSlots).length > 0
   const sceneLocked = Boolean(
     (activeJob?.kind === 'image') ||
       (activeJob?.kind === 'translate' && activeJob.phase === 'running'),
   )
+  /** 批量/翻译/生成/选图时锁全局；单槽重画不锁其它槽的「云端配图」 */
   const imageOpsLocked =
-    imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot) || !plusActive
+    imaging || translating || generating || Boolean(pickingSlot) || slotRedrawBusy || !plusActive
   const showJobBanner = Boolean(activeJob) || transcribePending > 0
+
+  function isSlotRedrawing(levelId: string, slotIndex: number): boolean {
+    return Boolean(redrawingSlots[slotRedrawKey(levelId, slotIndex)])
+  }
+
+  /** 单槽写库串行，避免并发 setMiniLevelSlotImage 互相覆盖 */
+  function enqueueSlotPersist<T>(run: () => Promise<T>): Promise<T> {
+    const p = slotPersistTailRef.current.then(run, run)
+    slotPersistTailRef.current = p.then(
+      () => undefined,
+      () => undefined,
+    )
+    return p
+  }
 
   function clearToastTimer() {
     if (toastTimerRef.current) {
@@ -489,7 +515,7 @@ export function FamilyStudioPage() {
       plusLockedToast()
       return false
     }
-    if (imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot)) {
+    if (imaging || translating || generating || slotRedrawBusy || Boolean(pickingSlot)) {
       showToast('请等待当前任务完成后再配图')
       return false
     }
@@ -550,9 +576,10 @@ export function FamilyStudioPage() {
       let persistTail: Promise<void> = Promise.resolve()
       const persistImages = (mini: FamilyMiniLevel, list: string[]) => {
         const run = async () => {
+          // 保留道具槽下标（含空串），避免缺图被压掉后补错位
           const day = await setMiniLevelImages(date, mini.id, {
             imageBg: list[0] || mini.imageBg,
-            itemImages: list.slice(1).filter(Boolean),
+            itemImages: list.slice(1).map((u) => u || ''),
           })
           if (day) setMiniLevels(day.miniLevels || [])
         }
@@ -622,12 +649,27 @@ export function FamilyStudioPage() {
       })
 
       await persistTail
-      if (failCount > 0) {
+
+      const dayAfter = getDay(date)
+      let stillMissing = 0
+      for (const m of dayAfter?.miniLevels || targets) {
+        stillMissing += miniLevelMissingImageSlots(
+          m.level as unknown as Record<string, unknown>,
+          m.scenePromptEn?.trim() || effectiveScenePrompt(m),
+          m.imageBg,
+          m.itemImages,
+        ).length
+      }
+
+      if (failCount > 0 || stillMissing > 0) {
+        const ok = targets.length - failCount
         finishJob(
-          `配图结束：成功 ${targets.length - failCount}/${targets.length}，失败 ${failCount}`,
+          stillMissing > 0
+            ? `配图结束：仍有 ${stillMissing} 张缺图（关卡 ${ok}/${targets.length}），可再点「只补缺图」`
+            : `配图结束：成功 ${ok}/${targets.length}，失败 ${failCount}`,
           'error',
         )
-        return failCount < targets.length
+        return ok > 0 && stillMissing === 0
       }
       finishJob('配图完成', 'done')
       return true
@@ -662,7 +704,7 @@ export function FamilyStudioPage() {
       showToast('还有语音正在转成文字，转完后再生成关卡')
       return
     }
-    if (generating || imagingRunning || translating || Boolean(pickingSlot)) {
+    if (generating || imagingRunning || translating || slotRedrawBusy || Boolean(pickingSlot)) {
       showToast('请等待当前任务完成后再生成')
       return
     }
@@ -969,15 +1011,21 @@ export function FamilyStudioPage() {
     await requestMiniLevelImages([mini])
   }
 
-  /** 单张重画：只重新生成该槽，不动其它图 */
+  /** 单张重画：可并发多槽；顶部提示进度，不锁其它槽的「云端配图」 */
   async function redrawOneSlot(mini: FamilyMiniLevel, slotIndex: number) {
-    if (imageOpsLocked) {
-      showToast('请等待当前任务完成后再重画')
+    if (!plusActive) {
+      plusLockedToast()
+      return
+    }
+    if (generating || translating || imagingRunning || Boolean(pickingSlot)) {
+      showToast('请等待当前批量任务完成后再重画')
       return
     }
     const day = getDay(date)
     const cur = day?.miniLevels?.find((m) => m.id === mini.id)
     if (!cur) return
+    const key = slotRedrawKey(cur.id, slotIndex)
+    if (redrawingKeysRef.current.has(key)) return
     const cloud = getImageCloudProvider()
     const cloudName = imageCloudLabel(cloud)
     const cloudKey = getImageCloudApiKey()
@@ -997,8 +1045,18 @@ export function FamilyStudioPage() {
     )
     const slot = slots[slotIndex]
     if (!slot) return
-    setRedrawSlot({ levelId: cur.id, slotIndex })
-    startJob('image', `${cloudName}重画第 ${slotIndex + 1} 张（${slot.subject}）…`)
+
+    redrawingKeysRef.current.add(key)
+    setRedrawingSlots((prev) => ({ ...prev, [key]: true }))
+    redrawInflightRef.current += 1
+    const running = redrawInflightRef.current
+    const subjectHint = slot.subject.trim().slice(0, 28)
+    startJob(
+      'redraw',
+      running === 1
+        ? `${cloudName}重画第 ${slotIndex + 1} 张（${subjectHint}）…`
+        : `${cloudName}重画中（${running} 张并行）…`,
+    )
     try {
       const images = await fetchSlotImages([slot], {
         date,
@@ -1008,19 +1066,37 @@ export function FamilyStudioPage() {
       })
       const img = images[0]
       if (!img) throw new Error('生成结果为空')
-      const updated = await setMiniLevelSlotImage(date, cur.id, slotIndex, img)
+      const updated = await enqueueSlotPersist(() =>
+        setMiniLevelSlotImage(date, cur.id, slotIndex, img),
+      )
       if (updated) {
         const hydrated = await hydrateFamilyDayImages(updated)
         setMiniLevels(hydrated.miniLevels || [])
-        finishJob('配图完成', 'done')
-      } else {
-        clearJobNow()
       }
     } catch (err) {
+      redrawFailRef.current += 1
       const msg = err instanceof Error ? err.message : String(err)
-      finishJob(`${cloudName}重画失败（${msg.slice(0, 40)}）`, 'error')
+      updateJobLabel(`${cloudName}有一张失败（${msg.slice(0, 28)}），其余继续…`)
     } finally {
-      setRedrawSlot(null)
+      redrawingKeysRef.current.delete(key)
+      setRedrawingSlots((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      redrawInflightRef.current = Math.max(0, redrawInflightRef.current - 1)
+      const left = redrawInflightRef.current
+      if (left > 0) {
+        updateJobLabel(`${cloudName}重画中（还剩 ${left} 张）…`)
+      } else {
+        const fails = redrawFailRef.current
+        redrawFailRef.current = 0
+        if (fails > 0) {
+          finishJob(`重画结束：${fails} 张失败，可再点「云端配图」`, 'error')
+        } else {
+          finishJob('配图完成', 'done')
+        }
+      }
     }
   }
 
@@ -1033,8 +1109,12 @@ export function FamilyStudioPage() {
       plusLockedToast()
       return
     }
-    if (imaging || translating || generating || Boolean(redrawSlot) || Boolean(pickingSlot)) {
+    if (imaging || translating || generating || Boolean(pickingSlot)) {
       showToast('请等待当前任务完成后再选图')
+      return
+    }
+    if (isSlotRedrawing(mini.id, slotIndex)) {
+      showToast('这张正在云端配图，稍后再选相册')
       return
     }
     setPickingSlot({ levelId: mini.id, slotIndex })
@@ -1100,10 +1180,12 @@ export function FamilyStudioPage() {
       : activeJob?.phase === 'error'
         ? 'error'
         : activeJob
-          ? activeJob.kind
+          ? activeJob.kind === 'redraw'
+            ? 'image'
+            : activeJob.kind
           : 'transcribe'
   const bannerTitle =
-    activeJob?.phase === 'done' && activeJob.kind === 'image'
+    activeJob?.phase === 'done' && (activeJob.kind === 'image' || activeJob.kind === 'redraw')
       ? '配图完成'
       : activeJob?.phase === 'done'
         ? activeJob.label
@@ -1111,7 +1193,7 @@ export function FamilyStudioPage() {
           ? activeJob.label
           : activeJob?.kind === 'generate'
             ? '生成关卡中…'
-            : activeJob?.kind === 'image'
+            : activeJob?.kind === 'image' || activeJob?.kind === 'redraw'
               ? '配图进行中'
               : activeJob?.kind === 'translate'
                 ? '翻译场景词中…'
@@ -1119,7 +1201,7 @@ export function FamilyStudioPage() {
   const bannerDetail =
     activeJob?.phase === 'running'
       ? activeJob.label
-      : activeJob?.phase === 'done' && activeJob.kind === 'image'
+      : activeJob?.phase === 'done' && (activeJob.kind === 'image' || activeJob.kind === 'redraw')
         ? '即将关闭…'
         : activeJob?.phase === 'done' || activeJob?.phase === 'error'
           ? activeJob.label
@@ -1506,9 +1588,17 @@ export function FamilyStudioPage() {
                             const finalPrompt = buildKidsPrompt(slot)
                             const subject = slot.subject
                             const img = slotImages[si] || ''
-                            const redrawing = redrawSlot?.levelId === m.id && redrawSlot.slotIndex === si
+                            const redrawing = isSlotRedrawing(m.id, si)
                             const picking = pickingSlot?.levelId === m.id && pickingSlot.slotIndex === si
                             const slotRole = slot.role === 'scene' ? 'scene' : 'item'
+                            // 单槽云端配图可并发：只禁用本槽 / 批量任务中
+                            const slotCloudBusy =
+                              !plusActive ||
+                              generating ||
+                              translating ||
+                              imagingRunning ||
+                              redrawing ||
+                              picking
                             return (
                               <div key={si} className="slot-card">
                                 <div className="slot-head">
@@ -1534,7 +1624,7 @@ export function FamilyStudioPage() {
                                   <button
                                     type="button"
                                     className="ghost"
-                                    disabled={imageOpsLocked || redrawing || picking}
+                                    disabled={slotCloudBusy}
                                     onClick={() => void redrawOneSlot(m, si)}
                                   >
                                     云端配图
@@ -1542,7 +1632,7 @@ export function FamilyStudioPage() {
                                   <button
                                     type="button"
                                     className="ghost"
-                                    disabled={imageOpsLocked || redrawing || picking}
+                                    disabled={slotCloudBusy}
                                     onClick={() => void pickSlotFromAlbum(m, si, slotRole)}
                                   >
                                     相册选图
