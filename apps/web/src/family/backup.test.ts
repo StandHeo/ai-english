@@ -39,6 +39,7 @@ const sampleStore = {
   },
   deepseekApiKey: 'sk-secret',
   tongyiApiKey: 'ty-secret',
+  paraformerApiKey: 'pf-secret',
   agnesApiKey: 'ag-secret',
   llmProvider: 'agnes' as const,
   imageCloudProvider: 'agnes' as const,
@@ -46,10 +47,11 @@ const sampleStore = {
   minLevelKeywords: 4,
 }
 
-test('stripApiKeys clears three keys', () => {
+test('stripApiKeys clears api keys', () => {
   const next = stripApiKeys(sampleStore)
   assert.equal(next.deepseekApiKey, '')
   assert.equal(next.tongyiApiKey, '')
+  assert.equal(next.paraformerApiKey, '')
   assert.equal(next.agnesApiKey, '')
   assert.equal(sampleStore.deepseekApiKey, 'sk-secret')
 })

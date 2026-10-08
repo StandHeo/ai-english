@@ -69,6 +69,7 @@ export function stripApiKeys(store: FamilyStoreSnapshot): FamilyStoreSnapshot {
     ...store,
     deepseekApiKey: '',
     tongyiApiKey: '',
+    paraformerApiKey: '',
     agnesApiKey: '',
   }
 }

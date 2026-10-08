@@ -59,6 +59,7 @@ import {
   type FamilyMiniLevel,
 } from '../family/store'
 import { getDiaryAsrStatus, transcribeDiaryAudio } from '../voice/diaryAsr'
+import { getDiaryAsrProvider } from '../voice/diaryAsrProvider'
 import {
   diaryWhisperModelLabel,
   getDiaryWhisperModelId,
@@ -282,7 +283,7 @@ export function FamilyStudioPage() {
         if (updated) setMessages(updated.messages)
         setAsrReady(true)
         setAsrHint('')
-        showToast(`语音已转写（${diaryWhisperModelLabel(asr.modelId)}），可点「改字」微调`)
+        showToast(`语音已转写（${asr.label}），可点「改字」微调`)
       } else {
         showToast(`${asr.message}（已保留录音，请点气泡改字）`)
       }
@@ -327,10 +328,19 @@ export function FamilyStudioPage() {
       setPlusChecked(true)
     })
     const modelId = getDiaryWhisperModelId()
+    const engine = getDiaryAsrProvider()
     void getDiaryAsrStatus(modelId).then((s) => {
       setAsrReady(s.available && s.modelReady)
+      if (engine === 'paraformer-v2') {
+        if (!s.modelReady) {
+          setAsrHint('云端 Paraformer 需在设置中填写百炼 API Key。')
+        } else {
+          setAsrHint('')
+        }
+        return
+      }
       if (!s.available) {
-        setAsrHint('浏览器请用打字发日记；安装 App 后可用语音转写。')
+        setAsrHint('浏览器请用打字，或设置里改用云端 Paraformer；安装 App 可用端侧 Whisper。')
       } else if (!s.modelReady) {
         setAsrHint(`语音模型 ${diaryWhisperModelLabel(modelId)} 准备中或未装齐，可先打字。`)
       } else {

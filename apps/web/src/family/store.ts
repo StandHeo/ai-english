@@ -96,6 +96,8 @@ type FamilyStore = {
   deepseekApiKey: string
   /** 通义/百炼 Key（可选；也可只用 API .env） */
   tongyiApiKey: string
+  /** 日记云端 ASR（Paraformer）专用；空则回落 tongyiApiKey */
+  paraformerApiKey: string
   /** Agnes 文本+配图共用 Key */
   agnesApiKey: string
   llmProvider: FamilyLlmProvider
@@ -118,6 +120,7 @@ function emptyStore(): FamilyStore {
     days: {},
     deepseekApiKey: '',
     tongyiApiKey: '',
+    paraformerApiKey: '',
     agnesApiKey: '',
     llmProvider: DEFAULT_FAMILY_LLM,
     imageCloudProvider: DEFAULT_IMAGE_CLOUD,
@@ -368,6 +371,7 @@ export function loadFamilyStore(): FamilyStore {
       days,
       deepseekApiKey: typeof parsed.deepseekApiKey === 'string' ? parsed.deepseekApiKey : '',
       tongyiApiKey: typeof parsed.tongyiApiKey === 'string' ? parsed.tongyiApiKey : '',
+      paraformerApiKey: typeof parsed.paraformerApiKey === 'string' ? parsed.paraformerApiKey : '',
       agnesApiKey: typeof parsed.agnesApiKey === 'string' ? parsed.agnesApiKey : '',
       llmProvider: isFamilyLlmProvider(String(parsed.llmProvider || ''))
         ? parsed.llmProvider
@@ -1160,6 +1164,25 @@ export function setTongyiKey(key: string): void {
 
 export function clearTongyiKey(): void {
   setTongyiKey('')
+}
+
+export function getParaformerKey(): string {
+  return loadFamilyStore().paraformerApiKey
+}
+
+/** Paraformer 专用 Key；未填时回落通义/百炼 Key（同属 DashScope）。 */
+export function getParaformerApiKeyResolved(): string {
+  return getParaformerKey().trim() || getTongyiKey().trim()
+}
+
+export function setParaformerKey(key: string): void {
+  const store = loadFamilyStore()
+  store.paraformerApiKey = key.trim()
+  saveFamilyStore(store)
+}
+
+export function clearParaformerKey(): void {
+  setParaformerKey('')
 }
 
 export function getAgnesKey(): string {

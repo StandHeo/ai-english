@@ -1,9 +1,16 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import {
+  diaryAsrProviderLabel,
+  getDiaryAsrProvider,
+  type DiaryAsrProvider,
+} from './diaryAsrProvider'
+import {
   diaryWhisperModelLabel,
   getDiaryWhisperModelId,
   type DiaryWhisperModelId,
 } from './diaryWhisperModel'
+import { getParaformerApiKeyResolved } from '../family/store'
+import { transcribeWithParaformer } from './paraformerAsr'
 
 export type DiaryAsrErrorCode =
   | 'unavailable'
@@ -12,17 +19,25 @@ export type DiaryAsrErrorCode =
   | 'download_busy'
   | 'transcribe_failed'
   | 'invalid_audio'
+  | 'missing_api_key'
   | 'unknown'
 
 export type DiaryAsrResult =
-  | { ok: true; text: string; modelId: DiaryWhisperModelId }
+  | {
+      ok: true
+      text: string
+      engine: DiaryAsrProvider
+      modelId?: DiaryWhisperModelId
+      label: string
+    }
   | { ok: false; code: DiaryAsrErrorCode; message: string }
 
 export type DiaryAsrStatus = {
   available: boolean
-  platform: 'web' | 'native'
+  platform: 'web' | 'native' | 'cloud'
   modelReady: boolean
   modelId: DiaryWhisperModelId
+  engine: DiaryAsrProvider
   packaged?: boolean
   needsDownload?: boolean
   downloadBytes?: number
@@ -97,7 +112,7 @@ const DiaryWhisper = registerPlugin<DiaryWhisperPlugin>('DiaryWhisper', {
 function friendly(code: DiaryAsrErrorCode, detail?: string): string {
   switch (code) {
     case 'unavailable':
-      return '端侧 Whisper 仅在 App（APK）中可用，浏览器请用打字，或安装后使用语音日记。'
+      return '端侧 Whisper 仅在 App（APK）中可用；也可在设置中改用云端 Paraformer。'
     case 'model_not_ready':
       return detail || '端侧 Whisper 模型尚未就绪，请稍后再试或先用手改文字。'
     case 'download_failed':
@@ -108,6 +123,8 @@ function friendly(code: DiaryAsrErrorCode, detail?: string): string {
       return detail || '转写失败，已保留录音，可手改文字后重试。'
     case 'invalid_audio':
       return '录音无效，请再说一段短一点的话。'
+    case 'missing_api_key':
+      return detail || '请先在设置中填写百炼 API Key（Paraformer-v2）。'
     default:
       return detail || '语音转写出错，请改用打字。'
   }
@@ -128,6 +145,7 @@ function mapStatus(
     platform: 'native',
     modelReady: Boolean(ready.ready),
     modelId,
+    engine: 'on-device',
     packaged: Boolean(ready.packaged),
     needsDownload: Boolean(ready.needsDownload),
     downloadBytes: typeof ready.downloadBytes === 'number' ? ready.downloadBytes : undefined,
@@ -137,15 +155,33 @@ function mapStatus(
   }
 }
 
+function paraformerStatus(modelId: DiaryWhisperModelId): DiaryAsrStatus {
+  const hasKey = Boolean(getParaformerApiKeyResolved())
+  return {
+    available: hasKey,
+    platform: 'cloud',
+    modelReady: hasKey,
+    modelId,
+    engine: 'paraformer-v2',
+    detail: hasKey
+      ? `${diaryAsrProviderLabel('paraformer-v2')} 已就绪（需联网）`
+      : friendly('missing_api_key'),
+  }
+}
+
 export async function getDiaryAsrStatus(
   modelId: DiaryWhisperModelId = getDiaryWhisperModelId(),
 ): Promise<DiaryAsrStatus> {
+  if (getDiaryAsrProvider() === 'paraformer-v2') {
+    return paraformerStatus(modelId)
+  }
   if (!Capacitor.isNativePlatform()) {
     return {
       available: false,
       platform: 'web',
       modelReady: false,
       modelId,
+      engine: 'on-device',
       detail: friendly('unavailable'),
     }
   }
@@ -162,6 +198,7 @@ export async function getDiaryAsrStatus(
       platform: 'native',
       modelReady: false,
       modelId,
+      engine: 'on-device',
       detail: friendly('model_not_ready', '原生 Whisper 插件未正确加载'),
     }
   }
@@ -201,6 +238,7 @@ export async function downloadDiaryWhisperModel(
       platform: 'web',
       modelReady: false,
       modelId,
+      engine: 'on-device',
       detail: friendly('unavailable'),
     }
   }
@@ -229,6 +267,7 @@ export async function downloadDiaryWhisperModel(
       platform: 'native',
       modelReady: false,
       modelId,
+      engine: 'on-device',
       needsDownload: true,
       detail: friendly(code, msg),
     }
@@ -243,8 +282,8 @@ export async function isDiaryAsrAvailable(): Promise<boolean> {
 }
 
 /**
- * Transcribe diary audio via on-device Whisper (Capacitor).
- * Never calls cloud OpenAI ASR.
+ * Transcribe diary audio.
+ * Default: on-device Whisper (never OpenAI). Optional: DashScope Paraformer-v2 when user selects cloud ASR.
  */
 export async function transcribeDiaryAudio(
   wavBase64: string,
@@ -254,6 +293,28 @@ export async function transcribeDiaryAudio(
   if (!wavBase64) {
     return { ok: false, code: 'invalid_audio', message: friendly('invalid_audio') }
   }
+
+  if (getDiaryAsrProvider() === 'paraformer-v2') {
+    const cloud = await transcribeWithParaformer(
+      wavBase64,
+      getParaformerApiKeyResolved(),
+      language === 'en' ? ['en', 'zh'] : ['zh', 'en'],
+    )
+    if (!cloud.ok) {
+      return {
+        ok: false,
+        code: cloud.code === 'missing_api_key' ? 'missing_api_key' : 'transcribe_failed',
+        message: cloud.message,
+      }
+    }
+    return {
+      ok: true,
+      text: cloud.text,
+      engine: 'paraformer-v2',
+      label: diaryAsrProviderLabel('paraformer-v2'),
+    }
+  }
+
   if (!Capacitor.isNativePlatform()) {
     return { ok: false, code: 'unavailable', message: friendly('unavailable') }
   }
@@ -281,7 +342,13 @@ export async function transcribeDiaryAudio(
         message: friendly('transcribe_failed', '没听清'),
       }
     }
-    return { ok: true, text: trimmed, modelId }
+    return {
+      ok: true,
+      text: trimmed,
+      engine: 'on-device',
+      modelId,
+      label: `端侧 Whisper ${diaryWhisperModelLabel(modelId)}`,
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (/model|ready|asset|missing|download/i.test(msg)) {
