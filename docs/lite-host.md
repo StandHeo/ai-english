@@ -11,25 +11,85 @@
 
 ## Nginx
 
-监听 `:443`（有证书后）反代 API：
+监听 `:443`，证书挂在 `tudoudou-ai.site`。API 反代到本机 `8787`；侧载 APK、模型、家长指引等静态文件挂**同一域名**，磁盘根目录：
+
+`/var/www/tudoudou-static/`
+
+目录约定（URL → 磁盘）：
+
+| URL | 磁盘路径 | 用途 |
+| --- | --- | --- |
+| `/app/*` | `.../app/` | `version.json`、APK |
+| `/models/*` | `.../models/` | Whisper / Vosk 等模型 |
+| `/helper` | `.../helper.html` | 家长指引 |
+| `/wechat-apk`、`/wechat-apk-install.html` | 站点根下同名文件 | 微信内打开 APK 指引 |
+
+在 `server_name tudoudou-ai.site;` 的 HTTPS `server { }` 里写入（`/api/`、`/health` 必须在静态 `location` **之前**或同等优先级下由前缀匹配优先生效）：
 
 ```nginx
+root /var/www/tudoudou-static;
+index index.html;
+
 location /api/ {
   proxy_pass http://127.0.0.1:8787;
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Forwarded-For $remote_addr;
+  proxy_set_header X-Forwarded-Proto $scheme;
 }
+
 location /health {
   proxy_pass http://127.0.0.1:8787;
 }
-# 侧载清单、Whisper 模型、家长指引等静态文件（与 HTTP 站点根同一目录）
-# location /app/ { alias /var/www/tudoudou/; }
-# location /models/ { alias /var/www/tudoudou/models/; }
-# location /helper { try_files /helper.html =404; }
+
+# 侧载清单 + APK（勿被默认站点抢走）
+location /app/ {
+  alias /var/www/tudoudou-static/app/;
+  types {
+    application/json json;
+    application/vnd.android.package-archive apk;
+  }
+  default_type application/octet-stream;
+  add_header Cache-Control "no-cache";
+}
+
+location /models/ {
+  alias /var/www/tudoudou-static/models/;
+  default_type application/octet-stream;
+  add_header Cache-Control "public, max-age=86400";
+}
+
+location = /helper {
+  default_type text/html;
+  alias /var/www/tudoudou-static/helper.html;
+}
+
+location = /wechat-apk {
+  return 302 /wechat-apk-install.html;
+}
+
+# 其余静态：wechat-apk-install.html、其它 html/资源
+location / {
+  try_files $uri $uri/ =404;
+}
 ```
 
-Web 静态资源需挂到同一域名站点根（`/app/`、`/models/`、`/helper` 等）；开发期 Vite 仍把 `/api` 代理到 `:8787`。
+上线前在服务器上确认文件已就位，再 reload：
+
+```bash
+sudo mkdir -p /var/www/tudoudou-static/{app,models}
+# 若文件仍在旧 HTTP 站点根，可一次性对齐：
+# sudo rsync -a /path/to/old-static/ /var/www/tudoudou-static/
+
+sudo nginx -t && sudo systemctl reload nginx
+
+curl -fsSI https://tudoudou-ai.site/health
+curl -fsS  https://tudoudou-ai.site/app/version.json
+curl -fsSI https://tudoudou-ai.site/helper
+curl -fsSI https://tudoudou-ai.site/wechat-apk-install.html
+```
+
+开发期 Vite 仍把 `/api` 代理到 `:8787`；生产 Web 静态资源走上述同一域名站点根。
 
 Express 默认 `trust proxy` 为一跳（可用 `TRUST_PROXY` 覆盖；直连公网设 `0`）。邮箱与短信发送共用客户端 IP 滑动窗口限流（默认 60 秒 10 次，可选 `SMS_IP_DAILY_MAX` 日限额）。邮箱超限返回 `auth_ip_rate_limited`，短信超限仍为 `sms_ip_rate_limited`；按目标间隔分别是 `email_rate_limited` / `sms_rate_limited`。生产可设 `AUTH_CAPTCHA=on`（或兼容 `SMS_CAPTCHA=on`）打开内置图形验证码，两通道发送都要校验；未设置时 mock 开发流程不变。Nginx 必须覆盖 `X-Real-IP` / `X-Forwarded-For`，不要把客户端自带的转发头原样传给 API。
 
