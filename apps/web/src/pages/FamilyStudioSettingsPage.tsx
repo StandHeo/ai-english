@@ -17,6 +17,7 @@ import {
 import {
   clearAgnesKey,
   clearDeepseekKey,
+  clearParaformerKey,
   clearTongyiKey,
   getAgnesKey,
   getAutoTongyiImages,
@@ -24,6 +25,7 @@ import {
   getImageCloudProvider,
   getLlmProvider,
   getMinLevelKeywords,
+  getParaformerKey,
   getTongyiKey,
   setAgnesKey,
   setAutoTongyiImages,
@@ -31,6 +33,7 @@ import {
   setImageCloudProvider,
   setLlmProvider,
   setMinLevelKeywords,
+  setParaformerKey,
   setTongyiKey,
 } from '../family/store'
 import {
@@ -41,6 +44,13 @@ import {
   shareOrDownloadBackup,
 } from '../family/backup'
 import { prepareDiaryWhisperModel, downloadDiaryWhisperModel, listDiaryWhisperModels } from '../voice/diaryAsr'
+import {
+  DIARY_ASR_PROVIDERS,
+  diaryAsrProviderLabel,
+  getDiaryAsrProvider,
+  setDiaryAsrProvider,
+  type DiaryAsrProvider,
+} from '../voice/diaryAsrProvider'
 import {
   DIARY_WHISPER_MODELS,
   diaryWhisperModelLabel,
@@ -74,6 +84,8 @@ export function FamilyStudioSettingsPage() {
   const [imageCloud, setImageCloud] = useState<FamilyImageCloudProvider>(DEFAULT_IMAGE_CLOUD)
   const [autoTongyi, setAutoTongyi] = useState(false)
   const [minKeywordsText, setMinKeywordsText] = useState('6')
+  const [asrProvider, setAsrProvider] = useState<DiaryAsrProvider>(() => getDiaryAsrProvider())
+  const [paraformerKey, setParaformerKeyInput] = useState('')
   const [whisperModel, setWhisperModel] = useState<DiaryWhisperModelId>(() =>
     getDiaryWhisperModelId(),
   )
@@ -91,6 +103,8 @@ export function FamilyStudioSettingsPage() {
     setApiKey(getDeepseekKey())
     setTongyiKeyInput(getTongyiKey())
     setAgnesKeyInput(getAgnesKey())
+    setParaformerKeyInput(getParaformerKey() || getTongyiKey())
+    setAsrProvider(getDiaryAsrProvider())
     setLlm(getLlmProvider())
     setImageCloud(getImageCloudProvider())
     setAutoTongyi(getAutoTongyiImages())
@@ -229,6 +243,8 @@ export function FamilyStudioSettingsPage() {
       setApiKey(getDeepseekKey())
       setTongyiKeyInput(getTongyiKey())
       setAgnesKeyInput(getAgnesKey())
+      setParaformerKeyInput(getParaformerKey() || getTongyiKey())
+      setAsrProvider(getDiaryAsrProvider())
       setLlm(getLlmProvider())
       setImageCloud(getImageCloudProvider())
       setAutoTongyi(getAutoTongyiImages())
@@ -241,6 +257,27 @@ export function FamilyStudioSettingsPage() {
       setBackupPct(null)
       if (backupFileRef.current) backupFileRef.current.value = ''
     }
+  }
+
+  function saveAsrProvider(next: DiaryAsrProvider) {
+    setAsrProvider(next)
+    setDiaryAsrProvider(next)
+    if (next === 'paraformer-v2') {
+      setStatus(`已选择 ${diaryAsrProviderLabel(next)}，请填写并保存百炼 API Key`)
+    } else {
+      setStatus(`已选择 ${diaryAsrProviderLabel(next)}`)
+    }
+  }
+
+  function saveParaformerSettings() {
+    setParaformerKey(paraformerKey)
+    setDiaryAsrProvider('paraformer-v2')
+    setAsrProvider('paraformer-v2')
+    setStatus(
+      paraformerKey.trim()
+        ? '已保存：云端 Paraformer 实时与 API Key（边说边出字）'
+        : '已选择云端 Paraformer 实时，但 Key 为空（也可复用上方通义/百炼 Key）',
+    )
   }
 
   async function onWhisperModelChange(next: DiaryWhisperModelId) {
@@ -501,37 +538,104 @@ export function FamilyStudioSettingsPage() {
           </p>
         )}
 
-        <h2>语音转写模型</h2>
+        <h2>语音转写方式</h2>
         <p className="muted">
-          仅 App 生效。APK 默认只带 Tiny；选 Base / Small 时会自动下载模型包（需联网）。
+          日记语音转文字。端侧 Whisper 不上传录音；云端 Paraformer 实时（阿里云百炼）边说边出字，需联网与
+          API Key。
         </p>
-        <div className="model-switch" role="radiogroup" aria-label="语音转写模型">
-          {DIARY_WHISPER_MODELS.map((m) => (
+        <div className="model-switch" role="radiogroup" aria-label="语音转写方式">
+          {DIARY_ASR_PROVIDERS.map((m) => (
             <button
               key={m.id}
               type="button"
               role="radio"
-              aria-checked={whisperModel === m.id}
-              className={`model-option ${whisperModel === m.id ? 'active' : ''}`}
+              aria-checked={asrProvider === m.id}
+              className={`model-option ${asrProvider === m.id ? 'active' : ''}`}
               disabled={busy}
-              onClick={() => void onWhisperModelChange(m.id)}
+              onClick={() => saveAsrProvider(m.id)}
             >
-              <strong>
-                {m.label}
-                {whisperReady[m.id]
-                  ? ' · 已就绪'
-                  : whisperNeedsDownload[m.id]
-                    ? ' · 需下载'
-                    : ''}
-              </strong>
+              <strong>{m.label}</strong>
               <span>{m.hint}</span>
             </button>
           ))}
         </div>
-        {downloadPct != null && (
-          <p className="muted" role="status">
-            下载进度 {downloadPct}%
-          </p>
+
+        {asrProvider === 'paraformer-v2' && (
+          <>
+            <h2>百炼 API Key（Paraformer 实时）</h2>
+            <p className="muted">
+              在{' '}
+              <a
+                href="https://docs.bailian.console.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                阿里云百炼实时语音识别
+              </a>{' '}
+              开通并创建 API Key（模型 paraformer-realtime-v2）。未单独填写时会尝试复用上方「通义 /
+              百炼」Key。
+            </p>
+            <input
+              type="password"
+              value={paraformerKey}
+              onChange={(e) => setParaformerKeyInput(e.target.value)}
+              placeholder="sk-…（DashScope / 百炼 API Key）"
+              autoComplete="off"
+            />
+            <div className="row">
+              <button type="button" onClick={saveParaformerSettings}>
+                保存云端 ASR
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  clearParaformerKey()
+                  setParaformerKeyInput('')
+                  setStatus('已清除 Paraformer Key（仍可回落通义 Key）')
+                }}
+              >
+                清除 Paraformer Key
+              </button>
+            </div>
+          </>
+        )}
+
+        {asrProvider === 'on-device' && (
+          <>
+            <h2>端侧 Whisper 模型</h2>
+            <p className="muted">
+              仅 App 生效。APK 默认只带 Tiny；选 Base / Small 时会自动下载模型包（需联网）。
+            </p>
+            <div className="model-switch" role="radiogroup" aria-label="端侧 Whisper 模型">
+              {DIARY_WHISPER_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={whisperModel === m.id}
+                  className={`model-option ${whisperModel === m.id ? 'active' : ''}`}
+                  disabled={busy}
+                  onClick={() => void onWhisperModelChange(m.id)}
+                >
+                  <strong>
+                    {m.label}
+                    {whisperReady[m.id]
+                      ? ' · 已就绪'
+                      : whisperNeedsDownload[m.id]
+                        ? ' · 需下载'
+                        : ''}
+                  </strong>
+                  <span>{m.hint}</span>
+                </button>
+              ))}
+            </div>
+            {downloadPct != null && (
+              <p className="muted" role="status">
+                下载进度 {downloadPct}%
+              </p>
+            )}
+          </>
         )}
       </section>
 

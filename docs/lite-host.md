@@ -16,9 +16,13 @@
 ```nginx
 location /api/ {
   proxy_pass http://127.0.0.1:8787;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
   proxy_set_header Host $host;
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Forwarded-For $remote_addr;
+  proxy_read_timeout 3600s;
 }
 location /health {
   proxy_pass http://127.0.0.1:8787;
@@ -29,7 +33,9 @@ location /health {
 # location /helper { try_files /helper.html =404; }
 ```
 
-Web 静态资源需挂到同一域名站点根（`/app/`、`/models/`、`/helper` 等）；开发期 Vite 仍把 `/api` 代理到 `:8787`。
+`/api/asr/paraformer-stream` 为日记云端实时 ASR 的 WebSocket 桥（浏览器不能带 `Authorization` 头直连百炼，故由本机 API 代连）。Nginx 须放行 `Upgrade` / `Connection`。
+
+Web 静态资源需挂到同一域名站点根（`/app/`、`/models/`、`/helper` 等）；开发期 Vite 仍把 `/api`（含 WS）代理到 `:8787`。
 
 Express 默认 `trust proxy` 为一跳（可用 `TRUST_PROXY` 覆盖；直连公网设 `0`）。邮箱与短信发送共用客户端 IP 滑动窗口限流（默认 60 秒 10 次，可选 `SMS_IP_DAILY_MAX` 日限额）。邮箱超限返回 `auth_ip_rate_limited`，短信超限仍为 `sms_ip_rate_limited`；按目标间隔分别是 `email_rate_limited` / `sms_rate_limited`。生产可设 `AUTH_CAPTCHA=on`（或兼容 `SMS_CAPTCHA=on`）打开内置图形验证码，两通道发送都要校验；未设置时 mock 开发流程不变。Nginx 必须覆盖 `X-Real-IP` / `X-Forwarded-For`，不要把客户端自带的转发头原样传给 API。
 
