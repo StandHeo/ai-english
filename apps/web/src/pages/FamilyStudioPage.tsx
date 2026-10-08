@@ -15,6 +15,11 @@ import {
 } from '../family/providers'
 import { pickAlbumImage, processAlbumImage } from '../family/albumImage'
 import {
+  createImageReuseCache,
+  fillLevelSlotImages,
+  seedItemImagesFromSlots,
+} from '../family/imageReuse'
+import {
   annotatePromptSlots,
   buildKidsPrompt,
   miniLevelMissingImageSlots,
@@ -562,6 +567,23 @@ export function FamilyStudioPage() {
       const fetchSlots = async (slots: ImageSlotLike[]) =>
         fetchSlotImages(slots, { date, cloud, cloudKey, useDirect })
 
+      const reuseCache = createImageReuseCache()
+      if (opts?.onlyMissingBg) {
+        for (const mini of levels) {
+          const scenePrompt = mini.scenePromptEn?.trim() || effectiveScenePrompt(mini)
+          seedItemImagesFromSlots(
+            reuseCache,
+            slotsForMiniLevel(
+              mini.level as unknown as Record<string, unknown>,
+              scenePrompt,
+              5,
+              mini.itemPrompts,
+            ),
+            [mini.imageBg || '', ...(mini.itemImages || [])],
+          )
+        }
+      }
+
       await mapPool(targets, conc, async (mini) => {
         const word = mini.level.target_words?.[0] || 'item'
         // 优先英文场景词（配图模型对英文更稳）；无缓存则用原文
@@ -575,28 +597,12 @@ export function FamilyStudioPage() {
           ),
         )
         try {
-          let list: string[]
-          if (opts?.onlyMissingBg) {
-            const existing = [mini.imageBg || '', ...(mini.itemImages || [])]
-            while (existing.length < slots.length) existing.push('')
-            const needIdx: number[] = []
-            const needSlots = slots.filter((_, i) => {
-              if (existing[i]) return false
-              needIdx.push(i)
-              return true
-            })
-            if (!needSlots.length) {
-              done += 1
-              return
-            }
-            const generated = await fetchSlots(needSlots)
-            list = [...existing]
-            needIdx.forEach((idx, j) => {
-              if (generated[j]) list[idx] = generated[j]!
-            })
-          } else {
-            list = await fetchSlots(slots)
-          }
+          const existing = opts?.onlyMissingBg
+            ? [mini.imageBg || '', ...(mini.itemImages || [])]
+            : []
+          const list = await fillLevelSlotImages(slots, existing, reuseCache, fetchSlots, {
+            onlyMissing: Boolean(opts?.onlyMissingBg),
+          })
           await persistImages(mini, list)
           done += 1
           updateJobLabel(

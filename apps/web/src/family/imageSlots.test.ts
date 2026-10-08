@@ -6,6 +6,7 @@ import {
   clampImageSlots,
   firstItemImage,
   imageUrlBySubject,
+  normalizeSlotSubjectKey,
   miniLevelMissingImageSlots,
   promptForSlotAt,
   resetActiveImagePromptConfig,
@@ -57,15 +58,15 @@ test('slotsFromLevel falls back to first word when setting empty', () => {
 test('buildKidsPrompt differs for scene vs item', () => {
   const scene = buildKidsPrompt({ subject: '小区游乐场', role: 'scene' })
   const item = buildKidsPrompt({ subject: 'slide', role: 'item' })
-  assert.match(scene, /竖/)
+  assert.match(scene, /方形构图/)
   assert.match(scene, /环境/)
   assert.match(scene, /小区游乐场/)
   assert.match(scene, /儿童绘本/)
   assert.doesNotMatch(scene, /正方形/)
-  assert.match(item, /居中/)
-  assert.match(item, /七成/)
-  assert.match(item, /闪卡/)
+  assert.doesNotMatch(scene, /竖版竖构图/)
+  assert.match(item, /清晰主体/)
   assert.match(item, /slide/)
+  assert.doesNotMatch(item, /单词闪卡|占画面约七成/)
   assert.doesNotMatch(item, /竖版/)
   assert.doesNotMatch(item, /不要画成/)
 })
@@ -79,7 +80,7 @@ test('distractor prompt avoids the main word and drops the clause when target is
   const scene = promptForSlotAt(slots, 0)
   const main = promptForSlotAt(slots, 1)
   const distractor = promptForSlotAt(slots, 2)
-  assert.match(scene, /竖/)
+  assert.match(scene, /方形构图/)
   assert.doesNotMatch(scene, /正方形/)
   assert.match(main, /chopsticks/)
   assert.doesNotMatch(main, /不要画成/)
@@ -211,6 +212,74 @@ test('slotsForMiniLevel defaults to 1 scene + 4 item slots', () => {
   assert.deepEqual(
     slots.filter((s) => s.role === 'item').map((s) => s.subject),
     ['park', 'bus', 'tree', 'kite'],
+  )
+})
+
+test('normalizeSlotSubjectKey strips articles and keeps CJK', () => {
+  assert.equal(normalizeSlotSubjectKey('a paper'), 'paper')
+  assert.equal(normalizeSlotSubjectKey('Paper'), 'paper')
+  assert.equal(normalizeSlotSubjectKey('the bus'), 'bus')
+  assert.equal(normalizeSlotSubjectKey('小区游乐场'), '小区游乐场')
+})
+
+test('slotsFromLevel merges a paper with paper', () => {
+  const slots = slotsFromLevel(
+    {
+      target_words: ['cake'],
+      scene: { setting: 'A bakery' },
+      beats: [
+        {
+          type: 'find',
+          options: [
+            { id: 'cake', correct: true },
+            { id: 'a paper', correct: false },
+            { id: 'paper', correct: false },
+          ],
+        },
+      ],
+    },
+    9,
+  )
+  const items = slots.filter((s) => s.role === 'item').map((s) => s.subject)
+  assert.deepEqual(items, ['cake', 'a paper'])
+})
+
+test('slotsForMiniLevel re-dedupes after itemPromptOverrides', () => {
+  const slots = slotsForMiniLevel(
+    {
+      target_words: ['cake'],
+      scene: { setting: 'bakery' },
+      beats: [
+        {
+          type: 'find',
+          options: [{ id: 'cake' }, { id: 'bus' }, { id: 'tree' }],
+        },
+      ],
+    },
+    'bakery',
+    5,
+    ['cake', 'cake', 'cake'],
+  )
+  assert.deepEqual(
+    slots.filter((s) => s.role === 'item').map((s) => s.subject),
+    ['cake'],
+  )
+})
+
+test('slotsFromLevel does not duplicate scene key as item', () => {
+  const slots = slotsFromLevel(
+    {
+      target_words: ['park'],
+      scene: { setting: 'park' },
+      beats: [{ type: 'find', options: [{ id: 'park' }, { id: 'bus' }] }],
+    },
+    9,
+  )
+  assert.equal(slots[0]?.subject, 'park')
+  assert.equal(slots[0]?.role, 'scene')
+  assert.deepEqual(
+    slots.filter((s) => s.role === 'item').map((s) => s.subject),
+    ['bus'],
   )
 })
 

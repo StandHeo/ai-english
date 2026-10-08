@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   clampPackLevelCount,
+  FAMILY_PACK_SYSTEM_PROMPT,
   parseValidatedFamilyPack,
 } from './packSchema.ts'
 
@@ -44,6 +45,11 @@ const oneLevel = (word: string) => ({
 })
 
 const fiveWords = ['park', 'slide', 'ball', 'duck', 'tree'] as const
+
+test('pack system prompt bans abstract distractor ids', () => {
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /NEVER use abstract/)
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /paper/)
+})
 
 test('clampPackLevelCount stays within 5-9', () => {
   assert.equal(clampPackLevelCount(2), 5)

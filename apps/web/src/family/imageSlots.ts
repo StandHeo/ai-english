@@ -5,6 +5,9 @@ import {
   type ImagePromptConfig,
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults'
+import { normalizeSlotSubjectKey, slotSubjectKey } from './slotSubject'
+
+export { normalizeSlotSubjectKey, slotSubjectKey }
 
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
@@ -47,9 +50,17 @@ export function clampImageSlots(n: unknown): number {
   return Math.min(12, Math.max(3, Math.floor(v)))
 }
 
-/** 槽位 / 选项匹配用的规范化键 */
-export function slotSubjectKey(subject: string): string {
-  return subject.trim().toLowerCase()
+function dedupeSlots(slots: ImageSlot[]): ImageSlot[] {
+  const out: ImageSlot[] = []
+  const seen = new Set<string>()
+  for (const slot of slots) {
+    const key = slotSubjectKey(slot.subject)
+    if (!key) continue
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(slot)
+  }
+  return out
 }
 
 export function buildKidsPrompt(slot: ImageSlot, opts?: RenderKidsPromptOpts): string {
@@ -191,7 +202,7 @@ export function slotsForMiniLevel(
       if (ov) slots[i] = { ...slots[i], subject: ov }
     }
   }
-  return slots
+  return dedupeSlots(slots)
 }
 
 /** 槽位展示标签：背景图 / 主词图 / 干扰图 */

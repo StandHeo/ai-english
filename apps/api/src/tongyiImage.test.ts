@@ -14,19 +14,19 @@ test('buildKidsPrompt includes safety prefix for items', () => {
   const p = buildKidsPrompt({ subject: 'slide', role: 'item' })
   assert.match(p, /儿童绘本/)
   assert.match(p, /slide/)
-  assert.match(p, /居中/)
-  assert.match(p, /七成/)
-  assert.match(p, /闪卡/)
+  assert.match(p, /清晰主体/)
+  assert.doesNotMatch(p, /单词闪卡|占画面约七成/)
   assert.doesNotMatch(p, /正方形|兔子/)
 })
 
-test('buildKidsPrompt scene asks for a tall background', () => {
+test('buildKidsPrompt scene asks for a square-friendly background', () => {
   const p = buildKidsPrompt({ subject: '小区游乐场', role: 'scene' })
   assert.match(p, /儿童绘本/)
-  assert.match(p, /竖/)
+  assert.match(p, /方形构图/)
   assert.match(p, /环境/)
   assert.match(p, /小区游乐场/)
   assert.doesNotMatch(p, /正方形/)
+  assert.doesNotMatch(p, /竖版竖构图/)
 })
 
 test('distractor prompt names the target word and omits it when empty', () => {

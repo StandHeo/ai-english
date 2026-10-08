@@ -44,8 +44,8 @@ beforeEach(() => {
 
 test('fetch failure without cache uses baked defaults', async () => {
   const cfg = await refreshImagePromptConfig(async () => ({ ok: false, data: null }))
-  assert.equal(cfg.version, 1)
-  assert.match(buildKidsPrompt({ subject: 'park', role: 'scene' }), /竖版竖构图/)
+  assert.equal(cfg.version, defaultImagePromptConfig().version)
+  assert.match(buildKidsPrompt({ subject: 'park', role: 'scene' }), /方形构图/)
   assert.doesNotMatch(cfg.negativePrompt, /兔子/)
 })
 
@@ -66,6 +66,22 @@ test('fetch failure keeps the last cached config', async () => {
   })
   assert.equal(cfg.version, 3)
   assert.match(buildKidsPrompt({ subject: 'kite', role: 'item' }), /闪卡：kite/)
+})
+
+test('stale cache below baked version is ignored until a fresh fetch', async () => {
+  mem.set(
+    'family-image-prompt-config-v1',
+    JSON.stringify({
+      ...defaultImagePromptConfig(),
+      version: 1,
+      sceneTemplate: '竖版竖构图的过期缓存：{subject}',
+    }),
+  )
+  hydrateImagePromptConfigFromStorage()
+  assert.match(buildKidsPrompt({ subject: 'park', role: 'scene' }), /方形构图/)
+  const cfg = await refreshImagePromptConfig(async () => ({ ok: false, data: null }))
+  assert.equal(cfg.version, defaultImagePromptConfig().version)
+  assert.doesNotMatch(cfg.sceneTemplate, /过期缓存/)
 })
 
 test('invalid payload falls back to cache or defaults', async () => {

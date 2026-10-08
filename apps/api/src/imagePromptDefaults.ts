@@ -5,22 +5,22 @@
  * 负向词默认不禁用兔子，避免和儿童绘本风格冲突。
  */
 
-export const IMAGE_PROMPT_CONFIG_VERSION = 1
+export const IMAGE_PROMPT_CONFIG_VERSION = 2
 
 export const DEFAULT_SAFETY_PREFIX =
-  '儿童绘本插画，厚实友好描边，扁平柔和暖色，温暖明亮，画面简洁干净，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，'
+  '儿童绘本插画，柔和暖色，温暖明亮，略带体积感和简单光影，适合4到6岁儿童，画面中绝对不要出现任何文字、字母、数字、招牌或标志，无水印，无暴力恐怖血腥，'
 
 export const DEFAULT_SCENE_TEMPLATE =
-  '竖版竖构图的游戏背景，画面偏高适合手机封面，开阔的远景环境，道具只作少量点缀，不要巨大招牌或横幅，主题：{subject}'
+  '方形构图的游戏背景，开阔的远景环境，道具只作少量点缀，不要巨大招牌或横幅，主题：{subject}'
 
 export const DEFAULT_ITEM_TEMPLATE =
-  '单词闪卡，画面中心只画一个主体：{subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框'
+  '画面中心只画一个清晰主体：{subject}，主体最大最清楚，可带极简桌面或手持环境点缀，柔和儿童绘本风格，不要装饰边框'
 
 export const DEFAULT_DISTRACTOR_TEMPLATE =
-  '单词闪卡，画面中心只画一个主体：{subject}，居中且占画面约七成，周围是干净的浅色柔和纯色背景，无其它物体、无场景元素、无装饰边框，不要画成或看起来像{targetWord}'
+  '画面中心只画一个清晰主体：{subject}，主体最大最清楚，可带极简桌面或手持环境点缀，柔和儿童绘本风格，不要装饰边框，不要画成或看起来像{targetWord}'
 
 export const DEFAULT_NEGATIVE_PROMPT =
-  '文字,字母,数字,乱码,招牌,标志,水印,签名,暴力,恐怖,血腥,写实照片,成人内容,畸形,低清晰度'
+  '文字,字母,数字,乱码,招牌,标志,水印,签名,暴力,恐怖,血腥,成人内容,畸形,低清晰度'
 
 export type ImagePromptConfig = {
   version: number

@@ -2,6 +2,7 @@
  * 家庭迷你 pack 生成（与 apps/web packSchema 对齐）。
  */
 import { runAgnesCall } from './agnesRateLimit.js'
+import { collectUsedNounKeys, sanitizeLevelDistractors } from './distractorWords.ts'
 import { ensureIntroShowBeat, normalizeFamilyLevel, validateFamilyLevel } from './familyGenerate.js'
 
 const PACK_SYSTEM_PROMPT = `You are a kids English oral-adventure designer for ages 4-6.
@@ -63,7 +64,8 @@ Rules:
 - ask beats MUST have expect (array), hint_say, success_say, and fallback.picture_choice with >=2 options.
 - ask expect: the word plus one natural variant, e.g. ["park", "a park"].
 - find beats MUST have options with >=2 items and exactly one correct:true.
-- Distractor option ids: 2-3 DIFFERENT concrete kid nouns per level (bus, cake, home, tree…), NOT the main word, NOT abstract words.
+- Distractor option ids: 2-3 DIFFERENT concrete kid nouns per level (bus, cake, home, tree…), NOT the main word.
+- NEVER use abstract or unpaintable option ids: paper, a paper, square, circle, triangle, rectangle, shape, color, number, letter.
 - npc_say / hint_say / success_say in simple English like the official pack ("Mmm! Yummy fruit!", "Yes! Apple!").
 - reward.sticker: "sticker-<mainword>".
 - Use image:"placeholder" everywhere.
@@ -122,6 +124,7 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
   const levels: Record<string, unknown>[] = []
   const mainWords: string[] = []
   const allHints: string[] = []
+  const usedNouns = new Set<string>()
 
   for (const raw of rawLevels.slice(0, want)) {
     if (!raw || typeof raw !== 'object') continue
@@ -158,6 +161,13 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
       ? entry.photoHints.map(String).filter(Boolean)
       : []
     allHints.push(...hints)
+    for (const key of collectUsedNounKeys(level)) usedNouns.add(key)
+    try {
+      sanitizeLevelDistractors(level, usedNouns)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(msg === 'abstract_distractors_exhausted' ? msg : `invalid_level:${msg}`)
+    }
     levels.push(level)
   }
 

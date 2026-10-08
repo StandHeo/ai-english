@@ -12,6 +12,7 @@ import {
   type ImagePromptConfig,
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults.js'
+import { slotSubjectKey } from './slotSubject.ts'
 
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
@@ -84,10 +85,6 @@ export function clampImageSlots(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
   if (!Number.isFinite(v)) return 9
   return Math.min(12, Math.max(3, Math.floor(v)))
-}
-
-function slotSubjectKey(subject: string): string {
-  return subject.trim().toLowerCase()
 }
 
 export function buildKidsPrompt(slot: ImageSlot, opts?: RenderKidsPromptOpts): string {

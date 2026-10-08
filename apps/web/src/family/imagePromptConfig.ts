@@ -1,5 +1,9 @@
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
-import { parseImagePromptConfig, type ImagePromptConfig } from './imagePromptDefaults'
+import {
+  IMAGE_PROMPT_CONFIG_VERSION,
+  parseImagePromptConfig,
+  type ImagePromptConfig,
+} from './imagePromptDefaults'
 import {
   getActiveImagePromptConfig,
   resetActiveImagePromptConfig,
@@ -12,11 +16,17 @@ const FETCH_TIMEOUT_MS = 12_000
 
 export type ImagePromptConfigFetch = { ok: boolean; data: unknown }
 
+function isFreshConfig(config: ImagePromptConfig): boolean {
+  return config.version >= IMAGE_PROMPT_CONFIG_VERSION
+}
+
 function readStored(): ImagePromptConfig | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    return parseImagePromptConfig(JSON.parse(raw))
+    const parsed = parseImagePromptConfig(JSON.parse(raw))
+    if (!parsed || !isFreshConfig(parsed)) return null
+    return parsed
   } catch {
     return null
   }
