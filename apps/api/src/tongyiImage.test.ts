@@ -57,7 +57,32 @@ test('slotsFromLevel uses scene.setting as first scene slot', () => {
   assert.equal(slots[0]?.subject, '公园滑梯')
   assert.equal(slots[1]?.role, 'item')
   assert.equal(slots[1]?.subject, 'park')
+  assert.equal(slots[1]?.word, 'park')
   assert.equal(slots.length, 5)
+})
+
+test('slotsFromLevel prefers draw for subject and keeps word as id', () => {
+  const draw = 'a yellow school bus on a quiet street'
+  const slots = slotsFromLevel(
+    {
+      target_words: ['cake'],
+      scene: { setting: 'bakery' },
+      beats: [
+        {
+          type: 'find',
+          options: [
+            { id: 'cake', correct: true, draw: 'a pink frosted cake on a wooden plate' },
+            { id: 'bus', correct: false, draw },
+          ],
+        },
+      ],
+    },
+    9,
+  )
+  const bus = slots.find((s) => s.word === 'bus')
+  assert.equal(bus?.subject, draw)
+  assert.equal(bus?.word, 'bus')
+  assert.match(buildKidsPrompt(bus!), /yellow school bus/)
 })
 
 test('compressImageBuffer shrinks large png to jpeg under limit', async () => {

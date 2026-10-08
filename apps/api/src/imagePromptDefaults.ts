@@ -34,6 +34,8 @@ export type ImagePromptConfig = {
 
 export type PromptSlot = {
   subject: string
+  /** 短词键；干扰避开时优先用 word 而非长 subject */
+  word?: string
   role?: 'scene' | 'item'
   /** 干扰图。缺省时由一批槽位里的第一张道具视为主词。 */
   distractor?: boolean
@@ -168,7 +170,8 @@ export function renderPromptAt(slots: PromptSlot[], index: number, config?: Imag
   if (slot.role === 'scene') return renderKidsPrompt(slot, { config, distractor: false })
   if (slot.distractor === true) {
     const mainIndex = slots.findIndex((s) => s.role !== 'scene' && s.distractor !== true)
-    const inferred = mainIndex >= 0 ? slots[mainIndex]!.subject : ''
+    const main = mainIndex >= 0 ? slots[mainIndex]! : undefined
+    const inferred = main ? (main.word || main.subject) : ''
     return renderKidsPrompt(slot, {
       config,
       distractor: true,
@@ -178,9 +181,10 @@ export function renderPromptAt(slots: PromptSlot[], index: number, config?: Imag
   if (slot.distractor === false) return renderKidsPrompt(slot, { config, distractor: false })
   const mainIndex = slots.findIndex((s) => s.role !== 'scene')
   const distractor = mainIndex >= 0 && index !== mainIndex
+  const main = mainIndex >= 0 ? slots[mainIndex]! : undefined
   return renderKidsPrompt(slot, {
     config,
     distractor,
-    targetWord: distractor ? slots[mainIndex]!.subject : '',
+    targetWord: distractor && main ? main.word || main.subject : '',
   })
 }

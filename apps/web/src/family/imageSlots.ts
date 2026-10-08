@@ -5,6 +5,7 @@ import {
   type ImagePromptConfig,
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults'
+import { normalizeOptionDraw } from './optionDraw'
 import { normalizeSlotSubjectKey, slotSubjectKey } from './slotSubject'
 
 export { normalizeSlotSubjectKey, slotSubjectKey }
@@ -12,11 +13,14 @@ export { normalizeSlotSubjectKey, slotSubjectKey }
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
 export type ImageSlot = {
+  /** 短词键：去重 / 复用 / 绑图；缺省回退 subject */
+  word?: string
+  /** 进提示词的主体：draw || word */
   subject: string
   role?: 'scene' | 'item'
   /** 干扰图。单张重画时标上，避免被当成主词。 */
   distractor?: boolean
-  /** 干扰图要避开的主词。 */
+  /** 干扰图要避开的主词（短词）。 */
   targetWord?: string
 }
 
@@ -50,11 +54,15 @@ export function clampImageSlots(n: unknown): number {
   return Math.min(12, Math.max(3, Math.floor(v)))
 }
 
+export function slotWordKey(slot: Pick<ImageSlot, 'word' | 'subject'>): string {
+  return slotSubjectKey(slot.word || slot.subject)
+}
+
 function dedupeSlots(slots: ImageSlot[]): ImageSlot[] {
   const out: ImageSlot[] = []
   const seen = new Set<string>()
   for (const slot of slots) {
-    const key = slotSubjectKey(slot.subject)
+    const key = slotWordKey(slot)
     if (!key) continue
     if (seen.has(key)) continue
     seen.add(key)
@@ -78,12 +86,18 @@ export function promptForSlotAt(slots: ImageSlot[], index: number, config?: Imag
 /** 给干扰图标上主词，单张或补缺重画时模板仍然避开目标词。 */
 export function annotatePromptSlots(slots: ImageSlot[]): ImageSlot[] {
   const mainIndex = slots.findIndex((s) => s.role !== 'scene')
-  const targetWord = mainIndex >= 0 ? slots[mainIndex]!.subject.trim() : ''
+  const targetWord = mainIndex >= 0 ? (slots[mainIndex]!.word || slots[mainIndex]!.subject).trim() : ''
   return slots.map((slot, index) => {
     if (slot.role === 'scene' || mainIndex < 0 || index === mainIndex) {
-      return { subject: slot.subject, role: slot.role }
+      return { word: slot.word || slot.subject, subject: slot.subject, role: slot.role }
     }
-    return { subject: slot.subject, role: slot.role ?? 'item', distractor: true, targetWord }
+    return {
+      word: slot.word || slot.subject,
+      subject: slot.subject,
+      role: slot.role ?? 'item',
+      distractor: true,
+      targetWord,
+    }
   })
 }
 
@@ -93,9 +107,34 @@ function sceneSettingOf(level: Record<string, unknown>): string {
   return String((scene as { setting?: unknown }).setting || '').trim()
 }
 
+function collectOptionDrawByWord(level: Record<string, unknown>): Map<string, string> {
+  const map = new Map<string, string>()
+  const beats = Array.isArray(level.beats) ? level.beats : []
+  for (const raw of beats) {
+    if (!raw || typeof raw !== 'object') continue
+    const b = raw as Record<string, unknown>
+    let opts: unknown[] = []
+    if (Array.isArray(b.options)) opts = b.options
+    else if (b.fallback && typeof b.fallback === 'object') {
+      const fb = (b.fallback as { options?: unknown }).options
+      if (Array.isArray(fb)) opts = fb
+    }
+    for (const o of opts) {
+      if (!o || typeof o !== 'object') continue
+      const opt = o as { id?: unknown; draw?: unknown }
+      const id = String(opt.id || '').trim()
+      const key = slotSubjectKey(id)
+      const draw = normalizeOptionDraw(opt.draw)
+      if (!key || !draw || map.has(key)) continue
+      map.set(key, draw)
+    }
+  }
+  return map
+}
+
 /**
- * 配图槽位：首位固定为 scene（优先 scene.setting），其余为 target_words / 选项 id。
- * 总张数上限 maxSlots = 1 背景 + 最多 maxSlots-1 道具。
+ * 配图槽位：首位固定为 scene（优先 scene.setting），其余为 target_words / 选项。
+ * 道具槽 word=短词，subject=draw||word。总张数上限 maxSlots = 1 背景 + 最多 maxSlots-1 道具。
  */
 export function slotsFromLevel(level: Record<string, unknown>, maxSlots?: number): ImageSlot[] {
   const max = clampImageSlots(maxSlots)
@@ -104,21 +143,29 @@ export function slotsFromLevel(level: Record<string, unknown>, maxSlots?: number
     : []
   const setting = sceneSettingOf(level)
   const sceneSubject = setting || words[0]?.trim() || 'playground'
+  const draws = collectOptionDrawByWord(level)
+  const mainKey = slotSubjectKey(words[0] || '')
+  const mainDraw = normalizeOptionDraw(level.main_draw)
 
-  const slots: ImageSlot[] = [{ subject: sceneSubject, role: 'scene' }]
+  const slots: ImageSlot[] = [{ word: sceneSubject, subject: sceneSubject, role: 'scene' }]
   const seen = new Set<string>([slotSubjectKey(sceneSubject)])
 
-  const pushItem = (raw: string) => {
+  const pushItem = (rawWord: string, draw?: string) => {
     if (slots.length >= max) return
-    const subject = raw.trim()
-    if (!subject) return
-    const key = slotSubjectKey(subject)
-    if (seen.has(key)) return
+    const word = rawWord.trim()
+    if (!word) return
+    const key = slotSubjectKey(word)
+    if (!key || seen.has(key)) return
     seen.add(key)
-    slots.push({ subject, role: 'item' })
+    const subject = (draw?.trim() || word)
+    slots.push({ word, subject, role: 'item' })
   }
 
-  for (const w of words) pushItem(w)
+  for (const w of words) {
+    const key = slotSubjectKey(w)
+    const draw = draws.get(key) || (key && key === mainKey ? mainDraw : undefined)
+    pushItem(w, draw)
+  }
 
   const beats = Array.isArray(level.beats) ? level.beats : []
   for (const raw of beats) {
@@ -134,14 +181,15 @@ export function slotsFromLevel(level: Record<string, unknown>, maxSlots?: number
     for (const o of opts) {
       if (slots.length >= max) break
       if (!o || typeof o !== 'object') continue
-      pushItem(String((o as { id?: string }).id || ''))
+      const opt = o as { id?: string; draw?: unknown }
+      pushItem(String(opt.id || ''), normalizeOptionDraw(opt.draw))
     }
   }
 
   return slots.slice(0, max)
 }
 
-/** 按槽位顺序，把 subject 映射到对应 images[i] */
+/** 按槽位顺序，把 word（或旧 subject）映射到对应 images[i] */
 export function imageUrlBySubject(
   slots: ImageSlot[],
   images: string[],
@@ -149,7 +197,7 @@ export function imageUrlBySubject(
 ): string | undefined {
   const key = slotSubjectKey(subject)
   if (!key) return undefined
-  const idx = slots.findIndex((s) => slotSubjectKey(s.subject) === key)
+  const idx = slots.findIndex((s) => slotWordKey(s) === key)
   if (idx >= 0 && images[idx]) return images[idx]
   return undefined
 }
@@ -178,7 +226,7 @@ export function missingSlotsForImages(
 /**
  * 迷你关配图槽：场景用可编辑 scenePrompt，道具含目标词 + picture_choice 选项
  *（确保 fork 等干扰项也有独立插画，而不是文字占位）。
- * itemPromptOverrides[i] 覆盖第 i 个道具槽的主体词（家长在制作台编辑）。
+ * itemPromptOverrides[i] 覆盖第 i 个道具槽的主体（画法，不改 word）。
  */
 export function slotsForMiniLevel(
   level: Record<string, unknown>,
@@ -199,7 +247,7 @@ export function slotsForMiniLevel(
   if (itemPromptOverrides?.length) {
     for (let i = 1; i < slots.length; i++) {
       const ov = itemPromptOverrides[i - 1]?.trim()
-      if (ov) slots[i] = { ...slots[i], subject: ov }
+      if (ov) slots[i] = { ...slots[i]!, word: slots[i]!.word, subject: ov }
     }
   }
   return dedupeSlots(slots)

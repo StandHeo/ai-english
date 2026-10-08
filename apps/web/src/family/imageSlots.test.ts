@@ -244,7 +244,7 @@ test('slotsFromLevel merges a paper with paper', () => {
   assert.deepEqual(items, ['cake', 'a paper'])
 })
 
-test('slotsForMiniLevel re-dedupes after itemPromptOverrides', () => {
+test('slotsForMiniLevel overrides subject (draw) but keeps word keys', () => {
   const slots = slotsForMiniLevel(
     {
       target_words: ['cake'],
@@ -260,10 +260,43 @@ test('slotsForMiniLevel re-dedupes after itemPromptOverrides', () => {
     5,
     ['cake', 'cake', 'cake'],
   )
+  const items = slots.filter((s) => s.role === 'item')
   assert.deepEqual(
-    slots.filter((s) => s.role === 'item').map((s) => s.subject),
-    ['cake'],
+    items.map((s) => s.word),
+    ['cake', 'bus', 'tree'],
   )
+  assert.deepEqual(
+    items.map((s) => s.subject),
+    ['cake', 'cake', 'cake'],
+  )
+})
+
+test('slotsFromLevel uses option draw as subject and id as word', () => {
+  const draw = 'a yellow school bus on a quiet street'
+  const slots = slotsFromLevel(
+    {
+      target_words: ['cake'],
+      main_draw: 'a pink frosted cake on a wooden plate',
+      scene: { setting: 'bakery' },
+      beats: [
+        {
+          type: 'find',
+          options: [
+            { id: 'cake', correct: true, draw: 'a pink frosted cake on a wooden plate' },
+            { id: 'bus', correct: false, draw },
+          ],
+        },
+      ],
+    },
+    9,
+  )
+  const items = slots.filter((s) => s.role === 'item')
+  assert.equal(items[0]?.word, 'cake')
+  assert.match(items[0]?.subject || '', /pink frosted cake/)
+  assert.equal(items[1]?.word, 'bus')
+  assert.equal(items[1]?.subject, draw)
+  assert.match(buildKidsPrompt(items[1]!), /yellow school bus/)
+  assert.equal(imageUrlBySubject(slots, ['bg', 'cake-img', 'bus-img'], 'bus'), 'bus-img')
 })
 
 test('slotsFromLevel does not duplicate scene key as item', () => {

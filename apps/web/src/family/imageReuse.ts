@@ -1,5 +1,5 @@
 import type { ImageSlot } from './imageSlots'
-import { slotSubjectKey } from './slotSubject'
+import { slotWordKey } from './imageSlots'
 
 export type ImageReuseCache = {
   get(key: string): string | undefined
@@ -47,7 +47,7 @@ export function seedItemImagesFromSlots(
   slots.forEach((slot, i) => {
     if (slot.role === 'scene') return
     const url = images[i]
-    if (url) cache.set(slotSubjectKey(slot.subject), url)
+    if (url) cache.set(slotWordKey(slot), url)
   })
 }
 
@@ -73,7 +73,7 @@ export function planSlotImageFills(
   slots.forEach((slot, i) => {
     if (opts?.onlyMissing && images[i]) return
     if (slot.role !== 'scene') {
-      const key = slotSubjectKey(slot.subject)
+      const key = slotWordKey(slot)
       const reused = key ? cache.get(key) : undefined
       if (reused) {
         images[i] = reused
@@ -113,7 +113,7 @@ export async function fillLevelSlotImages(
       sceneSlots.push(slot)
       return
     }
-    const key = slotSubjectKey(slot.subject)
+    const key = slotWordKey(slot)
     if (!key) return
     itemJobs.push(
       cache

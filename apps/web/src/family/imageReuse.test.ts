@@ -11,45 +11,45 @@ test('planSlotImageFills reuses item images across levels but not scenes', () =>
   const cache = createImageReuseCache()
   cache.set('cake', 'img-cake')
   const level2: ImageSlot[] = [
-    { subject: 'A honey bar', role: 'scene' },
-    { subject: 'shake', role: 'item' },
-    { subject: 'cake', role: 'item' },
+    { word: 'A honey bar', subject: 'A honey bar', role: 'scene' },
+    { word: 'shake', subject: 'shake', role: 'item' },
+    { word: 'cake', subject: 'a pink frosted cake', role: 'item' },
   ]
   const plan = planSlotImageFills(level2, [], cache)
   assert.equal(plan.images[2], 'img-cake')
   assert.equal(plan.fetchSlots.some((s) => s.role === 'scene'), true)
   assert.equal(
-    plan.fetchSlots.some((s) => s.subject === 'cake'),
+    plan.fetchSlots.some((s) => s.word === 'cake'),
     false,
   )
   assert.equal(
-    plan.fetchSlots.some((s) => s.subject === 'shake'),
+    plan.fetchSlots.some((s) => s.word === 'shake'),
     true,
   )
 })
 
-test('fillLevelSlotImages fetches each scene and reuses cake', async () => {
+test('fillLevelSlotImages fetches each scene and reuses cake by word not draw', async () => {
   const cache = createImageReuseCache()
   const calls: string[] = []
   const fetchSlots = async (slots: ImageSlot[]) => {
     return slots.map((s) => {
-      calls.push(`${s.role}:${s.subject}`)
-      return `gen:${s.subject}`
+      calls.push(`${s.role}:${s.word || s.subject}`)
+      return `gen:${s.word || s.subject}`
     })
   }
 
   const level1: ImageSlot[] = [
-    { subject: 'bakery', role: 'scene' },
-    { subject: 'cake', role: 'item' },
+    { word: 'bakery', subject: 'bakery', role: 'scene' },
+    { word: 'cake', subject: 'a pink frosted cake', role: 'item' },
   ]
   const imgs1 = await fillLevelSlotImages(level1, [], cache, fetchSlots)
   assert.equal(imgs1[0], 'gen:bakery')
   assert.equal(imgs1[1], 'gen:cake')
 
   const level2: ImageSlot[] = [
-    { subject: 'bedroom', role: 'scene' },
-    { subject: 'pillow', role: 'item' },
-    { subject: 'a cake', role: 'item' },
+    { word: 'bedroom', subject: 'bedroom', role: 'scene' },
+    { word: 'pillow', subject: 'pillow', role: 'item' },
+    { word: 'a cake', subject: 'a chocolate cake slice', role: 'item' },
   ]
   const imgs2 = await fillLevelSlotImages(level2, [], cache, fetchSlots)
   assert.equal(imgs2[0], 'gen:bedroom')
@@ -60,5 +60,5 @@ test('fillLevelSlotImages fetches each scene and reuses cake', async () => {
   assert.ok(calls.includes('scene:bedroom'))
   assert.ok(calls.includes('item:pillow'))
   assert.equal(calls.filter((c) => c === 'item:cake').length, 1)
-  assert.equal(calls.some((c) => c.includes('a cake')), false)
+  assert.equal(calls.some((c) => c.includes('chocolate')), false)
 })

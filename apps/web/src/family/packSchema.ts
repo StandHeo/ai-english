@@ -24,16 +24,18 @@ CRITICAL beat field names (do NOT invent other names):
 - ask beat example:
   {"type":"ask","show":"placeholder","npc_say":"I want a park! Say it!","expect":["park","a park"],"hint_say":"Park. Can you say park?","success_say":"Yes! Park!",
    "fallback":{"type":"picture_choice","options":[
-     {"id":"park","image":"placeholder","correct":true},
-     {"id":"bus","image":"placeholder","correct":false}
+     {"id":"park","image":"placeholder","correct":true,"draw":"a green city park with a slide, soft warm light"},
+     {"id":"bus","image":"placeholder","correct":false,"draw":"a yellow school bus on a quiet street"}
    ]}}
 - find beat example:
   {"type":"find","npc_say":"Find the park!","hint_say":"Park!","success_say":"Yes! Park!",
    "options":[
-     {"id":"park","image":"placeholder","correct":true},
-     {"id":"cake","image":"placeholder","correct":false}
+     {"id":"park","image":"placeholder","correct":true,"draw":"a green city park with a slide, soft warm light"},
+     {"id":"cake","image":"placeholder","correct":false,"draw":"a pink frosted cake on a wooden plate"}
    ]}
 - Do NOT use correct_id / label-only options. Each option needs id, image:"placeholder", correct boolean.
+- Prefer optional English "draw" on each picture option (about 8–20 words): color/material + at most one simple support; no text, no multi-object clutter. Keep id a SHORT kid noun; NEVER put the long draw sentence into id.
+- Optional level field "main_draw": same style as option draw, used when the main word has no matching option draw.
 - expect MUST be an array of strings, not a single string.
 
 Schema:
@@ -47,6 +49,7 @@ Schema:
         "theme": "family",
         "title": short English title for THIS level,
         "target_words": [ONE short English noun kids can say],
+        "main_draw": "optional English draw for the main word (same style as option draw)",
         "scene": {
           "setting": short place phrase like official levels (e.g. "A sunny outdoor swimming pool" or "阳光下的游泳池"), max ~12 words / one short sentence,
           "image": "placeholder",

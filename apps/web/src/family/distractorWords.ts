@@ -53,8 +53,8 @@ export function nextKidNoun(used: Set<string>): string | null {
   return null
 }
 
-function collectOptionObjects(level: Record<string, unknown>): Array<{ id?: unknown }> {
-  const out: Array<{ id?: unknown }> = []
+function collectOptionObjects(level: Record<string, unknown>): Array<{ id?: unknown; draw?: unknown }> {
+  const out: Array<{ id?: unknown; draw?: unknown }> = []
   const beats = Array.isArray(level.beats) ? level.beats : []
   for (const raw of beats) {
     if (!raw || typeof raw !== 'object') continue
@@ -66,7 +66,7 @@ function collectOptionObjects(level: Record<string, unknown>): Array<{ id?: unkn
       if (Array.isArray(fb)) opts = fb
     }
     for (const o of opts) {
-      if (o && typeof o === 'object') out.push(o as { id?: unknown })
+      if (o && typeof o === 'object') out.push(o as { id?: unknown; draw?: unknown })
     }
   }
   return out
@@ -100,6 +100,7 @@ export function sanitizeLevelDistractors(level: Record<string, unknown>, used: S
     const next = nextKidNoun(used)
     if (!next) throw new Error('abstract_distractors_exhausted')
     o.id = next
+    delete o.draw
     used.add(slotSubjectKey(next))
   }
 }

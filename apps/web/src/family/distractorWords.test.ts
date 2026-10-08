@@ -21,18 +21,19 @@ test('sanitizeLevelDistractors replaces paper option not the main word', () => {
         type: 'find',
         options: [
           { id: 'cake', correct: true },
-          { id: 'a paper', correct: false },
+          { id: 'a paper', correct: false, draw: 'a blank white paper sheet' },
         ],
       },
     ],
   }
   const used = new Set(['cake', 'paper'])
   sanitizeLevelDistractors(level, used)
-  const ids = (level.beats[0]!.options as { id: string }[]).map((o) => o.id)
-  assert.equal(ids[0], 'cake')
-  assert.notEqual(ids[1], 'a paper')
-  assert.notEqual(ids[1], 'paper')
-  assert.equal(isAbstractDistractorId(ids[1]!), false)
+  const opts = level.beats[0]!.options as { id: string; draw?: string }[]
+  assert.equal(opts[0]!.id, 'cake')
+  assert.notEqual(opts[1]!.id, 'a paper')
+  assert.notEqual(opts[1]!.id, 'paper')
+  assert.equal(isAbstractDistractorId(opts[1]!.id), false)
+  assert.equal(opts[1]!.draw, undefined)
 })
 
 const oneLevel = (word: string, distractor: string) => ({

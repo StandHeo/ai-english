@@ -1,4 +1,5 @@
 import { runAgnesCall } from './agnesRateLimit'
+import { normalizeOptionDraw } from './optionDraw'
 
 export type GeneratedFamilyPayload = {
   level: Record<string, unknown>
@@ -124,9 +125,9 @@ export function normalizeIconColors(raw: unknown): IconColorHint[] {
 function normalizePictureOptions(
   opts: unknown,
   correctId?: string,
-): { id: string; image: string; correct: boolean }[] {
+): { id: string; image: string; correct: boolean; draw?: string }[] {
   if (!Array.isArray(opts)) return []
-  const out: { id: string; image: string; correct: boolean }[] = []
+  const out: { id: string; image: string; correct: boolean; draw?: string }[] = []
   for (const raw of opts) {
     if (!raw || typeof raw !== 'object') continue
     const o = raw as Record<string, unknown>
@@ -136,7 +137,8 @@ function normalizePictureOptions(
       typeof o.image === 'string' && o.image.trim() ? String(o.image) : 'placeholder'
     let correct = Boolean(o.correct)
     if (!correct && correctId && id === correctId) correct = true
-    out.push({ id, image, correct })
+    const draw = normalizeOptionDraw(o.draw)
+    out.push({ id, image, correct, ...(draw ? { draw } : {}) })
   }
   if (out.length >= 2 && !out.some((o) => o.correct)) out[0]!.correct = true
   return out
@@ -191,7 +193,12 @@ export function normalizeFamilyLevel(level: Record<string, unknown>): Record<str
     delete b.question
     return b
   })
-  return { ...level, beats }
+  const mainDraw = normalizeOptionDraw(level.main_draw)
+  return {
+    ...level,
+    beats,
+    ...(mainDraw ? { main_draw: mainDraw } : {}),
+  }
 }
 
 /** 与 apps/web levelSchema.ensureIntroShowBeat 对齐 */

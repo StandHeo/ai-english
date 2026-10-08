@@ -12,18 +12,21 @@ import {
   type ImagePromptConfig,
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults.js'
+import { normalizeOptionDraw } from './optionDraw.ts'
 import { slotSubjectKey } from './slotSubject.ts'
 
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
 export type ImageSlot = {
-  /** 用于 prompt 的主体描述（英文词或中文场景） */
+  /** 短词键：去重 / 复用 / 绑图；缺省回退 subject */
+  word?: string
+  /** 用于 prompt 的主体描述（draw || word，或中文场景） */
   subject: string
   /** 可选角色标签 */
   role?: 'scene' | 'item'
   /** 干扰图。单张重画时由客户端标上，避免被当成主词。 */
   distractor?: boolean
-  /** 干扰图要避开的主词。 */
+  /** 干扰图要避开的主词（短词）。 */
   targetWord?: string
 }
 
@@ -282,8 +285,34 @@ async function callTongyiWithRetry(
   }
 }
 
+function collectOptionDrawByWord(level: Record<string, unknown>): Map<string, string> {
+  const map = new Map<string, string>()
+  const beats = Array.isArray(level.beats) ? level.beats : []
+  for (const raw of beats) {
+    if (!raw || typeof raw !== 'object') continue
+    const b = raw as Record<string, unknown>
+    let opts: unknown[] = []
+    if (Array.isArray(b.options)) opts = b.options
+    else if (b.fallback && typeof b.fallback === 'object') {
+      const fb = (b.fallback as { options?: unknown }).options
+      if (Array.isArray(fb)) opts = fb
+    }
+    for (const o of opts) {
+      if (!o || typeof o !== 'object') continue
+      const opt = o as { id?: unknown; draw?: unknown }
+      const id = String(opt.id || '').trim()
+      const key = slotSubjectKey(id)
+      const draw = normalizeOptionDraw(opt.draw)
+      if (!key || !draw || map.has(key)) continue
+      map.set(key, draw)
+    }
+  }
+  return map
+}
+
 /**
  * 从关卡快照推断配图槽位（英文关键词优先，张数由 maxSlots 控制）。
+ * 道具槽 word=短词，subject=draw||word。
  */
 export function slotsFromLevel(
   level: Record<string, unknown>,
@@ -298,20 +327,27 @@ export function slotsFromLevel(
       ? String((level.scene as { setting?: unknown }).setting || '').trim()
       : ''
   const sceneSubject = setting || words[0]?.trim() || 'playground'
-  const slots: ImageSlot[] = [{ subject: sceneSubject, role: 'scene' }]
+  const draws = collectOptionDrawByWord(level)
+  const mainKey = slotSubjectKey(words[0] || '')
+  const mainDraw = normalizeOptionDraw(level.main_draw)
+  const slots: ImageSlot[] = [{ word: sceneSubject, subject: sceneSubject, role: 'scene' }]
   const seen = new Set<string>([slotSubjectKey(sceneSubject)])
 
-  const pushItem = (raw: string) => {
+  const pushItem = (rawWord: string, draw?: string) => {
     if (slots.length >= max) return
-    const subject = raw.trim()
-    if (!subject) return
-    const key = slotSubjectKey(subject)
-    if (seen.has(key)) return
+    const word = rawWord.trim()
+    if (!word) return
+    const key = slotSubjectKey(word)
+    if (!key || seen.has(key)) return
     seen.add(key)
-    slots.push({ subject, role: 'item' })
+    slots.push({ word, subject: draw?.trim() || word, role: 'item' })
   }
 
-  for (const w of words) pushItem(w)
+  for (const w of words) {
+    const key = slotSubjectKey(w)
+    const draw = draws.get(key) || (key && key === mainKey ? mainDraw : undefined)
+    pushItem(w, draw)
+  }
 
   const beats = Array.isArray(level.beats) ? level.beats : []
   for (const raw of beats) {
@@ -327,7 +363,8 @@ export function slotsFromLevel(
     for (const o of opts) {
       if (slots.length >= max) break
       if (!o || typeof o !== 'object') continue
-      pushItem(String((o as { id?: string }).id || ''))
+      const opt = o as { id?: string; draw?: unknown }
+      pushItem(String(opt.id || ''), normalizeOptionDraw(opt.draw))
     }
   }
 

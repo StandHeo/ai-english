@@ -83,7 +83,7 @@ import {
 import { blobToWav16kBase64 } from '../voice/wavEncode'
 import './family-studio.css'
 
-type ImageSlotLike = { subject: string; role?: 'scene' | 'item' }
+type ImageSlotLike = { word?: string; subject: string; role?: 'scene' | 'item' }
 
 type StudioJobKind = 'image' | 'generate' | 'translate'
 type StudioJob = {
@@ -1552,7 +1552,8 @@ export function FamilyStudioPage() {
                                   <summary>画图提示词</summary>
                                   <p className="slot-prompt-full">{finalPrompt}</p>
                                   <label className="muted" style={{ fontSize: 12 }}>
-                                    主体（可改：如把 cake 换成 birthday cake）
+                                    画法（可改颜色/环境；不改短词 id
+                                    {slot.word && slot.word !== subject ? `「${slot.word}」` : ''}）
                                   </label>
                                   <input
                                     type="text"
@@ -1563,7 +1564,7 @@ export function FamilyStudioPage() {
                                       const v = e.target.value.trim()
                                       if (si > 0 && v !== subject) {
                                         const day = setMiniLevelItemPrompt(date, m.id, si, v)
-                                        if (day) void refreshMiniLevels(day, '已保存主体词，可点重画更新这张图')
+                                        if (day) void refreshMiniLevels(day, '已保存画法，可点云端配图更新这张图')
                                       }
                                     }}
                                     disabled={si === 0 || sceneLocked}
