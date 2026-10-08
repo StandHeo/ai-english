@@ -1,6 +1,6 @@
 ## Context
 
-见 `proposal.md` 动机。当前 `DEFAULT_FAMILY_LLM = 'deepseek'`、`DEFAULT_IMAGE_CLOUD = 'tongyi'`；`FamilyStudioSettingsPage` 并排两块 Key，指引写死 `http://118.24.164.40/agnes-api-key.html`。`docs/agnes-api-key.html` 已有 `id="agnes"` / `id="deepseek"`。存储已分三把 Key，Agnes 关卡与配图共用 `agnesApiKey`。
+见 `proposal.md` 动机。当前 `DEFAULT_FAMILY_LLM = 'deepseek'`、`DEFAULT_IMAGE_CLOUD = 'tongyi'`；`FamilyStudioSettingsPage` 并排两块 Key，指引写死 `https://tudoudou-ai.site/agnes-api-key.html`。`docs/agnes-api-key.html` 已有 `id="agnes"` / `id="deepseek"`。存储已分三把 Key，Agnes 关卡与配图共用 `agnesApiKey`。
 
 ## Goals / Non-Goals
 

@@ -96,9 +96,9 @@ describe('parent plus copy', () => {
 })
 
 describe('native production API default', () => {
-  it('points Capacitor/production builds at the temporary lighthouse IP', () => {
-    assert.match(baseSrc, /PRODUCTION_API_BASE = 'http:\/\/118\.24\.164\.40'/)
-    assert.equal(/PRODUCTION_API_BASE = 'https:\/\/tudoudou-ai\.site'/.test(baseSrc), false)
+  it('points Capacitor/production builds at the filed domain HTTPS', () => {
+    assert.match(baseSrc, /PRODUCTION_API_BASE = 'https:\/\/tudoudou-ai\.site'/)
+    assert.equal(/PRODUCTION_API_BASE = 'http:\/\/118\.24\.164\.40'/.test(baseSrc), false)
     assert.match(membershipSrc, /recoverFromUnreachablePrivateBase/)
   })
 })

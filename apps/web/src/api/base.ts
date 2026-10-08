@@ -8,11 +8,13 @@ const ENV_BASE = String(viteEnv.VITE_API_BASE || '')
   .replace(/\/$/, '')
 
 /**
- * 正式 App / 生产 Web 的会员与 /api 地址。
- * 临时：域名被未备案 SNI 拦截，先走成都轻量公网 IP 的 HTTP。备案或迁出大陆后改回 https://tudoudou-ai.site。
+ * 正式 App / 生产 Web 的会员与 /api 地址（已备案域名 HTTPS）。
  * App / 生产包固定此地址，设置页不再提供修改入口。
  */
-export const PRODUCTION_API_BASE = 'http://118.24.164.40'
+export const PRODUCTION_API_BASE = 'https://tudoudou-ai.site'
+
+/** 备案前临时 HTTP IP，仅用于识别旧配置仍算「官方服务器」。 */
+const LEGACY_PRODUCTION_API_BASES = ['http://118.24.164.40', 'https://118.24.164.40'] as const
 
 /** 本会话内跳过已失败的局域网地址（localStorage 之外再挡一层）。 */
 let sessionSkipPrivate = false
@@ -124,7 +126,8 @@ export function switchToOfficialApiBase(): string {
 }
 
 export function isOfficialApiBase(url = getApiBase()): boolean {
-  return normalizeBase(url) === PRODUCTION_API_BASE
+  const n = normalizeBase(url)
+  return n === PRODUCTION_API_BASE || LEGACY_PRODUCTION_API_BASES.includes(n as (typeof LEGACY_PRODUCTION_API_BASES)[number])
 }
 
 /**

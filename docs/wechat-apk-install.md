@@ -2,8 +2,8 @@
 
 用微信把安卓安装包（`.apk`）发给朋友时，文件常被拦截或改后缀。按下面步骤一般就能装上。
 
-在线版（临时 IP）：http://118.24.164.40/wechat-apk-install.html  
-短地址：http://118.24.164.40/wechat-apk
+在线版：https://tudoudou-ai.site/wechat-apk-install.html  
+短地址：https://tudoudou-ai.site/wechat-apk
 
 ## 常见现象
 
