@@ -5,10 +5,11 @@ import {
   type ImagePromptConfig,
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults'
+import { isFallbackMockImageUrl } from './compressImage'
 import { normalizeOptionDraw } from './optionDraw'
-import { normalizeSlotSubjectKey, slotSubjectKey } from './slotSubject'
+import { normalizeSlotSubjectKey, sceneSlotDedupeKey, slotSubjectKey } from './slotSubject'
 
-export { normalizeSlotSubjectKey, slotSubjectKey }
+export { normalizeSlotSubjectKey, sceneSlotDedupeKey, slotSubjectKey }
 
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
@@ -62,7 +63,11 @@ function dedupeSlots(slots: ImageSlot[]): ImageSlot[] {
   const out: ImageSlot[] = []
   const seen = new Set<string>()
   for (const slot of slots) {
-    const key = slotWordKey(slot)
+    // 场景用 sceneSlotDedupeKey，避免长英文场景首词（water/cake…）误删干扰道具
+    const key =
+      slot.role === 'scene'
+        ? sceneSlotDedupeKey(slot.word || slot.subject)
+        : slotWordKey(slot)
     if (!key) continue
     if (seen.has(key)) continue
     seen.add(key)
@@ -148,7 +153,7 @@ export function slotsFromLevel(level: Record<string, unknown>, maxSlots?: number
   const mainDraw = normalizeOptionDraw(level.main_draw)
 
   const slots: ImageSlot[] = [{ word: sceneSubject, subject: sceneSubject, role: 'scene' }]
-  const seen = new Set<string>([slotSubjectKey(sceneSubject)])
+  const seen = new Set<string>([sceneSlotDedupeKey(sceneSubject)])
 
   const pushItem = (rawWord: string, draw?: string) => {
     if (slots.length >= max) return
@@ -261,7 +266,7 @@ export function slotRoleLabel(slots: ImageSlot[], index: number): string {
   return index === 1 ? '主词图' : '干扰图'
 }
 
-/** 某槽是否已有可显示图或已落库的图 id（localStorage 瘦身后只有 id）。 */
+/** 某槽是否已有可显示的真图或已落库的图 id（data: 米色 SVG 失败占位不算）。 */
 export function miniLevelSlotHasImage(
   index: number,
   imageBg: string | undefined,
@@ -269,11 +274,17 @@ export function miniLevelSlotHasImage(
   imageBgId?: string,
   itemImageIds?: Array<string | undefined>,
 ): boolean {
-  if (index === 0) return Boolean((imageBg && imageBg.trim()) || (imageBgId && imageBgId.trim()))
+  if (index === 0) {
+    const url = imageBg?.trim() || ''
+    if (isFallbackMockImageUrl(url)) return false
+    if (url) return true
+    return Boolean(imageBgId && imageBgId.trim())
+  }
   const i = index - 1
-  const url = itemImages?.[i]
-  const id = itemImageIds?.[i]
-  return Boolean((url && url.trim()) || (id && id.trim()))
+  const url = (itemImages?.[i] || '').trim()
+  if (isFallbackMockImageUrl(url)) return false
+  if (url) return true
+  return Boolean(itemImageIds?.[i] && String(itemImageIds[i]).trim())
 }
 
 /**
@@ -299,7 +310,7 @@ export function miniLevelMissingImageSlots(
   return missing
 }
 
-/** 构造「已有图」标记：有 URL 用 URL，仅有 id 时用占位（truthy，供 onlyMissing 跳过）。 */
+/** 构造「已有图」标记：有真图 URL 用 URL，仅有 id 时用占位；失败 mock 视为空。 */
 export function existingSlotMarkers(
   slotCount: number,
   imageBg: string | undefined,
@@ -309,15 +320,18 @@ export function existingSlotMarkers(
 ): string[] {
   const out: string[] = []
   for (let i = 0; i < slotCount; i++) {
-    if (i === 0) {
-      out.push(
-        (imageBg && imageBg.trim()) || (imageBgId && imageBgId.trim() ? `id:${imageBgId}` : '') || '',
-      )
+    if (!miniLevelSlotHasImage(i, imageBg, itemImages, imageBgId, itemImageIds)) {
+      out.push('')
       continue
     }
-    const url = itemImages?.[i - 1]
+    if (i === 0) {
+      const url = imageBg?.trim() || ''
+      out.push(url && !isFallbackMockImageUrl(url) ? url : imageBgId ? `id:${imageBgId}` : '')
+      continue
+    }
+    const url = (itemImages?.[i - 1] || '').trim()
     const id = itemImageIds?.[i - 1]
-    out.push((url && url.trim()) || (id && id.trim() ? `id:${id}` : '') || '')
+    out.push(url && !isFallbackMockImageUrl(url) ? url : id ? `id:${id}` : '')
   }
   return out
 }

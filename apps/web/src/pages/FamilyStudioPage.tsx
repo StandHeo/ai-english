@@ -5,6 +5,7 @@ import type { FamilyDayRecord } from '../family/store'
 import { apiJson, getApiBase, isNativeApp } from '../api/base'
 import { fetchMe, PLUS_ADMIN_WECHAT_HINT } from '../api/membership'
 import { DiaryVoicePlayer } from '../family/DiaryVoicePlayer'
+import { isFallbackMockImage, isFallbackMockImageUrl } from '../family/compressImage'
 import { generateFamilyImagesDirect, mapPool, FAMILY_IMAGE_LEVEL_CONCURRENCY } from '../family/generateImagesClient'
 import { refreshImagePromptConfig } from '../family/imagePromptConfig'
 import { generateFamilyPackDirect, llmBusyLabel, translateSceneToEnglish } from '../family/generateLevelClient'
@@ -56,6 +57,7 @@ import {
   removeDayImage,
   resetMiniLevelScenePrompt,
   saveGeneratedPack,
+  clearMiniLevelSlotImage,
   setDayImages,
   setMiniLevelImages,
   setMiniLevelItemPrompt,
@@ -111,6 +113,13 @@ async function fetchSlotImages(
     useDirect: boolean
   },
 ): Promise<string[]> {
+  const rejectMocks = (images: string[]) => {
+    const cleaned = images.map((u) => (u && !isFallbackMockImageUrl(u) ? u : ''))
+    if (cleaned.some((u) => !u) || cleaned.length < slots.length) {
+      throw new Error('slot_empty')
+    }
+    return cleaned
+  }
   if (opts.useDirect) {
     const payload = await generateFamilyImagesDirect({
       slots,
@@ -118,7 +127,7 @@ async function fetchSlotImages(
       provider: opts.cloud as 'tongyi' | 'agnes',
       maxSlots: Math.max(slots.length, 3),
     })
-    return payload.images
+    return rejectMocks(payload.images)
   }
   const res = await apiJson('/api/family/generate-images', {
     method: 'POST',
@@ -136,7 +145,8 @@ async function fetchSlotImages(
     timeoutMs: 300_000,
   })
   if (!res.ok) throw new Error(res.error || String(res.status))
-  return Array.isArray(res.data.images) ? (res.data.images as string[]) : []
+  const images = Array.isArray(res.data.images) ? (res.data.images as string[]) : []
+  return rejectMocks(images)
 }
 
 export function FamilyStudioPage() {
@@ -622,9 +632,11 @@ export function FamilyStudioPage() {
           let day: FamilyDayRecord | null = null
           for (let i = 0; i < list.length; i++) {
             const url = list[i] || ''
-            if (!url || markers[i] || isPersistedSlotMarker(url)) continue
+            if (!url || markers[i] || isPersistedSlotMarker(url) || isFallbackMockImageUrl(url)) {
+              continue
+            }
             const dataUrl = await toPersistableDataUrl(url)
-            if (!dataUrl) continue
+            if (!dataUrl || isFallbackMockImageUrl(dataUrl)) continue
             day = await setMiniLevelSlotImage(date, mini.id, i, dataUrl)
           }
           if (day) setMiniLevels(day.miniLevels || [])
@@ -948,20 +960,37 @@ export function FamilyStudioPage() {
     await requestMiniLevelImages(day!.miniLevels || [])
   }
 
+  /** 清掉配图失败留下的米色 SVG 占位，否则「只补缺图」会当成已齐。 */
+  async function stripFallbackMocks(levels: FamilyMiniLevel[]): Promise<FamilyMiniLevel[]> {
+    let latest = levels
+    for (const m of levels) {
+      const urls = [m.imageBg || '', ...(m.itemImages || [])]
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i]
+        if (!url) continue
+        if (!(await isFallbackMockImage(url))) continue
+        const day = await clearMiniLevelSlotImage(date, m.id, i)
+        if (day?.miniLevels) latest = day.miniLevels
+      }
+    }
+    return latest
+  }
+
   async function regenerateMissingImages() {
     // 必须用已 hydrate 的界面状态（含 blob URL）；getDay() 瘦身后往往只有 id，会被误判为全缺。
-    if (!miniLevels.length) {
+    let levels = miniLevels
+    if (!levels.length) {
       const day = getDay(date)
       if (!dayHasMiniPack(day)) {
         showToast('请先生成迷你关卡包')
         return
       }
       const hydrated = await hydrateFamilyDayImages(day!)
-      setMiniLevels(hydrated.miniLevels || [])
-      await requestMiniLevelImages(hydrated.miniLevels || [], { onlyMissingBg: true })
-      return
+      levels = hydrated.miniLevels || []
     }
-    await requestMiniLevelImages(miniLevels, { onlyMissingBg: true })
+    levels = await stripFallbackMocks(levels)
+    setMiniLevels(levels)
+    await requestMiniLevelImages(levels, { onlyMissingBg: true })
   }
 
   async function refreshMiniLevels(day: FamilyDayRecord | null, statusText: string) {
@@ -1089,11 +1118,17 @@ export function FamilyStudioPage() {
       showToast('请等待当前批量任务完成后再重画')
       return
     }
-    const day = getDay(date)
-    const cur = day?.miniLevels?.find((m) => m.id === mini.id)
-    if (!cur) return
+    // 与界面同一份 hydrate 状态建槽，避免 getDay 瘦身/场景英译导致下标错位
+    const cur = miniLevels.find((m) => m.id === mini.id) || getDay(date)?.miniLevels?.find((m) => m.id === mini.id)
+    if (!cur) {
+      showToast('找不到这一关，请刷新后再试')
+      return
+    }
     const key = slotRedrawKey(cur.id, slotIndex)
-    if (redrawingKeysRef.current.has(key)) return
+    if (redrawingKeysRef.current.has(key)) {
+      showToast('这张正在配图中…')
+      return
+    }
     const cloud = getImageCloudProvider()
     const cloudName = imageCloudLabel(cloud)
     const cloudKey = getImageCloudApiKey()
@@ -1102,17 +1137,25 @@ export function FamilyStudioPage() {
       showToast(`请到设置填写${cloudName} Key`)
       return
     }
-    const sceneFinal = cur.scenePromptEn?.trim() || effectiveScenePrompt(cur)
+    // 槽位结构与界面一致（中文场景主题）；背景槽出图时再用英文缓存
+    const sceneForSlots = effectiveScenePrompt(cur)
+    const sceneEn = cur.scenePromptEn?.trim() || ''
     const slots = annotatePromptSlots(
       slotsForMiniLevel(
         cur.level as unknown as Record<string, unknown>,
-        sceneFinal,
+        sceneForSlots,
         5,
         cur.itemPrompts,
       ),
     )
-    const slot = slots[slotIndex]
-    if (!slot) return
+    let slot = slots[slotIndex]
+    if (!slot) {
+      showToast(`第 ${slotIndex + 1} 槽不存在（共 ${slots.length} 张），请刷新后重试`)
+      return
+    }
+    if (slotIndex === 0 && sceneEn && sceneEn !== slot.subject) {
+      slot = { ...slot, subject: sceneEn, word: slot.word || sceneEn }
+    }
 
     redrawingKeysRef.current.add(key)
     setRedrawingSlots((prev) => ({ ...prev, [key]: true }))
@@ -1145,6 +1188,10 @@ export function FamilyStudioPage() {
       redrawFailRef.current += 1
       const msg = err instanceof Error ? err.message : String(err)
       updateJobLabel(`${cloudName}有一张失败（${msg.slice(0, 28)}），其余继续…`)
+      if (redrawInflightRef.current <= 1) {
+        /* finishJob 在 finally；此处再 toast 便于单槽失败可见 */
+        showToast(`${cloudName}配图失败：${msg.slice(0, 48)}`)
+      }
     } finally {
       redrawingKeysRef.current.delete(key)
       setRedrawingSlots((prev) => {

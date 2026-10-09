@@ -966,6 +966,47 @@ export async function setMiniLevelSlotImage(
   return hydrateFamilyDayImages(updated)
 }
 
+/** 清空某一槽的图（用于去掉配图失败留下的假占位）。 */
+export async function clearMiniLevelSlotImage(
+  date: string,
+  levelId: string,
+  slotIndex: number,
+): Promise<FamilyDayRecord | null> {
+  const store = loadFamilyStore()
+  const prev = store.days[date]
+  if (!prev?.miniLevels?.length) return null
+  const cur = prev.miniLevels.find((m) => m.id === levelId)
+  if (!cur) return null
+
+  const next: FamilyMiniLevel = { ...cur }
+  if (slotIndex === 0) {
+    if (cur.imageBgId) void deleteImageBlob(cur.imageBgId).catch(() => undefined)
+    delete next.imageBgId
+    delete next.imageBg
+  } else {
+    const itemIndex = slotIndex - 1
+    const ids = [...(cur.itemImageIds || [])]
+    const urls = [...(cur.itemImages || [])]
+    const len = Math.max(itemIndex + 1, ids.length, urls.length)
+    while (ids.length < len) ids.push('')
+    while (urls.length < len) urls.push('')
+    const oldId = ids[itemIndex]
+    if (oldId) void deleteImageBlob(oldId).catch(() => undefined)
+    ids[itemIndex] = ''
+    urls[itemIndex] = ''
+    next.itemImageIds = ids.some(Boolean) ? ids : undefined
+    next.itemImages = urls.some(Boolean) ? urls : undefined
+    if (!next.itemImageIds) delete next.itemImageIds
+    if (!next.itemImages) delete next.itemImages
+  }
+
+  const miniLevels = prev.miniLevels.map((m) => (m.id === levelId ? next : m))
+  const updated = { ...prev, miniLevels, updatedAt: Date.now() }
+  store.days[date] = updated
+  saveFamilyStore(store)
+  return hydrateFamilyDayImages(updated)
+}
+
 /** 把 IDB 图 id（及旧 data URL）解析成可显示的 URL，供 UI / 游玩使用 */
 export async function hydrateFamilyDayImages(day: FamilyDayRecord): Promise<FamilyDayRecord> {
   const miniLevels = await Promise.all(

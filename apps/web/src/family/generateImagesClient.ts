@@ -1,6 +1,6 @@
 import { cloudJson, downloadBinary, isCloudTimeoutMessage } from '../api/cloudHttp'
 import { runAgnesCall } from './agnesRateLimit'
-import { compressBytes, compressDataUrl, mockSlotDataUrl } from './compressImage'
+import { compressBytes, compressDataUrl } from './compressImage'
 import { refreshImagePromptConfig } from './imagePromptConfig'
 import {
   clampImageSlots,
@@ -197,9 +197,13 @@ export async function generateFamilyImagesDirect(input: {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         warnings.push(`slot_failed:${slot.subject}:${msg}`)
-        return mockSlotDataUrl(slot.subject)
+        // 空串而非米色 SVG 占位，避免「只补缺图」误判为已齐
+        return ''
       }
     }),
   )
+  if (images.some((u) => !u)) {
+    throw new Error(warnings[0] || 'slot_empty')
+  }
   return { images, warnings, provider: input.provider }
 }

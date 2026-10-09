@@ -13,7 +13,7 @@ import {
   type RenderKidsPromptOpts,
 } from './imagePromptDefaults.js'
 import { normalizeOptionDraw } from './optionDraw.ts'
-import { slotSubjectKey } from './slotSubject.ts'
+import { sceneSlotDedupeKey, slotSubjectKey } from './slotSubject.ts'
 
 export type { ImagePromptConfig, RenderKidsPromptOpts }
 
@@ -331,7 +331,7 @@ export function slotsFromLevel(
   const mainKey = slotSubjectKey(words[0] || '')
   const mainDraw = normalizeOptionDraw(level.main_draw)
   const slots: ImageSlot[] = [{ word: sceneSubject, subject: sceneSubject, role: 'scene' }]
-  const seen = new Set<string>([slotSubjectKey(sceneSubject)])
+  const seen = new Set<string>([sceneSlotDedupeKey(sceneSubject)])
 
   const pushItem = (rawWord: string, draw?: string) => {
     if (slots.length >= max) return

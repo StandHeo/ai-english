@@ -298,7 +298,11 @@ export function FamilyLevelPage({ onProgress }: Props) {
       ? nativeVosk
         ? `正在听（离线）… 约 ${Math.round(listenMs / 1000)} 秒，或再点麦克风结束`
         : `正在听… 约 ${Math.round(listenMs / 1000)} 秒，或再点麦克风结束`
-      : micTip
+      : micTip === 'empty'
+        ? '没听清，再试一次或点大图听一听～'
+        : phase === 'listen' && !recording && !micTip
+          ? '点红色麦克风说英语；也可点大图再听一遍～'
+          : micTip
 
   return (
     <div className="level-screen" style={{ backgroundImage: `url(${level.scene.image})` }}>
@@ -311,7 +315,21 @@ export function FamilyLevelPage({ onProgress }: Props) {
         aria-label="exit"
       />
       {beat?.show && phase !== 'find' && (
-        <img className={`focus-item ${phase === 'listen' ? 'bounce' : ''}`} src={beat.show} alt="" />
+        <button
+          type="button"
+          className={`focus-item ${phase === 'listen' ? 'bounce' : ''} ${
+            phase === 'listen' ? 'focus-item--tap' : ''
+          }`}
+          disabled={busy || phase !== 'listen'}
+          aria-label="hear the word again"
+          onClick={() => {
+            if (phase !== 'listen' || busy) return
+            const line = beat.expect?.[0] || beat.hint_say || beat.npc_say
+            if (line) void requestTts(line)
+          }}
+        >
+          <img src={beat.show} alt="" />
+        </button>
       )}
       {tipText && (phase === 'listen' || phase === 'fallback') && (
         <div className="mic-tip">{tipText}</div>

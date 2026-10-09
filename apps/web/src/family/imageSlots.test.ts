@@ -318,6 +318,29 @@ test('slotsFromLevel does not duplicate scene key as item', () => {
   )
 })
 
+test('long English scene does not drop distractor whose id matches first word', () => {
+  const slots = slotsForMiniLevel(
+    {
+      target_words: ['milk'],
+      scene: { setting: 'A sunny kitchen' },
+      beats: [
+        {
+          type: 'find',
+          options: [
+            { id: 'milk', correct: true },
+            { id: 'water', correct: false, draw: 'a clear glass of plain water with ice cubes' },
+          ],
+        },
+      ],
+    },
+    'Water table at kindergarten party with cups',
+    5,
+  )
+  const words = slots.filter((s) => s.role === 'item').map((s) => s.word)
+  assert.ok(words.includes('water'), `expected water item, got ${words.join(',')}`)
+  assert.equal(slots.length, 3)
+})
+
 test('miniLevelMissingImageSlots detects missing distractor art', () => {
   const level = {
     target_words: ['chopsticks'],
@@ -369,4 +392,22 @@ test('existingSlotMarkers keeps id placeholders for onlyMissing skip', () => {
   assert.equal(markers[1], '')
   assert.equal(markers[2], 'x')
   assert.equal(markers[3], '')
+})
+
+test('miniLevelSlotHasImage rejects fallback mock svg data urls', async () => {
+  const { mockSlotDataUrl } = await import('./compressImage.ts')
+  const mock = mockSlotDataUrl('a small pile of whipped cream')
+  assert.equal(miniLevelSlotHasImage(2, 'bg', ['a', mock, 'c']), false)
+  const missing = miniLevelMissingImageSlots(
+    {
+      target_words: ['cake'],
+      scene: { setting: 'bakery' },
+      beats: [{ type: 'find', options: [{ id: 'cake' }, { id: 'cream' }, { id: 'lettuce' }] }],
+    },
+    'bakery',
+    'bg',
+    ['cake-img', mock, 'lettuce-img'],
+  )
+  assert.equal(missing.length, 1)
+  assert.equal(missing[0]?.word || missing[0]?.subject, 'cream')
 })

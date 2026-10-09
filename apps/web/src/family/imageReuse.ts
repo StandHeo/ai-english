@@ -1,3 +1,4 @@
+import { isFallbackMockImageUrl } from './compressImage'
 import type { ImageSlot } from './imageSlots'
 import { slotWordKey } from './imageSlots'
 
@@ -47,7 +48,9 @@ export function seedItemImagesFromSlots(
   slots.forEach((slot, i) => {
     if (slot.role === 'scene') return
     const url = images[i]
-    if (url) cache.set(slotWordKey(slot), url)
+    if (url && !isFallbackMockImageUrl(url) && !url.startsWith('id:')) {
+      cache.set(slotWordKey(slot), url)
+    }
   })
 }
 
@@ -120,10 +123,11 @@ export async function fillLevelSlotImages(
         .getOrLoad(key, async () => {
           const got = await fetchSlots([slot])
           const url = got[0] || ''
-          if (!url) throw new Error(`slot_empty:${key}`)
+          if (!url || isFallbackMockImageUrl(url)) throw new Error(`slot_empty:${key}`)
           return url
         })
         .then((url) => {
+          if (!url || isFallbackMockImageUrl(url)) throw new Error(`slot_empty:${key}`)
           images[i] = url
         }),
     )

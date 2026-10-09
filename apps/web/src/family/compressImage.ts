@@ -44,12 +44,43 @@ export async function compressDataUrl(dataUrl: string): Promise<string> {
   return compressImageBlob(blob)
 }
 
+/** 配图失败时的米色 SVG 占位底色；出现在 URL/SVG 正文中即视为假图。 */
+export const MOCK_SLOT_FILL = '#ffe8c8'
+
 export function mockSlotDataUrl(label: string): string {
   const safe = label.replace(/[<>&"']/g, '').slice(0, 24) || 'fun'
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-  <rect width="100%" height="100%" fill="#ffe8c8"/>
+  <rect width="100%" height="100%" fill="${MOCK_SLOT_FILL}"/>
   <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
     font-family="sans-serif" font-size="42" fill="#5a3d1b">${safe}</text>
 </svg>`
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
+/** 同步识别 data: SVG 失败占位（尚未进 IDB 时）。 */
+export function isFallbackMockImageUrl(url: string | undefined | null): boolean {
+  if (!url) return false
+  if (!/^data:image\/svg\+xml/i.test(url)) return false
+  try {
+    const decoded = /%[0-9a-f]{2}/i.test(url) ? decodeURIComponent(url) : url
+    return new RegExp(MOCK_SLOT_FILL, 'i').test(decoded)
+  } catch {
+    return /ffe8c8/i.test(url)
+  }
+}
+
+/** 含 blob: 解析后的 SVG 占位；JPEG 化后的假图无法可靠识别。 */
+export async function isFallbackMockImage(url: string | undefined | null): Promise<boolean> {
+  if (!url) return false
+  if (isFallbackMockImageUrl(url)) return true
+  if (!url.startsWith('blob:') && !/^data:image\/svg/i.test(url)) return false
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    if (blob.type && !/svg/i.test(blob.type)) return false
+    const text = await blob.text()
+    return new RegExp(MOCK_SLOT_FILL, 'i').test(text)
+  } catch {
+    return false
+  }
 }

@@ -16,3 +16,14 @@ export function normalizeSlotSubjectKey(subject: string): string {
 export function slotSubjectKey(subject: string): string {
   return normalizeSlotSubjectKey(subject)
 }
+
+/**
+ * 场景槽去重键：短词用规范化首词；多词/长句用整句，
+ * 避免英文场景首词误伤 distractor。
+ */
+export function sceneSlotDedupeKey(setting: string): string {
+  const t = setting.trim().toLowerCase().replace(/\s+/g, ' ')
+  if (!t) return ''
+  if (/\s/.test(t) || t.length > 24) return t
+  return slotSubjectKey(t)
+}
