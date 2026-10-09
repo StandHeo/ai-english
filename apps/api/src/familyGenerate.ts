@@ -50,8 +50,9 @@ Beat types: "introduce" | "ask" | "find".
 Each beat needs "type" and "npc_say" (simple English, max ~8 words).
 ask beats MUST have "expect" (array of short phrases), "hint_say", "success_say", and "fallback": { "type":"picture_choice", "options":[ {id, image:"placeholder", correct:true}, {id, image:"placeholder", correct:false} ] }.
 find beats MUST have "options" with at least 2 items and one correct.
-CRITICAL vocabulary rule: Across target_words PLUS every picture-option "id", the UNIQUE short English keywords MUST meet the minimum count given in the user message (default 9). Use many distinct concrete nouns as option ids (park, slide, bus, ball, friend, home, tree, duck, cake, …). Avoid repeating the same id.
-Prefer words like park, slide, rice, friend, ball, bus, home — avoid long phrases.
+CRITICAL vocabulary rule: Across target_words PLUS every picture-option "id", the UNIQUE short English keywords MUST meet the minimum count given in the user message (default 9). Use many distinct concrete nouns as option ids. Avoid repeating the same id.
+Distractor option ids MUST be SAME theme / category as the correct word (apple→banana; basketball→soccer). NEVER cross-category (bad: basketball→truck/milk).
+Prefer short concrete kid nouns — avoid long phrases.
 Use image:"placeholder" everywhere; photos are attached later.
 Do NOT include beep_talk (optional kid-robot tail dialogue is authored only for official packs).
 iconColors: give ONE entry per target_word (and important option ids if useful). Colors must be warm, soft, kid-friendly hex pairs (peach, coral, sky, mint, sunshine, lavender). fg = icon fill (medium saturation), bg = light pastel card background. Never use neon, pure black, or pure white as fg.`
