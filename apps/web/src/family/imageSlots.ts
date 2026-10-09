@@ -261,19 +261,67 @@ export function slotRoleLabel(slots: ImageSlot[], index: number): string {
   return index === 1 ? '主词图' : '干扰图'
 }
 
-/** 迷你关是否还缺背景或任一选项道具图 */
+/** 某槽是否已有可显示图或已落库的图 id（localStorage 瘦身后只有 id）。 */
+export function miniLevelSlotHasImage(
+  index: number,
+  imageBg: string | undefined,
+  itemImages: string[] | undefined,
+  imageBgId?: string,
+  itemImageIds?: Array<string | undefined>,
+): boolean {
+  if (index === 0) return Boolean((imageBg && imageBg.trim()) || (imageBgId && imageBgId.trim()))
+  const i = index - 1
+  const url = itemImages?.[i]
+  const id = itemImageIds?.[i]
+  return Boolean((url && url.trim()) || (id && id.trim()))
+}
+
+/**
+ * 迷你关还缺哪些槽（背景 / 主词 / 干扰）。
+ * 须同时认 URL 与 imageBgId/itemImageIds：盘面瘦身后 getDay() 往往只有 id。
+ */
 export function miniLevelMissingImageSlots(
   level: Record<string, unknown>,
   scenePrompt: string,
   imageBg: string | undefined,
   itemImages: string[] | undefined,
   maxSlots = 5,
+  imageBgId?: string,
+  itemImageIds?: Array<string | undefined>,
 ): ImageSlot[] {
   const slots = slotsForMiniLevel(level, scenePrompt, maxSlots)
-  const images = [imageBg, ...(itemImages || [])].map((u) => u || '')
   const missing: ImageSlot[] = []
   for (let i = 0; i < slots.length; i++) {
-    if (!images[i]) missing.push(slots[i]!)
+    if (!miniLevelSlotHasImage(i, imageBg, itemImages, imageBgId, itemImageIds)) {
+      missing.push(slots[i]!)
+    }
   }
   return missing
+}
+
+/** 构造「已有图」标记：有 URL 用 URL，仅有 id 时用占位（truthy，供 onlyMissing 跳过）。 */
+export function existingSlotMarkers(
+  slotCount: number,
+  imageBg: string | undefined,
+  itemImages: string[] | undefined,
+  imageBgId?: string,
+  itemImageIds?: Array<string | undefined>,
+): string[] {
+  const out: string[] = []
+  for (let i = 0; i < slotCount; i++) {
+    if (i === 0) {
+      out.push(
+        (imageBg && imageBg.trim()) || (imageBgId && imageBgId.trim() ? `id:${imageBgId}` : '') || '',
+      )
+      continue
+    }
+    const url = itemImages?.[i - 1]
+    const id = itemImageIds?.[i - 1]
+    out.push((url && url.trim()) || (id && id.trim() ? `id:${id}` : '') || '')
+  }
+  return out
+}
+
+export function isPersistedSlotMarker(url: string | undefined): boolean {
+  return Boolean(url && url.startsWith('id:'))
 }

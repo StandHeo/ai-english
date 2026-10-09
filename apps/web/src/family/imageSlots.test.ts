@@ -7,7 +7,9 @@ import {
   firstItemImage,
   imageUrlBySubject,
   normalizeSlotSubjectKey,
+  existingSlotMarkers,
   miniLevelMissingImageSlots,
+  miniLevelSlotHasImage,
   promptForSlotAt,
   resetActiveImagePromptConfig,
   setActiveImagePromptConfig,
@@ -331,4 +333,40 @@ test('miniLevelMissingImageSlots detects missing distractor art', () => {
   const missing = miniLevelMissingImageSlots(level, 'table', 'bg-url', ['chopsticks-url'])
   assert.equal(missing.length, 1)
   assert.equal(missing[0]?.subject, 'fork')
+})
+
+test('miniLevelMissingImageSlots treats image ids as filled when URLs stripped', () => {
+  const level = {
+    target_words: ['apple'],
+    scene: { setting: 'kitchen' },
+    beats: [
+      {
+        fallback: {
+          options: [{ id: 'apple' }, { id: 'banana' }, { id: 'grape' }],
+        },
+      },
+    ],
+  }
+  // 模拟 getDay() 瘦身后：只有 id，没有 blob URL
+  const missing = miniLevelMissingImageSlots(
+    level,
+    'kitchen',
+    undefined,
+    undefined,
+    5,
+    'bg_1',
+    ['item_apple', '', 'item_grape'],
+  )
+  assert.equal(missing.length, 1)
+  assert.equal(missing[0]?.word || missing[0]?.subject, 'banana')
+  assert.equal(miniLevelSlotHasImage(0, undefined, undefined, 'bg_1', undefined), true)
+  assert.equal(miniLevelSlotHasImage(2, undefined, undefined, undefined, ['a', '', 'c']), false)
+})
+
+test('existingSlotMarkers keeps id placeholders for onlyMissing skip', () => {
+  const markers = existingSlotMarkers(4, undefined, ['', 'x'], 'bgId', ['', 'item2', ''])
+  assert.equal(markers[0], 'id:bgId')
+  assert.equal(markers[1], '')
+  assert.equal(markers[2], 'x')
+  assert.equal(markers[3], '')
 })
