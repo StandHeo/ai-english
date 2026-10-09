@@ -22,6 +22,8 @@ import {
 import {
   annotatePromptSlots,
   buildKidsPrompt,
+  existingSlotMarkers,
+  isPersistedSlotMarker,
   miniLevelMissingImageSlots,
   sceneNeedsTranslation,
   slotRoleLabel,
@@ -535,6 +537,9 @@ export function FamilyStudioPage() {
           effectiveScenePrompt(m),
           m.imageBg,
           m.itemImages,
+          5,
+          m.imageBgId,
+          m.itemImageIds,
         ).length > 0
       )
     })
@@ -591,6 +596,47 @@ export function FamilyStudioPage() {
         return p
       }
 
+      /** blob:/http 图转成可写入 IDB 的 data URL（复用他关图时常见）。 */
+      const toPersistableDataUrl = async (url: string): Promise<string> => {
+        if (/^data:image\//i.test(url)) return url
+        if (url.startsWith('blob:') || /^https?:\/\//i.test(url)) {
+          const res = await fetch(url)
+          const blob = await res.blob()
+          return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result || ''))
+            reader.onerror = () => reject(reader.error || new Error('read_failed'))
+            reader.readAsDataURL(blob)
+          })
+        }
+        return url
+      }
+
+      /** 只补缺图：只写入新生成的槽，绝不整关覆盖（避免删掉已有 IDB 图）。 */
+      const persistMissingOnly = (
+        mini: FamilyMiniLevel,
+        markers: string[],
+        list: string[],
+      ) => {
+        const run = async () => {
+          let day: FamilyDayRecord | null = null
+          for (let i = 0; i < list.length; i++) {
+            const url = list[i] || ''
+            if (!url || markers[i] || isPersistedSlotMarker(url)) continue
+            const dataUrl = await toPersistableDataUrl(url)
+            if (!dataUrl) continue
+            day = await setMiniLevelSlotImage(date, mini.id, i, dataUrl)
+          }
+          if (day) setMiniLevels(day.miniLevels || [])
+        }
+        const p = persistTail.then(run, run)
+        persistTail = p.then(
+          () => undefined,
+          () => undefined,
+        )
+        return p
+      }
+
       const fetchSlots = async (slots: ImageSlotLike[]) =>
         fetchSlotImages(slots, { date, cloud, cloudKey, useDirect })
 
@@ -624,13 +670,23 @@ export function FamilyStudioPage() {
           ),
         )
         try {
-          const existing = opts?.onlyMissingBg
-            ? [mini.imageBg || '', ...(mini.itemImages || [])]
+          const markers = opts?.onlyMissingBg
+            ? existingSlotMarkers(
+                slots.length,
+                mini.imageBg,
+                mini.itemImages,
+                mini.imageBgId,
+                mini.itemImageIds,
+              )
             : []
-          const list = await fillLevelSlotImages(slots, existing, reuseCache, fetchSlots, {
+          const list = await fillLevelSlotImages(slots, markers, reuseCache, fetchSlots, {
             onlyMissing: Boolean(opts?.onlyMissingBg),
           })
-          await persistImages(mini, list)
+          if (opts?.onlyMissingBg) {
+            await persistMissingOnly(mini, markers, list)
+          } else {
+            await persistImages(mini, list)
+          }
           done += 1
           updateJobLabel(
             `${prefix}${cloudName}配图 ${done}/${targets.length}：${word}（${slots.length} 张）`.trim(),
@@ -650,7 +706,9 @@ export function FamilyStudioPage() {
 
       await persistTail
 
-      const dayAfter = getDay(date)
+      const rawAfter = getDay(date)
+      const dayAfter = rawAfter ? await hydrateFamilyDayImages(rawAfter) : null
+      if (dayAfter) setMiniLevels(dayAfter.miniLevels || [])
       let stillMissing = 0
       for (const m of dayAfter?.miniLevels || targets) {
         stillMissing += miniLevelMissingImageSlots(
@@ -658,6 +716,9 @@ export function FamilyStudioPage() {
           m.scenePromptEn?.trim() || effectiveScenePrompt(m),
           m.imageBg,
           m.itemImages,
+          5,
+          m.imageBgId,
+          m.itemImageIds,
         ).length
       }
 
@@ -888,12 +949,19 @@ export function FamilyStudioPage() {
   }
 
   async function regenerateMissingImages() {
-    const day = getDay(date)
-    if (!dayHasMiniPack(day)) {
-      showToast('请先生成迷你关卡包')
+    // 必须用已 hydrate 的界面状态（含 blob URL）；getDay() 瘦身后往往只有 id，会被误判为全缺。
+    if (!miniLevels.length) {
+      const day = getDay(date)
+      if (!dayHasMiniPack(day)) {
+        showToast('请先生成迷你关卡包')
+        return
+      }
+      const hydrated = await hydrateFamilyDayImages(day!)
+      setMiniLevels(hydrated.miniLevels || [])
+      await requestMiniLevelImages(hydrated.miniLevels || [], { onlyMissingBg: true })
       return
     }
-    await requestMiniLevelImages(day!.miniLevels || [], { onlyMissingBg: true })
+    await requestMiniLevelImages(miniLevels, { onlyMissingBg: true })
   }
 
   async function refreshMiniLevels(day: FamilyDayRecord | null, statusText: string) {
