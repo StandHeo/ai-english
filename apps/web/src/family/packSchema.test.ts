@@ -51,6 +51,14 @@ test('pack system prompt bans abstract distractor ids', () => {
   assert.match(FAMILY_PACK_SYSTEM_PROMPT, /paper/)
 })
 
+test('pack system prompt requires same-theme distractors', () => {
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /SAME theme/)
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /basketball→soccer/)
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /NEVER pick cross-category/)
+  assert.match(FAMILY_PACK_SYSTEM_PROMPT, /"id":"slide"/)
+  assert.doesNotMatch(FAMILY_PACK_SYSTEM_PROMPT, /Distractor option ids: 2-3 DIFFERENT concrete kid nouns per level \(bus, cake/)
+})
+
 test('clampPackLevelCount stays within 5-9', () => {
   assert.equal(clampPackLevelCount(2), 5)
   assert.equal(clampPackLevelCount(12), 9)

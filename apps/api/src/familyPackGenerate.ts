@@ -14,17 +14,17 @@ CRITICAL beat field names (do NOT invent other names):
 - The FIRST beat of EVERY level MUST be an introduce beat with show (main word picture):
   {"type":"introduce","show":"placeholder","npc_say":"Look! park!","hint_say":"park"}
 - introduce and ask beats MUST have "show":"placeholder" (picture of the word).
-- ask beat example:
+- ask beat example (distractors MUST be same theme as the main word — playground peers, not bus/cake):
   {"type":"ask","show":"placeholder","npc_say":"I want a park! Say it!","expect":["park","a park"],"hint_say":"Park. Can you say park?","success_say":"Yes! Park!",
    "fallback":{"type":"picture_choice","options":[
      {"id":"park","image":"placeholder","correct":true,"draw":"a green city park with a slide, soft warm light"},
-     {"id":"bus","image":"placeholder","correct":false,"draw":"a yellow school bus on a quiet street"}
+     {"id":"slide","image":"placeholder","correct":false,"draw":"a red playground slide on soft sand"}
    ]}}
 - find beat example:
   {"type":"find","npc_say":"Find the park!","hint_say":"Park!","success_say":"Yes! Park!",
    "options":[
      {"id":"park","image":"placeholder","correct":true,"draw":"a green city park with a slide, soft warm light"},
-     {"id":"cake","image":"placeholder","correct":false,"draw":"a pink frosted cake on a wooden plate"}
+     {"id":"swing","image":"placeholder","correct":false,"draw":"a wooden swing under a tree"}
    ]}
 - Do NOT use correct_id / label-only options. Each option needs id, image:"placeholder", correct boolean.
 - Prefer optional English "draw" on each picture option (about 8–20 words): color/material + at most one simple support; no text, no multi-object clutter. Keep id a SHORT kid noun; NEVER put the long draw sentence into id.
@@ -67,13 +67,14 @@ Rules:
 - ask beats MUST have expect (array), hint_say, success_say, and fallback.picture_choice with >=2 options.
 - ask expect: the word plus one natural variant, e.g. ["park", "a park"].
 - find beats MUST have options with >=2 items and exactly one correct:true.
-- Distractor option ids: 2-3 DIFFERENT concrete kid nouns per level (bus, cake, home, tree…), NOT the main word.
+- Distractor option ids: 2-3 OTHER concrete kid nouns in the SAME theme / category as the main word (easy to confuse in a picture). Examples: apple→banana/orange; basketball→soccer/ball; park→slide/swing; bike→helmet/tricycle. Prefer other main words from THIS pack when they fit the theme.
+- NEVER pick cross-category distractors (bad: basketball→truck/milk; park→cake/bus). Kids must still guess among related things.
 - NEVER use abstract or unpaintable option ids: paper, a paper, square, circle, triangle, rectangle, shape, color, number, letter.
 - npc_say / hint_say / success_say in simple English like the official pack ("Mmm! Yummy fruit!", "Yes! Apple!").
 - reward.sticker: "sticker-<mainword>".
 - Use image:"placeholder" everywhere.
 - Do NOT include beep_talk.
-- Prefer concrete kid nouns from the diary; if the story is thin, invent plausible related nouns so the level count is met.`
+- Prefer concrete kid nouns from the diary; if the story is thin, invent plausible SAME-THEME nouns so the level count is met.`
 
 export function clampPackLevelCount(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
@@ -189,9 +190,15 @@ function parsePack(content: string, date: string, levelCount: number): Omit<Gene
 
 function mockPack(story: string, date: string, levelCount: number): GeneratedFamilyPackPayload {
   const n = clampPackLevelCount(levelCount)
-  const pool = ['park', 'slide', 'ball', 'bus', 'home', 'duck', 'tree', 'cake', 'friend']
+  // 同主题邻词，便于 mock 联调；勿用跨类 cake/bus 当万能干扰
+  const pool = ['park', 'slide', 'swing', 'ball', 'tree', 'duck', 'kite', 'dog', 'friend']
   const words = pool.slice(0, n)
   const idDate = date.replace(/-/g, '')
+  const peer = (word: string, offset: number) => {
+    const i = words.indexOf(word)
+    const alt = words[(i + offset + words.length) % words.length] || pool[offset] || 'slide'
+    return alt === word ? pool.find((w) => w !== word) || 'slide' : alt
+  }
   const levels = words.map((word) => ({
     id: `family-${idDate}-${word}`,
     approved: true,
@@ -212,7 +219,7 @@ function mockPack(story: string, date: string, levelCount: number): GeneratedFam
         success_say: `Yes! ${word}!`,
         options: [
           { id: word, image: 'placeholder', correct: true },
-          { id: 'cake', image: 'placeholder', correct: false },
+          { id: peer(word, 1), image: 'placeholder', correct: false },
         ],
       },
       {
@@ -226,7 +233,7 @@ function mockPack(story: string, date: string, levelCount: number): GeneratedFam
           type: 'picture_choice',
           options: [
             { id: word, image: 'placeholder', correct: true },
-            { id: 'bus', image: 'placeholder', correct: false },
+            { id: peer(word, 2), image: 'placeholder', correct: false },
           ],
         },
       },
